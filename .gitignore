@@ -1,3 +1,37 @@
-# JetBrains IDE
+
+# IntelliJ IDEA
 .idea/
-.iml
+*.iml
+*.iws
+*.ipr
+out/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Linux
+*~
+
+# Editor backups
+*.swp
+*.swo
+
+# Config
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.python-version
+
+# Project
+data/traces/
+
+# Special
+gitignore
+ok
