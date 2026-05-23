@@ -17,7 +17,7 @@ from observed.agent import build_agent
 
 APP_NAME = "agent-accountant"
 USER_ID = "dev"
-DEFAULT_MESSAGE = "How do I reset my Stratus Forms password?"
+DEFAULT_MESSAGE = "I want a refund for last month's charge."
 
 
 async def run_once(message: str) -> None:
