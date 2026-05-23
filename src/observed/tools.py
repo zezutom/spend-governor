@@ -7,8 +7,8 @@ parameter schema.
 
 Tools are deliberately honest about their behavior: refund tickets should
 resolve through kb_lookup of /policies/refunds + customer_lookup, not
-through repeated web_search. The anti-pattern that breaks this gets baked
-in on Day 3.
+through repeated web_search. Any anti-pattern that breaks this lives in
+the agent instruction, not in the tool definitions.
 """
 
 import uuid
@@ -19,9 +19,9 @@ import uuid
 # Classification chosen as a *tool* the agent must call first, rather than
 # free-text emission from the model. Reasons:
 #   - Tool calls produce structured span data with both args and return
-#     value in trace attributes. Day 5 aggregation reads task_class
+#     value in trace attributes. Downstream aggregation reads task_class
 #     directly from the task_classifier span; no text parsing.
-#   - Keyword logic here is deterministic and demo-stable. The four task
+#   - Keyword logic here is deterministic and stable. The four task
 #     types are well-separated by obvious keywords, so a thin classifier
 #     is enough — we are not trying to be a real intent model.
 
@@ -227,7 +227,7 @@ def refund_api(customer_id: str, amount_usd: float, reason: str) -> dict:
 
     Only call this after confirming refund eligibility against the refund
     policy (kb_lookup of /policies/refunds) and the customer record
-    (customer_lookup). Always succeeds in this demo environment.
+    (customer_lookup). Always succeeds in this synthetic environment.
 
     Args:
         customer_id: Customer ID to refund.

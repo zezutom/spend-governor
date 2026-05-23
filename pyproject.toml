@@ -8,6 +8,8 @@ dependencies = [
     "arize-phoenix-otel",
     "openinference-instrumentation-google-adk",
     "python-dotenv",
+    "arize-phoenix-client>=2.7.0",
+    "pandas>=2.3.3",
 ]
 
 [build-system]

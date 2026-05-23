@@ -37,6 +37,11 @@ async def run_once(message: str) -> None:
             for part in event.content.parts:
                 if part.text:
                     print(part.text)
+                elif part.function_call:
+                    args = dict(part.function_call.args) if part.function_call.args else {}
+                    print(f"[tool] {part.function_call.name}({args})")
+                elif part.function_response:
+                    print(f"[result] {part.function_response.name}")
 
 
 def main() -> None:

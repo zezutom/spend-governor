@@ -85,8 +85,11 @@ Saved `$1.48` per refund.
 │   └── observed/         The demo customer-support agent
 ├── infra/                GCP deployment configs
 ├── examples/             Sample traces and Accountant outputs
-├── docs/
-│   └── architecture.md   Technical overview
+├── doc/
+│   ├── architecture.md   Technical overview of the two-agent design
+│   ├── observed-agent.md The Helpdesk Co-Pilot: tools and instruction
+│   ├── cost-model.md     How per-trace and per-task-type cost is computed
+│   └── development.md    Setup, environment, and common commands
 ├── LICENSE
 ├── CLAUDE.md             Guidance for Claude Code in this repo
 └── README.md
@@ -127,7 +130,9 @@ cd ../accountant
 gcloud run deploy accountant --source .
 ```
 
-Full setup instructions are in [`docs/setup.md`](./docs/setup.md).
+Full setup instructions are in [`doc/development.md`](./doc/development.md). For an
+overview of how the pieces fit together, start with
+[`doc/architecture.md`](./doc/architecture.md).
 
 ### Try it
 
