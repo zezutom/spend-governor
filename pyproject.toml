@@ -11,6 +11,9 @@ dependencies = [
     "arize-phoenix-client>=2.7.0",
     "pandas>=2.3.3",
     "mcp>=1.27.1",
+    "fastapi>=0.136.1",
+    "uvicorn[standard]>=0.47.0",
+    "streamlit>=1.57.0",
 ]
 
 [build-system]
