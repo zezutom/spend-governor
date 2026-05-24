@@ -34,11 +34,19 @@ PHOENIX_API_KEY_OBSERVED_WRITE=<your-phoenix-api-key>
 GOOGLE_GENAI_USE_VERTEXAI=True
 GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
 GOOGLE_CLOUD_LOCATION=us-central1
+
+# Enables the observed agent's real-time fan-out to the Accountant.
+# Without it, spans go only to Phoenix (and the agent logs a notice).
+ACCOUNTANT_INGEST_URL=http://localhost:8765
 ```
 
 `telemetry.py` reads `PHOENIX_API_KEY_OBSERVED_WRITE` and sets it
 as `PHOENIX_API_KEY` for the OTEL exporter. The two-key naming
 reserves room for a separate Accountant read key.
+
+`ACCOUNTANT_INGEST_URL` turns on the second OTEL exporter that posts
+spans to the Accountant ingest server in real time. Leave it unset to
+emit to Phoenix only.
 
 ## Vertex AI authentication
 
@@ -69,15 +77,39 @@ try again.
 
 ## Common commands
 
-### Run the agent once
+### Launch the live dashboard (the main entry point)
 
 ```bash
-uv run python -m observed.main "I want a refund for last month's charge."
+uv run streamlit run src/accountant/dashboard.py
 ```
 
-Prints the tool sequence and the agent's reply. Useful for
-eyeballing a single trace's behavior. The trace is emitted to
-Phoenix in the background.
+This one command boots the whole Accountant stack: it auto-spawns the
+ingest server (`:8765`) as a subprocess if it isn't already running,
+imports history from Phoenix on first run (empty cache = new account),
+and opens the dashboard at `http://localhost:8501`. See
+[realtime-pipeline.md](./realtime-pipeline.md) for what happens under
+the hood.
+
+To feed it live traffic, run the observed agent (next command) with
+`ACCOUNTANT_INGEST_URL` set — the dashboard reflects each new trace
+within ~0.5s.
+
+The ingest server can also be started on its own (e.g. for debugging):
+
+```bash
+uv run uvicorn accountant.ingest_server:app --port 8765
+```
+
+### Run the observed agent once
+
+```bash
+ACCOUNTANT_INGEST_URL=http://localhost:8765 \
+  uv run python -m observed.main "I want a refund for last month's charge."
+```
+
+Prints the tool sequence and the agent's reply. The trace is emitted
+to Phoenix and (with the env var set) to the Accountant in the
+background.
 
 ### Generate a synthetic dataset
 
@@ -140,3 +172,23 @@ that the Phoenix project name matches. The ADK instrumentor needs
 `init_telemetry()` to run *before* `build_agent()` imports — see
 the import order in `observed/main.py` and
 `observed/generate_dataset.py`.
+
+### Dashboard shows nothing / counters stuck at zero
+
+- Confirm the ingest server is up: `curl http://localhost:8765/health`.
+  The dashboard spawns it automatically, but if port 8765 is taken by
+  another process the spawn is skipped.
+- For live traffic, confirm the observed agent ran with
+  `ACCOUNTANT_INGEST_URL` set — without it, spans only reach Phoenix.
+  The agent prints a notice on startup either way.
+- The dashboard reads SQLite at `data/accountant.db`. Deleting it
+  forces a fresh new-account backfill on the next dashboard load.
+
+### Reset to a clean "new account" state
+
+```bash
+rm -f data/accountant.db data/accountant.db-wal data/accountant.db-shm
+```
+
+Next dashboard load sees an empty cache and re-runs the Phoenix
+backfill from scratch. The cache is gitignored and disposable.

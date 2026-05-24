@@ -86,10 +86,11 @@ Saved `$1.48` per refund.
 ├── infra/                GCP deployment configs
 ├── examples/             Sample traces and Accountant outputs
 ├── doc/
-│   ├── architecture.md   Technical overview of the two-agent design
-│   ├── observed-agent.md The Helpdesk Co-Pilot: tools and instruction
-│   ├── cost-model.md     How per-trace and per-task-type cost is computed
-│   └── development.md    Setup, environment, and common commands
+│   ├── architecture.md      Technical overview of the two-agent design
+│   ├── realtime-pipeline.md Event ingest, outbox, dashboard, backfill
+│   ├── observed-agent.md    The Helpdesk Co-Pilot: tools and instruction
+│   ├── cost-model.md        How per-trace and per-task-type cost is computed
+│   └── development.md       Setup, environment, and common commands
 ├── LICENSE
 ├── CLAUDE.md             Guidance for Claude Code in this repo
 └── README.md

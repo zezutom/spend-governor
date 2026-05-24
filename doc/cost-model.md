@@ -1,7 +1,12 @@
 # Cost model
 
-How per-trace and per-task-type cost is computed from Phoenix trace
-data.
+How per-trace and per-task-type cost is computed from trace data.
+
+`cost.py` is the pure, stateless core. It's called from three places,
+all of which feed it the same Gemini token shape: the real-time
+`worker.py` (per live span), `backfill.py` (per historical span during
+onboarding), and the CLI `inspect_traces.py` / `verify_cost.py`. The
+math below is identical regardless of caller.
 
 ## Principles
 

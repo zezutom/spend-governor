@@ -107,6 +107,15 @@ surfaced into OpenInference attributes as:
 The Phoenix project name defaults to `agent-accountant` (override
 with `PHOENIX_PROJECT_NAME`).
 
+### Fan-out to the Accountant
+
+`telemetry.py` registers a second span processor alongside Phoenix's
+when `ACCOUNTANT_INGEST_URL` is set. The same spans are posted to the
+Accountant's `/ingest` endpoint in real time, in addition to going to
+Phoenix. This is what lets the dashboard react to each ticket as it
+happens. See [realtime-pipeline.md](./realtime-pipeline.md). Without
+the env var, the agent emits to Phoenix only and logs a notice.
+
 ## Running the agent
 
 ```bash
