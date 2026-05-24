@@ -100,7 +100,7 @@ When asked to help with demo content:
   Cloud Run configs).
 - `examples/` — sample traces, sample config files, sample
   Accountant outputs.
-- `docs/` — public-facing documentation, including architecture
+- `doc/` — public-facing documentation, including architecture
   overview.
 - `LICENSE` — MIT.
 - `README.md` — what the project is, how to run it, link to demo

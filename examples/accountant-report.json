@@ -1,0 +1,119 @@
+{
+  "recommendations": [
+    {
+      "anomaly_type": "class_cost_uplift",
+      "expected_effect": "Significant reduction in `tool_cost_usd` for `refund_handling` tasks, lowering the `avg_cost_usd` closer to the baseline.",
+      "task_class": "refund_handling",
+      "optimization": "Implement a cache for the `web_search` tool to reduce redundant queries."
+    },
+    {
+      "anomaly_type": "repeated_tool",
+      "expected_effect": "Reduction in the number of `kb_lookup` calls, lowering `avg_tools` and `avg_tool_cost_usd` for the `account_question` task class.",
+      "task_class": "account_question",
+      "optimization": "Improve agent prompting to synthesize and reformulate user questions for more effective `kb_lookup` queries, aiming for a single, comprehensive query."
+    },
+    {
+      "anomaly_type": "class_cost_uplift",
+      "expected_effect": "No immediate cost change, but provides a path for future optimization if needed.",
+      "task_class": "plan_change",
+      "optimization": "Continue to monitor the `plan_change` task class. The optimizations for other classes may have a positive impact. If cost uplift persists, further investigation will be required."
+    }
+  ],
+  "anomalies": [
+    {
+      "avg_cost_usd": 0.02354,
+      "type": "class_cost_uplift",
+      "task_class": "refund_handling",
+      "baseline_cost_usd": 0.00378,
+      "uplift_x": 6.23,
+      "n_traces": 281
+    },
+    {
+      "n_traces": 112,
+      "uplift_x": 1.53,
+      "baseline_cost_usd": 0.00378,
+      "task_class": "plan_change",
+      "avg_cost_usd": 0.00579,
+      "type": "class_cost_uplift"
+    },
+    {
+      "task_class": "account_question",
+      "avg_cost_usd": 0.00846,
+      "type": "class_cost_uplift",
+      "n_traces": 482,
+      "uplift_x": 2.24,
+      "baseline_cost_usd": 0.00378
+    },
+    {
+      "hit_rate": 0.989,
+      "repeat_threshold": 3,
+      "tool": "web_search",
+      "traces_with_repeat": 278,
+      "type": "repeated_tool",
+      "of_total_in_class": 281,
+      "task_class": "refund_handling"
+    },
+    {
+      "traces_with_repeat": 84,
+      "hit_rate": 0.174,
+      "repeat_threshold": 3,
+      "tool": "kb_lookup",
+      "of_total_in_class": 482,
+      "task_class": "account_question",
+      "type": "repeated_tool"
+    }
+  ],
+  "summary": {
+    "project": "agent-accountant",
+    "total_traces": 1218,
+    "window_hours": 24,
+    "by_task_class": {
+      "unknown": {
+        "avg_tool_cost_usd": 0.01379,
+        "n": 27,
+        "avg_tools": 5.93,
+        "avg_llm_cost_usd": 0.00846,
+        "avg_web_search": 2.67,
+        "traces_with_3plus_web_search": 23,
+        "avg_cost_usd": 0.02226
+      },
+      "account_question": {
+        "traces_with_3plus_web_search": 15,
+        "avg_cost_usd": 0.00846,
+        "avg_web_search": 0.24,
+        "avg_tool_cost_usd": 0.00154,
+        "n": 482,
+        "avg_tools": 4.43,
+        "avg_llm_cost_usd": 0.00692
+      },
+      "refund_handling": {
+        "avg_cost_usd": 0.02354,
+        "traces_with_3plus_web_search": 278,
+        "avg_web_search": 2.97,
+        "avg_llm_cost_usd": 0.00827,
+        "avg_tool_cost_usd": 0.01527,
+        "avg_tools": 6.57,
+        "n": 281
+      },
+      "password_reset": {
+        "traces_with_3plus_web_search": 0,
+        "avg_cost_usd": 0.00378,
+        "avg_web_search": 0,
+        "avg_tool_cost_usd": 0.0002,
+        "n": 316,
+        "avg_tools": 2.98,
+        "avg_llm_cost_usd": 0.00359
+      },
+      "plan_change": {
+        "n": 112,
+        "avg_tools": 4.15,
+        "avg_tool_cost_usd": 0.00044,
+        "avg_llm_cost_usd": 0.00535,
+        "avg_web_search": 0.03,
+        "traces_with_3plus_web_search": 1,
+        "avg_cost_usd": 0.00579
+      }
+    },
+    "total_cost_usd": 13.1392
+  }
+}
