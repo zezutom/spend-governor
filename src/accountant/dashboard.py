@@ -133,10 +133,21 @@ def _load_recommendations() -> list[dict]:
         rows = c.execute(
             "SELECT signature, source, task_class, anomaly_type, title, "
             "description, data, updated_at "
-            "FROM recommendations WHERE superseded = 0 "
-            "ORDER BY updated_at DESC"
+            "FROM recommendations WHERE superseded = 0"
         ).fetchall()
-    return [dict(r) for r in rows]
+    recs = [dict(r) for r in rows]
+
+    # Always rank by impact (projected monthly savings), descending.
+    # Applied/updated state must NOT change the order — the biggest
+    # leak stays on top whether or not it's been actioned.
+    def _impact(r: dict) -> float:
+        try:
+            return float(json.loads(r.get("data") or "{}").get("monthly_savings_usd") or 0)
+        except Exception:
+            return 0.0
+
+    recs.sort(key=_impact, reverse=True)
+    return recs
 
 
 def _render_onboarding(live: dict) -> None:
@@ -189,19 +200,53 @@ def _render_onboarding(live: dict) -> None:
             st.caption(f"Currently reviewing activity from {lookback}.")
 
 
-def _render_header(live: dict) -> None:
+def _render_hero(live: dict) -> None:
+    """Value on the nose: lead with avoidable waste and realized savings,
+    not trace counters. The two numbers a stressed CFO needs first."""
+    from governor.store import active_policies, intervention_summary
+
     summary = live.get("summary") or {}
     total_traces = int(summary.get("total_traces") or 0)
     total_cost = float(summary.get("total_cost_usd") or 0.0)
     last_updated = summary.get("last_updated_at") or "—"
 
+    # Total avoidable waste = sum of every detected policy's monthly
+    # opportunity. Realized = what the governor has actually saved so far.
+    recs = _load_recommendations()
+    opportunity = 0.0
+    for r in recs:
+        try:
+            opportunity += float(json.loads(r.get("data") or "{}").get("monthly_savings_usd") or 0)
+        except Exception:
+            pass
+    gov = intervention_summary()
+    realized = gov["total_cost_avoided_usd"]
+    n_active = len(active_policies())
+
     c1, c2, c3 = st.columns(3)
-    c1.metric("Traces ingested", f"{total_traces:,}")
-    c2.metric("Total cost (USD)", f"${total_cost:.4f}")
-    c3.metric(
-        "Last update (UTC)",
-        last_updated.split("T")[1][:8] if "T" in last_updated else last_updated,
+    c1.metric(
+        "💸 Avoidable AI waste",
+        f"${opportunity:,.0f}/mo",
+        help="Projected monthly cost of the wasteful execution patterns "
+             "detected in your traces, at current volume.",
     )
+    c2.metric(
+        "✅ Saved so far",
+        f"${realized:,.4f}",
+        help="Actual cost the governor has avoided since you activated "
+             "policies — logged per intervention.",
+    )
+    c3.metric(
+        "⚡ Policies governing live",
+        f"{n_active}",
+    )
+    upd = last_updated.split("T")[1][:8] if "T" in last_updated else last_updated
+    st.caption(
+        f"{total_traces:,} tickets · ${total_cost:.2f} analyzed · updated {upd} UTC"
+    )
+
+
+BASELINE_CLASS = "password_reset"
 
 
 def _render_by_class(live: dict) -> None:
@@ -210,43 +255,281 @@ def _render_by_class(live: dict) -> None:
         st.info("Waiting for data…")
         return
 
-    rows = []
+    # Spend share per class — answers "where is the money going?"
+    spend = {tc: (s["avg_cost_usd"] * s["n"]) for tc, s in by_class.items()}
+    total_spend = sum(spend.values()) or 1e-9
+    baseline = (by_class.get(BASELINE_CLASS) or {}).get("avg_cost_usd") or 1e-9
+
+    ranked = sorted(by_class.items(), key=lambda kv: spend[kv[0]], reverse=True)
+
+    # Signal-first headline: name the single biggest avoidable waste.
+    worst_tc, worst_x = None, 1.0
     for tc, s in by_class.items():
+        if tc in (BASELINE_CLASS, "unknown"):
+            continue
+        x = s["avg_cost_usd"] / baseline
+        if x > worst_x:
+            worst_tc, worst_x = tc, x
+    if worst_tc:
+        share = spend[worst_tc] / total_spend
+        st.markdown(
+            f"**{worst_tc.replace('_',' ').title()}** is your biggest avoidable "
+            f"cost — **{worst_x:.1f}× the baseline** per ticket and "
+            f"**{share*100:.0f}% of total spend**. See the policy below to fix it."
+        )
+
+    rows = []
+    for tc, s in ranked:
+        x = s["avg_cost_usd"] / baseline
+        flag = "🟢 baseline" if tc == BASELINE_CLASS else (
+            "🔴 wasteful" if x >= 2.0 else ("🟡 elevated" if x >= 1.5 else "🟢 ok")
+        )
         rows.append({
-            "Task class": tc,
-            "Traces": s["n"],
-            "Avg cost (USD)": s["avg_cost_usd"],
-            "Avg LLM cost": s["avg_llm_cost_usd"],
-            "Avg tool cost": s["avg_tool_cost_usd"],
-            "Avg tools/trace": s["avg_tools"],
-            "Avg web_search/trace": s["avg_web_search"],
-            "Traces ≥3 web_search": s["traces_with_3plus_web_search"],
+            "Task type": tc.replace("_", " "),
+            "Share of spend": f"{spend[tc]/total_spend*100:.0f}%",
+            "Cost vs baseline": "—" if tc == BASELINE_CLASS else f"{x:.1f}×",
+            "Status": flag,
         })
-    df = pd.DataFrame(rows).sort_values("Avg cost (USD)", ascending=False)
-    st.dataframe(df, hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    with st.expander("Full per-class breakdown"):
+        detail = []
+        for tc, s in ranked:
+            detail.append({
+                "Task type": tc.replace("_", " "),
+                "Tickets": s["n"],
+                "Avg $/ticket": round(s["avg_cost_usd"], 5),
+                "Avg LLM $": round(s["avg_llm_cost_usd"], 5),
+                "Avg tool $": round(s["avg_tool_cost_usd"], 5),
+                "Avg tools/ticket": s["avg_tools"],
+                "Avg web_search/ticket": s["avg_web_search"],
+            })
+        st.dataframe(pd.DataFrame(detail), hide_index=True, use_container_width=True)
+
+
+def _issue_of(rec: dict) -> dict:
+    try:
+        return json.loads(rec.get("data") or "{}")
+    except Exception:
+        return {}
+
+
+def _policy_for_issue(issue: dict):
+    """Map a detected issue to the governor policy that fixes it at
+    runtime. Returns (signature, policy_type, params) or None."""
+    kind = issue.get("kind")
+    if kind == "tool_cache" and issue.get("primary_tool"):
+        tool = issue["primary_tool"]
+        unit = (issue.get("components") or {}).get("tool_unit_price_usd", 0.0)
+        return (f"cache_tool:{tool}", "cache_tool",
+                {"tool": tool, "cost_per_call_usd": unit})
+    if kind == "model_routing":
+        # Spread the per-ticket saving across ~4 LLM calls/ticket for a
+        # per-call estimate the governor records on each downgrade.
+        per_call = round((issue.get("savings_per_ticket_usd", 0) or 0) / 4.0, 6)
+        return ("route_model:simple", "route_model",
+                {"cheap_model": issue.get("cheap_model", "gemini-2.5-flash-lite"),
+                 "est_savings_per_call_usd": per_call})
+    return None
+
+
+def _policy_explainer(issue: dict) -> dict:
+    """Plain-English answers to the buyer's questions: what does it do,
+    is it safe, what's the action labelled."""
+    kind = issue.get("kind")
+    if kind == "model_routing":
+        cheap = issue.get("cheap_model", "a cheaper model")
+        return {
+            "what": (
+                f"Routes **simple tickets** (password resets, account questions) "
+                f"to **{cheap}** instead of the standard model — at the gateway, "
+                f"as requests pass through."
+            ),
+            "safeguard": (
+                "Only low-risk request types are routed. Refunds, plan changes, "
+                "and anything involving money or a decision stay on the standard "
+                "model — they're never downgraded."
+            ),
+            "button": "Activate routing",
+        }
+    tool = issue.get("primary_tool") or "the tool"
+    return {
+        "what": (
+            f"Serves **repeated `{tool}` calls** from a cache instead of "
+            f"re-running them — so the same external lookup isn't paid for "
+            f"twice across tickets."
+        ),
+        "safeguard": (
+            "A call is only served from cache when its query is **semantically "
+            "equivalent** to a prior one (embedding check). A genuinely "
+            "different query still runs — so answers don't degrade."
+        ),
+        "button": "Activate caching",
+    }
+
+
+def _render_savings_math(issue: dict) -> None:
+    comp = issue.get("components") or {}
+    st.markdown("**How this is calculated**")
+    if issue.get("kind") == "model_routing":
+        st.markdown(
+            f"- {issue['n_traces']} simple tickets currently run on the standard model\n"
+            f"- Routing to `{comp.get('cheap_model')}` retains ~"
+            f"{int(comp.get('llm_cost_retained_ratio', 0)*100)}% of LLM cost "
+            f"(estimated, input-heavy tasks)\n"
+            f"- Saving per ticket: **${issue.get('savings_per_ticket_usd', 0):.4f}** "
+            f"(${issue.get('current_avg_usd', 0):.4f} → ${issue.get('projected_avg_usd', 0):.4f})\n"
+            f"- × {issue.get('monthly_volume', 0):,} tickets/month "
+            f"(observed over {comp.get('window_days', 0):g} days) = "
+            f"**${issue.get('monthly_savings_usd', 0):,.2f}/month**"
+        )
+        return
+    removed = comp.get("avg_tool_calls_removed", 0)
+    tool = issue.get("primary_tool") or "tool"
+    unit = comp.get("tool_unit_price_usd", 0)
+    st.markdown(
+        f"- Serves ~{removed:g} repeated `{tool}` calls/ticket from semantic cache "
+        f"× ${unit:.4f} = **${comp.get('tool_savings_per_ticket_usd', 0):.4f}** tool cost\n"
+        f"- Plus the LLM reasoning those calls triggered: "
+        f"**${comp.get('llm_savings_per_ticket_usd', 0):.4f}**\n"
+        f"- Saving per ticket: **${issue.get('savings_per_ticket_usd', 0):.4f}** "
+        f"(${issue.get('current_avg_usd', 0):.4f} → ${issue.get('projected_avg_usd', 0):.4f})\n"
+        f"- × {issue.get('monthly_volume', 0):,} tickets/month "
+        f"(observed over {comp.get('window_days', 0):g} days) = "
+        f"**${issue.get('monthly_savings_usd', 0):,.2f}/month**"
+    )
+
+
+def _render_realized_savings() -> None:
+    from governor.store import intervention_summary
+    s = intervention_summary()
+    if s["total_interventions"] == 0:
+        st.caption(
+            "No realized savings yet — activate a policy below, then run "
+            "the observed agent to see the governor intervene live."
+        )
+        return
+    c1, c2 = st.columns(2)
+    c1.metric("Realized savings (governing live)", f"${s['total_cost_avoided_usd']:,.4f}")
+    c2.metric("Interventions", f"{s['total_interventions']:,}")
+    labels = {"tool_cache_hit": "cache hits", "model_downgrade": "model downgrades"}
+    parts = [
+        f"{d['n']} {labels.get(k, k)} (${d['saved']:.4f})"
+        for k, d in s["by_kind"].items()
+    ]
+    if parts:
+        st.caption("  ·  ".join(parts))
+
+
+def _affected_classes(issue: dict) -> list[str]:
+    if issue.get("kind") == "model_routing":
+        return list(issue.get("classes") or [])
+    tc = issue.get("task_class")
+    return [tc] if tc else []
+
+
+def _render_verification(issue: dict, policy_sig: str) -> None:
+    from accountant.verification import measured_before_after
+    from governor import store as gov_store
+
+    classes = _affected_classes(issue)
+    since = gov_store.policy_activated_at(policy_sig)
+    m = measured_before_after(classes, since)
+
+    if not m["has_after_data"]:
+        st.info(
+            "▶ Policy is live. Send traffic through the agent and the "
+            "**measured** before/after cost will appear here — proven from "
+            "your own traces, not estimated."
+        )
+        return
+
+    pct = int(round(m["pct_reduction"] * 100))
+    st.success(
+        f"**Verified from your traces:** {m['before_n']:,} tickets before vs "
+        f"{m['after_n']:,} since activation — cost-per-ticket "
+        f"**${m['before_avg_usd']:.4f} → ${m['after_avg_usd']:.4f}** "
+        f"(**−{pct}%**), **${m['measured_savings_usd']:,.4f}** saved so far."
+    )
 
 
 def _render_recommendations(recs: list[dict]) -> None:
+    from governor import store as gov_store
+
+    st.markdown("#### Realized savings")
+    _render_realized_savings()
+    st.divider()
+    st.markdown("#### Optimization policies")
+
     if not recs:
-        st.success("No anomalies detected.")
+        st.success("No cost issues detected — the agent is running clean.")
         return
 
-    st.caption(f"{len(recs)} active recommendation(s).")
     for rec in recs:
+        issue = _issue_of(rec)
+        policy = _policy_for_issue(issue)
+        badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
+        sig = policy[0] if policy else rec["signature"]
+        active = gov_store.is_active(sig) if policy else False
+
+        pct = int(round(issue.get("pct_reduction", 0) * 100))
+        monthly = issue.get("monthly_savings_usd", 0) or 0
+        cur = issue.get("current_avg_usd", 0) or 0
+        proj = issue.get("projected_avg_usd", 0) or 0
+        volume = issue.get("monthly_volume", 0) or 0
+        has_savings = (issue.get("savings_per_ticket_usd", 0) or 0) > 0
+
+        explain = _policy_explainer(issue) if policy else None
+
         with st.container(border=True):
-            top = st.columns([6, 1])
-            with top[0]:
-                badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
-                st.markdown(f"**{rec['title']}**  ·  *{badge}*")
-                st.write(rec["description"])
-                if rec.get("data"):
-                    try:
-                        with st.expander("Supporting data"):
-                            st.json(json.loads(rec["data"]))
-                    except Exception:
-                        pass
-            with top[1]:
-                st.caption(f"updated\n{rec['updated_at']}")
+            head = st.columns([5, 2])
+            with head[0]:
+                tag = "  ·  ✅ governing live" if active else ""
+                st.markdown(f"**{rec['title']}**  ·  _{badge}_{tag}")
+            with head[1]:
+                if policy:
+                    if active:
+                        if st.button("Turn off", key=f"deact_{sig}",
+                                     use_container_width=True,
+                                     help="Stop enforcing this policy. Takes effect immediately."):
+                            gov_store.deactivate_policy(sig)
+                            st.rerun()
+                    else:
+                        if st.button(explain["button"], key=f"act_{sig}",
+                                     type="primary", use_container_width=True,
+                                     help="Enforced at the gateway in real time. "
+                                          "Reversible in one click."):
+                            gov_store.activate_policy(sig, policy[1], policy[2])
+                            st.rerun()
+
+            if has_savings:
+                m1, m2 = st.columns(2)
+                m1.metric("Saving per ticket", f"{pct}%")
+                m2.metric("Saving per month", f"${monthly:,.2f}")
+                st.caption(
+                    f"${cur:.4f} → ${proj:.4f} per ticket  ·  "
+                    f"~{volume:,} tickets/month at current volume"
+                )
+
+            # The buyer's three questions, answered before they click.
+            if explain:
+                st.markdown(f"**What it does** — {explain['what']}")
+                st.markdown(f"**Safeguard** — {explain['safeguard']}")
+                st.caption(
+                    "🔒 Runtime only — never changes your prompts or code. "
+                    "Reversible in one click."
+                    + ("  ·  ✅ currently governing live." if active else "")
+                )
+
+            # Proof, once active: measured from the customer's own traces.
+            if active and policy:
+                _render_verification(issue, sig)
+
+            with st.expander("The math"):
+                if has_savings:
+                    _render_savings_math(issue)
+                else:
+                    st.caption("No quantified savings for this item yet.")
 
 
 @st.fragment(run_every="500ms")
@@ -271,13 +554,11 @@ def render_live() -> None:
         ingest = live.get("ingest") or {}
         backfill_status = ingest.get("status")
 
-    recs = _load_recommendations()
-
     # Banner policy: while a backfill is running OR the cache is empty,
     # show the big onboarding banner ONLY — no header, no by-class
-    # table, no recs. After backfill completes, the banner disappears
-    # and the regular dashboard takes over. The same `live` blob feeds
-    # both modes, so no cadence divergence is possible.
+    # table. After backfill completes, the banner disappears and the
+    # regular dashboard takes over. The same `live` blob feeds both
+    # modes, so no cadence divergence is possible.
     show_onboarding = (
         span_count == 0
         or backfill_status in ("in_progress", "starting", None)
@@ -287,24 +568,43 @@ def render_live() -> None:
         _render_onboarding(live)
         return
 
-    _render_header(live)
+    _render_hero(live)
     st.divider()
-
-    st.subheader("Cost by task class")
+    st.subheader("Where the money goes")
     _render_by_class(live)
-    st.divider()
 
-    st.subheader("Active recommendations")
-    _render_recommendations(recs)
+
+def _is_onboarding() -> bool:
+    live = _load_live_state()
+    status = (live.get("ingest") or {}).get("status")
+    return (
+        _cache_span_count() == 0
+        or status in ("in_progress", "starting", None)
+    ) and status != "complete"
+
+
+# Recommendations live in a separate, slower fragment. Two reasons:
+# (1) the Apply/Revert buttons are interactive — a 500ms auto-rerun
+# can race a click; 3s is gentle enough that clicks land reliably.
+# (2) recommendations change on the order of seconds (when Gemini
+# reasons), not per-span, so they don't need the fast cadence.
+@st.fragment(run_every="3s")
+def render_recommendations_section() -> None:
+    if _is_onboarding():
+        return
+    st.divider()
+    st.subheader("Recommendations")
+    _render_recommendations(_load_recommendations())
 
 
 def main() -> None:
     st.title("Agent Accountant")
     st.caption(
         "Live unit economics for the observed agent. "
-        "Updates every 2 seconds as new spans arrive."
+        "Counters update in real time as new spans arrive."
     )
     render_live()
+    render_recommendations_section()
 
 
 main()

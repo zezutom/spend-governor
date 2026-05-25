@@ -85,6 +85,12 @@ def _aggregate_by_class(traces: list[dict]) -> dict:
         ws_counts = [sum(1 for x in t["tools"] if x == "web_search") for t in items]
         avg_ws = sum(ws_counts) / n
         ws_3_plus = sum(1 for c in ws_counts if c >= 3)
+        # Average occurrences of each tool per trace — the savings model
+        # needs this to price the calls an optimization would remove.
+        tool_totals: Counter = Counter()
+        for t in items:
+            tool_totals.update(t["tools"])
+        avg_tool_counts = {tool: round(cnt / n, 3) for tool, cnt in tool_totals.items()}
         summary[tc] = {
             "n": n,
             "avg_tools": round(avg_tools, 2),
@@ -93,8 +99,28 @@ def _aggregate_by_class(traces: list[dict]) -> dict:
             "avg_cost_usd": round(sum(t["total_cost_usd"] for t in items) / n, 5),
             "avg_llm_cost_usd": round(sum(t["llm_cost_usd"] for t in items) / n, 5),
             "avg_tool_cost_usd": round(sum(t["tool_cost_usd"] for t in items) / n, 5),
+            "avg_tool_counts": avg_tool_counts,
         }
     return summary
+
+
+def _window_days(traces: list[dict]) -> float:
+    """Observed time span of the trace set, in days. Used to project a
+    monthly rate. Floors at a fraction of a day so a tight burst doesn't
+    explode the extrapolation."""
+    times = []
+    for t in traces:
+        ts = t.get("start_time")
+        if not ts:
+            continue
+        try:
+            times.append(datetime.fromisoformat(ts))
+        except (TypeError, ValueError):
+            continue
+    if len(times) < 2:
+        return 1.0
+    span = (max(times) - min(times)).total_seconds() / 86400.0
+    return max(span, 0.5)
 
 
 def _detect_anomalies(traces: list[dict], by_class: dict) -> list[dict]:
@@ -157,12 +183,20 @@ def run_detection() -> dict:
     traces = _derive_traces()
     by_class = _aggregate_by_class(traces)
     anomalies = _detect_anomalies(traces, by_class)
+    window_days = _window_days(traces)
+    # Group raw anomalies into one actionable issue per task class, with
+    # savings projected over the observed window. Imported here to keep
+    # the dependency one-way (savings -> pricing only).
+    from accountant.savings import build_issues
+    issues = build_issues(by_class, anomalies, window_days)
     return {
         "now": datetime.now(timezone.utc).isoformat(),
         "total_traces": len(traces),
         "total_cost_usd": round(sum(t["total_cost_usd"] for t in traces), 4),
+        "window_days": round(window_days, 2),
         "by_task_class": by_class,
         "anomalies": anomalies,
+        "issues": issues,
     }
 
 

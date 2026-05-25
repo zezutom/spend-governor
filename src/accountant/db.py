@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS spans (
     end_time TIMESTAMP,
     tool_name TEXT,
     classifier_task_class TEXT,
+    cache_hit INTEGER NOT NULL DEFAULT 0,
     prompt_tokens INTEGER DEFAULT 0,
     cached_input_tokens INTEGER DEFAULT 0,
     completion_tokens INTEGER DEFAULT 0,
@@ -87,12 +88,23 @@ _init_lock = threading.Lock()
 _initialized: set[str] = set()
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive column migrations for DBs created before a column
+    existed. SQLite has no ADD COLUMN IF NOT EXISTS, so we check
+    PRAGMA table_info first. Recommendations are derived/cheap to
+    rebuild, so this only matters to avoid errors on an existing cache."""
+    span_cols = {r[1] for r in conn.execute("PRAGMA table_info(spans)").fetchall()}
+    if span_cols and "cache_hit" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN cache_hit INTEGER NOT NULL DEFAULT 0")
+
+
 def _initialize(path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=NORMAL;")
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.commit()
 
 
@@ -212,15 +224,17 @@ def mark_batch_failed(batch_id: int, error: str, conn=None) -> None:
 
 def upsert_span(span: dict, conn=None) -> None:
     """Insert a fully-costed span. Duplicate span_ids are ignored."""
+    rec_defaults = {"cache_hit": 0, **span}
+    span = rec_defaults
     sql = """
     INSERT INTO spans (
         span_id, trace_id, parent_id, span_kind, name,
-        start_time, end_time, tool_name, classifier_task_class,
+        start_time, end_time, tool_name, classifier_task_class, cache_hit,
         prompt_tokens, cached_input_tokens, completion_tokens,
         reasoning_tokens, model_name, llm_cost_usd, tool_cost_usd
     ) VALUES (
         :span_id, :trace_id, :parent_id, :span_kind, :name,
-        :start_time, :end_time, :tool_name, :classifier_task_class,
+        :start_time, :end_time, :tool_name, :classifier_task_class, :cache_hit,
         :prompt_tokens, :cached_input_tokens, :completion_tokens,
         :reasoning_tokens, :model_name, :llm_cost_usd, :tool_cost_usd
     )
@@ -256,12 +270,9 @@ def upsert_recommendation(rec: dict, conn=None) -> None:
 
 
 def supersede_recommendations(active_signatures: set[str], conn=None) -> None:
-    """Mark recommendations not in active_signatures as superseded.
-
-    Lets the dashboard show only currently-detected anomalies — if a
-    pattern resolves (e.g. operator applied the fix), the recommendation
-    fades out instead of sticking around forever.
-    """
+    """Mark recommendations not in active_signatures as superseded, so the
+    dashboard shows only currently-detected issues — if a pattern
+    resolves, its card fades out instead of lingering."""
     if not active_signatures:
         return
     placeholders = ",".join("?" * len(active_signatures))

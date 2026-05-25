@@ -29,7 +29,17 @@ GEMINI_2_5_PRO = ModelPrice(
 )
 
 
+# Cheaper tier the governor routes simple requests to.
+GEMINI_2_5_FLASH_LITE = ModelPrice(
+    name="gemini-2.5-flash-lite",
+    input_uncached_per_1m_usd=0.10,
+    input_cached_per_1m_usd=0.025,
+    output_per_1m_usd=0.40,
+)
+
+
 MODELS: dict[str, ModelPrice] = {
     "gemini-2.5-flash": GEMINI_2_5_FLASH,
     "gemini-2.5-pro": GEMINI_2_5_PRO,
+    "gemini-2.5-flash-lite": GEMINI_2_5_FLASH_LITE,
 }

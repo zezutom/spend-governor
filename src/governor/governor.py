@@ -197,6 +197,13 @@ def model_routing_callback(callback_context, llm_request):
     if original == cheap:
         return None
     llm_request.model = cheap
+    # Tag the span so the routed call is filterable in Phoenix
+    # (e.g. filter governor.model_routed == true).
+    span = otel_trace.get_current_span()
+    if span is not None and span.is_recording():
+        span.set_attribute("governor.model_routed", True)
+        span.set_attribute("governor.routed_from", original or "")
+        span.set_attribute("governor.routed_to", cheap)
     store.record_intervention(
         kind="model_downgrade",
         tool=None,

@@ -31,18 +31,27 @@ These are non-negotiable. Any generated code must respect them.
 
 ## Architecture in one paragraph
 
-The system has two pieces. **The observed agent** is a small
-customer-support agent that resolves tickets on a demo helpdesk; it
-calls Gemini for reasoning and a small set of tools (knowledge base
-lookup, refund API, ticket update), and emits OTEL-format traces to
-Arize. **The Accountant** is the product — built on Google Cloud
-Agent Builder + Gemini — which reads the observed agent's traces
-through Arize's MCP server, attaches LLM and tool costs, aggregates
-to per-trace and per-task-type unit economics, detects anomalies,
-generates optimization recommendations using Gemini, and on operator
-approval writes config changes back to the observed agent's config
-store. The observed agent picks up the new config on its next run,
-and the Accountant re-measures to show the cost delta.
+Accountant Agent is **AI Runtime FinOps**: a runtime economic governor
+for multi-agent AI systems. It does not edit prompts or touch the
+observed agent's source — enterprises won't grant that access. It
+operates in two planes. The **learning plane** reads the observed
+agent's OTEL traces through Arize's MCP server, attaches LLM and tool
+costs, aggregates to per-trace and per-task-type unit economics, and
+detects economically irrational execution patterns (e.g. redundant
+retrieval, over-powered models for trivial requests). The
+**enforcement plane** is an inline gateway / runtime control layer the
+observed agent's outbound tool and LLM traffic flows through; on
+operator-activated policies it intervenes in real time — suppressing
+redundant tool calls and serving a *semantically-equivalent* cache,
+routing simple requests to cheaper models, capping tool invocations,
+preventing wasteful loops — and the Accountant re-measures from traces
+to prove the cost delta with quality held. The **observed agent** is a
+small customer-support agent (resolves helpdesk tickets, calls Gemini +
+a few tools) used as the demo target; its traffic is routed through the
+governor. Critical: Phoenix/Arize is post-hoc (detection/learning only)
+— interception happens at the inline gateway, never by "reading
+traces." Integration is at one boundary (route traffic through the
+gateway), framework-agnostic, with no prompt or source access.
 
 ## Things to do before writing code
 

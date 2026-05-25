@@ -1,9 +1,13 @@
 """Tier 2 templated recommendations.
 
-Maps detected anomaly patterns to boilerplate recommendation text.
-Cheap, instant, deterministic, covers ~80% of cases that the
-detection layer recognizes. Gemini reasoning (Tier 3, separate
-module) supersedes these when it has something more specific to say.
+One recommendation per detected *issue* (already deduped + costed by
+savings.build_issues), keyed by the issue signature. Cheap, instant,
+deterministic — covers the common cases the moment an issue is
+detected. Gemini reasoning (Tier 3) supersedes these in place with
+tailored guidance and the ready-to-apply instruction fix.
+
+The savings figures live in the recommendation's `data` JSON; the
+dashboard reads them to render the headline (% per ticket + $/mo).
 """
 
 import json
@@ -13,90 +17,63 @@ from accountant.db import (
     supersede_recommendations,
     upsert_recommendation,
 )
-from accountant.detection import anomaly_signature
 
 
-def _template_for(a: dict) -> dict | None:
-    """Return {title, description} for a known anomaly pattern, or None."""
-    if a["type"] == "class_cost_uplift":
-        return {
-            "title": (
-                f"{a['task_class']} costs {a['uplift_x']}× the "
-                f"{a['baseline_class']} baseline"
-            ),
-            "description": (
-                f"Average cost per {a['task_class']} trace is "
-                f"${a['avg_cost_usd']:.5f} across {a['n_traces']} traces, vs. "
-                f"${a['baseline_cost_usd']:.5f} for {a['baseline_class']}. "
-                f"Investigate why this task class is so much more expensive."
-            ),
-        }
-
-    if a["type"] == "repeated_tool":
-        rate_pct = int(round(a["hit_rate"] * 100))
-        return {
-            "title": (
-                f"{a['tool']} called {a['repeat_threshold']}+ times per "
-                f"{a['task_class']} ticket ({rate_pct}% of cases)"
-            ),
-            "description": _repeated_tool_advice(a),
-        }
-    return None
+def _human_class(tc: str) -> str:
+    return tc.replace("_", " ")
 
 
-def _repeated_tool_advice(a: dict) -> str:
-    """Specific guidance for known tool/class repeat patterns."""
-    tc = a["task_class"]
-    tool = a["tool"]
-    base = (
-        f"{a['traces_with_repeat']} of {a['of_total_in_class']} {tc} "
-        f"traces invoke {tool} {a['repeat_threshold']} or more times. "
-    )
-    if tool == "web_search" and tc == "refund_handling":
-        return base + (
-            "Likely fix: remove the mandatory web_search-3× rule from the "
-            "agent instruction (refund policy should resolve via kb_lookup "
-            "of /policies/refunds + customer_lookup, not via repeated open-"
-            "web search). Alternatively, cache web_search results so "
-            "redundant calls become free."
+def _template_for_issue(issue: dict) -> dict:
+    pct = int(round(issue.get("pct_reduction", 0) * 100))
+
+    if issue.get("kind") == "model_routing":
+        title = f"Run simple tickets on a cheaper model — {pct}% less per ticket"
+        description = (
+            f"{issue['n_traces']} simple tickets (password resets, account "
+            f"questions) run on the standard model. Routing them to "
+            f"{issue.get('cheap_model')} saves ~${issue['savings_per_ticket_usd']:.4f} "
+            f"per ticket — about ${issue['monthly_savings_usd']:.2f}/month at "
+            f"current volume."
         )
-    if tool == "kb_lookup" and tc == "account_question":
-        return base + (
-            "Likely fix: tighten the agent instruction so a single, "
-            "well-formed kb_lookup query is preferred over scattershot "
-            "multi-article retrieval. Consider letting the agent batch "
-            "candidate paths in one call."
+        return {"title": title, "description": description}
+
+    tc = _human_class(issue["task_class"])
+    tool = issue.get("primary_tool")
+    if issue.get("actionable") and tool:
+        title = f"{tc} costs {pct}% more than it should, per ticket"
+        description = (
+            f"Every {tc} ticket runs ~{issue['avg_repeats']:.0f} redundant "
+            f"{tool} calls. Caching them at the gateway saves about "
+            f"${issue['savings_per_ticket_usd']:.4f} per ticket — roughly "
+            f"${issue['monthly_savings_usd']:.2f}/month at current volume."
         )
-    return base + (
-        f"Investigate whether the {tool} calls are redundant; consider "
-        "caching, batching, or restructuring the agent instruction to "
-        "avoid the repetition."
-    )
+    else:
+        title = f"{tc} cost is elevated"
+        description = (
+            f"{tc} averages ${issue['current_avg_usd']:.5f} per ticket "
+            f"across {issue['n_traces']} tickets. Investigating the driver."
+        )
+    return {"title": title, "description": description}
 
 
 def generate_templated_recommendations(state: dict) -> set[str]:
-    """Write a recommendation row for each detected anomaly.
-
-    Returns the set of active signatures so the caller can supersede
-    anything no longer detected.
-    """
+    """Write one recommendation row per issue. Returns the set of active
+    signatures so the caller can supersede anything no longer detected."""
     active: set[str] = set()
     with connect() as c:
         c.execute("BEGIN")
-        for a in state.get("anomalies", []):
-            tpl = _template_for(a)
-            if tpl is None:
-                continue
-            sig = anomaly_signature(a)
+        for issue in state.get("issues", []):
+            tpl = _template_for_issue(issue)
+            sig = issue["signature"]
             active.add(sig)
             upsert_recommendation({
                 "signature": sig,
                 "source": "templated",
-                "task_class": a.get("task_class"),
-                "anomaly_type": a.get("type"),
+                "task_class": issue.get("task_class"),
+                "anomaly_type": "issue",
                 "title": tpl["title"],
                 "description": tpl["description"],
-                "data": json.dumps(a),
+                "data": json.dumps(issue),
             }, conn=c)
         supersede_recommendations(active, conn=c)
         c.execute("COMMIT")

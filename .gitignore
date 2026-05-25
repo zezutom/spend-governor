@@ -38,6 +38,10 @@ data/accountant.db-wal
 data/accountant.db-shm
 data/ingest_server.log
 
+# Observed agent's runtime instruction overrides (baseline lives in
+# code as DEFAULT_INSTRUCTION; this file holds applied optimizations)
+data/observed_config.json
+
 # Special
 gitignore
 ok

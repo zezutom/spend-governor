@@ -35,6 +35,10 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(app: FastAPI):
     ensure_initialized()
     worker_task = asyncio.create_task(worker.run_forever())
+    # Refresh recommendations from an already-populated cache on boot,
+    # so a restart (e.g. after a code change) reflects the current
+    # analysis without waiting for new traffic.
+    asyncio.create_task(worker.initial_refresh())
     log.info("worker task started")
     try:
         yield

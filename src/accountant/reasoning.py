@@ -28,7 +28,6 @@ from google import genai
 from google.genai import types
 
 from accountant.db import get_meta, set_meta, upsert_recommendation
-from accountant.detection import anomaly_signature
 
 
 log = logging.getLogger(__name__)
@@ -47,24 +46,24 @@ _in_flight: set[str] = set()
 _client: genai.Client | None = None
 
 
-# The observed agent's tunable configuration, handed to Gemini so its
-# recommendations target real levers rather than abstract advice.
-OBSERVED_AGENT_CONTEXT = """\
-The observed agent is "Helpdesk Co-Pilot", a customer-support agent for a
-SaaS product. Its entire behavior is governed by ONE instruction string
-(a system prompt) that the operator can edit. Its tools: task_classifier,
-kb_lookup (internal knowledge base), web_search (external/open web),
-customer_lookup, refund_api, ticket_update, escalate_human.
+# Context for Gemini: the Accountant is a RUNTIME GOVERNOR. It does not
+# edit prompts or touch source — it enforces economic policy inline at a
+# gateway the observed agent's tool/LLM traffic flows through. The
+# operator activates a policy; the gateway enforces it in real time.
+GOVERNOR_CONTEXT = """\
+You advise a runtime economic governor for AI agents. The governor sits
+inline (an API gateway the agent's tool and model calls route through)
+and enforces economic policies in real time — WITHOUT editing prompts or
+accessing source. Available policy types:
+- Semantic-cache a tool: serve a cached, semantically-equivalent result
+  for a repeated external call (e.g. web_search) instead of re-executing
+  it. Quality is preserved by an embedding-equivalence check.
+- Route simple requests to a cheaper model tier.
+- Cap redundant tool invocations.
 
-Levers the operator can actually pull:
-- Edit the instruction text — relax or remove a rule that forces
-  redundant tool calls; reorder or condition workflow steps.
-- The refund workflow currently MANDATES exactly three web_search calls
-  per refund ticket (covering FTC regs, SaaS norms, competitor policies)
-  before doing anything else. web_search hits the open web and is the
-  most expensive tool; kb_lookup of /policies/refunds already covers the
-  refund policy. This mandatory-3×-web_search rule is the single biggest
-  avoidable cost driver.
+The observed agent is a SaaS customer-support copilot. The detected
+issue (below) already quantifies the projected savings. Your job is the
+operator-facing rationale, not a code or prompt change.
 """
 
 
@@ -77,12 +76,10 @@ def _genai_client() -> genai.Client:
     return _client
 
 
-def _magnitude(a: dict) -> float:
-    if a["type"] == "class_cost_uplift":
-        return float(a.get("uplift_x") or 0)
-    if a["type"] == "repeated_tool":
-        return float(a.get("hit_rate") or 0)
-    return 0.0
+def _magnitude(issue: dict) -> float:
+    """Change-detection magnitude for an issue — its projected per-ticket
+    savings. Re-reason when this moves materially."""
+    return float(issue.get("savings_per_ticket_usd") or 0.0)
 
 
 def _load_reasoned() -> dict:
@@ -101,8 +98,8 @@ def _mark_reasoned(sig: str, magnitude: float) -> None:
     set_meta("reasoned_signatures", json.dumps(reasoned))
 
 
-def _anomaly_changed(sig: str, magnitude: float, reasoned: dict) -> bool:
-    """True if this anomaly is new, or its magnitude crossed the refire
+def _issue_changed(sig: str, magnitude: float, reasoned: dict) -> bool:
+    """True if this issue is new, or its magnitude crossed the refire
     threshold relative to the last time Gemini reasoned about it."""
     if sig not in reasoned:
         return True
@@ -113,31 +110,32 @@ def _anomaly_changed(sig: str, magnitude: float, reasoned: dict) -> bool:
     return ratio >= MAGNITUDE_REFIRE_RATIO or ratio <= (1 / MAGNITUDE_REFIRE_RATIO)
 
 
-def _build_prompt(a: dict) -> str:
-    return f"""You are a cost-optimization analyst for AI agents. An \
-automated detector flagged a cost anomaly in the observed agent's \
-behavior. Write one concise, actionable recommendation for the operator.
+def _build_prompt(issue: dict) -> str:
+    return f"""You advise a runtime economic governor for AI agents. A \
+detector flagged a costly execution pattern and quantified the savings \
+of a runtime policy. Write the operator-facing rationale.
 
-{OBSERVED_AGENT_CONTEXT}
+{GOVERNOR_CONTEXT}
 
-Detected anomaly (raw detector output):
-{json.dumps(a, indent=2)}
+Detected issue (deduped, with projected savings):
+{json.dumps(issue, indent=2)}
 
-Write:
-- "title": a single line (<= 90 chars) naming the problem and its cost impact.
-- "description": 2-3 sentences. State the likely ROOT CAUSE in terms of the
-  agent's instruction/workflow, then the SPECIFIC change the operator should
-  make to a named lever. Be concrete and practical — name the rule or tool,
-  not generic advice. Quote the relevant numbers from the anomaly."""
+Return:
+- "title": one line (<= 90 chars). Lead with the cost impact (percent
+  saved per ticket). Decisive, not hedged.
+- "description": 1-2 SHORT sentences. Name the wasteful pattern and the
+  runtime policy that fixes it (semantic-cache the repeated tool, or
+  route to the cheaper model). State that it needs no prompt or source
+  change. No preamble — a busy CFO reads this."""
 
 
-def _reason_sync(a: dict) -> dict | None:
+def _reason_sync(issue: dict) -> dict | None:
     """Blocking Gemini call. Returns {"title", "description"} or None."""
     try:
         client = _genai_client()
         resp = client.models.generate_content(
             model=REASONING_MODEL,
-            contents=_build_prompt(a),
+            contents=_build_prompt(issue),
             config=types.GenerateContentConfig(
                 temperature=0.3,
                 response_mime_type="application/json",
@@ -161,34 +159,36 @@ def _reason_sync(a: dict) -> dict | None:
             return None
         return {"title": title[:200], "description": description}
     except Exception:
-        log.exception("Gemini reasoning call failed for %s", anomaly_signature(a))
+        log.exception("Gemini reasoning call failed for %s", issue.get("signature"))
         return None
 
 
-async def _reason_and_store(a: dict) -> None:
-    sig = anomaly_signature(a)
+async def _reason_and_store(issue: dict) -> None:
+    sig = issue["signature"]
     try:
-        result = await asyncio.to_thread(_reason_sync, a)
+        result = await asyncio.to_thread(_reason_sync, issue)
         if not result:
             return
         upsert_recommendation({
             "signature": sig,
             "source": "gemini",
-            "task_class": a.get("task_class"),
-            "anomaly_type": a.get("type"),
+            "task_class": issue.get("task_class"),
+            "anomaly_type": issue.get("kind", "issue"),
             "title": result["title"],
             "description": result["description"],
-            "data": json.dumps(a),
+            # Carry the full issue (incl. savings) so the dashboard
+            # renders the same headline numbers on a reasoned card.
+            "data": json.dumps(issue),
         })
-        _mark_reasoned(sig, _magnitude(a))
+        _mark_reasoned(sig, _magnitude(issue))
         log.info("Gemini reasoned about %s", sig)
     finally:
         _in_flight.discard(sig)
 
 
-def schedule_if_changed(anomalies: list[dict]) -> None:
-    """Schedule Gemini reasoning for any anomaly that is new or has
-    materially changed magnitude since the last reasoning pass.
+def schedule_if_changed(issues: list[dict]) -> None:
+    """Schedule Gemini reasoning for any issue that is new or whose
+    projected savings changed materially since the last pass.
 
     Non-blocking: spawns asyncio tasks. Skips entirely while a bulk
     backfill is in progress (templated cards carry the load during
@@ -203,16 +203,18 @@ def schedule_if_changed(anomalies: list[dict]) -> None:
             pass
 
     reasoned = _load_reasoned()
-    for a in anomalies or []:
-        sig = anomaly_signature(a)
+    for issue in issues or []:
+        # Only reason about actionable issues — ones where there's a fix
+        # to propose and savings to quote.
+        if not issue.get("actionable"):
+            continue
+        sig = issue["signature"]
         if sig in _in_flight:
             continue
-        if _anomaly_changed(sig, _magnitude(a), reasoned):
+        if _issue_changed(sig, _magnitude(issue), reasoned):
             _in_flight.add(sig)
             try:
-                asyncio.create_task(_reason_and_store(a))
+                asyncio.create_task(_reason_and_store(issue))
             except RuntimeError:
-                # No running loop (e.g. called from a sync context) —
-                # drop the in-flight marker so a later call retries.
                 _in_flight.discard(sig)
                 log.warning("no running loop; skipped reasoning for %s", sig)

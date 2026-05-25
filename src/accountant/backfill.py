@@ -126,6 +126,7 @@ def _phoenix_row_to_normalized(row) -> dict | None:
         ),
         "tool_name": _attr(row, "attributes.tool.name", "tool.name"),
         "output_value": _attr(row, "attributes.output.value", "output.value"),
+        "cache_hit": bool(_attr(row, "attributes.governor.cache_hit", "governor.cache_hit")),
         "prompt_tokens": _attr(row, "attributes.llm.token_count.prompt"),
         "cached_input_tokens": _attr(
             row,
@@ -516,18 +517,13 @@ async def run_backfill(hours: int | None = None) -> None:
                 f"{total_traces:,} traces, {processed} chunks."
             ),
         })
-        final_snap = _write_live_state(traces_in_memory, ingest)
-        # Persist templated recommendations to the recommendations table
-        # for cross-session retention.
-        await asyncio.to_thread(
-            generate_templated_recommendations,
-            {"anomalies": final_snap.get("anomalies", [])},
-        )
-        # Tier 3: now that the full picture is loaded and status is
-        # 'complete', do one Gemini reasoning pass over the detected
-        # anomalies. Templated cards appear instantly; reasoned ones
-        # supersede them as Gemini responds.
-        reasoning.schedule_if_changed(final_snap.get("anomalies", []))
+        _write_live_state(traces_in_memory, ingest)
+        # Run detection from the DB to compute deduped, costed issues
+        # (build_issues needs the aggregates + window), then generate
+        # templated recommendations and kick off Gemini reasoning.
+        det = await asyncio.to_thread(run_detection)
+        await asyncio.to_thread(generate_templated_recommendations, det)
+        reasoning.schedule_if_changed(det.get("issues", []))
         log.info(
             "backfill complete: %s spans, %s traces, %s chunks",
             total_spans, total_traces, processed,

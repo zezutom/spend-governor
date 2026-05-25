@@ -82,7 +82,12 @@ def _cost_for_span(raw: dict) -> tuple[float, float]:
             llm = compute_llm_cost(usage, MODELS[model])["total_usd"]
 
     if kind == "TOOL":
-        tool = TOOL_PRICES.get(raw.get("tool_name") or "", 0.0)
+        # A governor cache hit means the real (paid) call never ran —
+        # price it at $0 so the trace-measured cost reflects the saving.
+        if raw.get("cache_hit"):
+            tool = 0.0
+        else:
+            tool = TOOL_PRICES.get(raw.get("tool_name") or "", 0.0)
 
     return llm, tool
 
@@ -104,6 +109,7 @@ def _row_for_span(raw: dict) -> dict:
         "end_time": raw.get("end_time"),
         "tool_name": tool_name,
         "classifier_task_class": classifier_tc,
+        "cache_hit": 1 if raw.get("cache_hit") else 0,
         "prompt_tokens": int(raw.get("prompt_tokens") or 0),
         "cached_input_tokens": int(raw.get("cached_input_tokens") or 0),
         "completion_tokens": int(raw.get("completion_tokens") or 0),
@@ -181,6 +187,24 @@ def _refresh_state() -> dict:
     return state
 
 
+async def initial_refresh() -> None:
+    """On startup, if the cache already has spans (an existing account,
+    no backfill coming), recompute state + recommendations + reasoning
+    once. Without this, a restart with a populated cache shows whatever
+    recommendations were last written — stale if the analysis code
+    changed and there's no new live traffic to trigger a refresh."""
+    with connect() as c:
+        n = int(c.execute("SELECT COUNT(*) AS n FROM spans").fetchone()["n"] or 0)
+    if n == 0:
+        return  # empty cache → onboarding backfill (re)generates everything
+    log.info("initial refresh over %s existing spans", n)
+    try:
+        state = _refresh_state()
+        reasoning.schedule_if_changed(state.get("issues", []))
+    except Exception:
+        log.exception("initial refresh failed")
+
+
 async def run_forever(idle_sleep: float = 0.1, batch_size: int = 20) -> None:
     log.info("worker starting")
     while True:
@@ -208,8 +232,8 @@ async def run_forever(idle_sleep: float = 0.1, batch_size: int = 20) -> None:
         if any_ok:
             try:
                 state = _refresh_state()
-                # Tier 3: schedule Gemini reasoning if the anomaly
-                # picture changed. Non-blocking — won't stall the loop.
-                reasoning.schedule_if_changed(state.get("anomalies", []))
+                # Tier 3: schedule Gemini reasoning if the issue picture
+                # changed. Non-blocking — won't stall the loop.
+                reasoning.schedule_if_changed(state.get("issues", []))
             except Exception:
                 log.exception("state refresh failed")

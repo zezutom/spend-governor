@@ -16,13 +16,15 @@ def init_telemetry() -> None:
     tracer_provider = register(project_name=project_name, auto_instrument=True)
 
     # If ACCOUNTANT_INGEST_URL is set, fan-out the same spans to the
-    # Accountant's real-time ingest endpoint as a second processor. The
-    # observed agent keeps emitting to Phoenix regardless; this is
-    # additive, not a replacement.
+    # Accountant's real-time ingest endpoint as a SECOND processor.
+    # Crucial: replace_default_processor=False — Phoenix's TracerProvider
+    # otherwise removes its own exporter when you add one, which would
+    # stop traces reaching Phoenix entirely. The observed agent must keep
+    # emitting to Phoenix (it's the system of record / trace-proof).
     extra_exporter = build_accountant_exporter()
     if extra_exporter is not None:
         provider = trace.get_tracer_provider()
-        if hasattr(provider, "add_span_processor"):
-            provider.add_span_processor(BatchSpanProcessor(extra_exporter))
-        elif hasattr(tracer_provider, "add_span_processor"):
-            tracer_provider.add_span_processor(BatchSpanProcessor(extra_exporter))
+        provider.add_span_processor(
+            BatchSpanProcessor(extra_exporter),
+            replace_default_processor=False,
+        )
