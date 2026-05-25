@@ -26,6 +26,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 from phoenix.client import Client
 
+from accountant import reasoning
 from accountant.db import connect, set_meta, upsert_span
 from accountant.detection import (
     _aggregate_by_class,
@@ -516,14 +517,17 @@ async def run_backfill(hours: int | None = None) -> None:
             ),
         })
         final_snap = _write_live_state(traces_in_memory, ingest)
-        # Persist recommendations to the recommendations table for
-        # cross-session retention. Live cards still come from
-        # live_state.anomalies, but the table holds first-seen / updated
-        # timestamps for the Day-7+ approve/reject flow.
+        # Persist templated recommendations to the recommendations table
+        # for cross-session retention.
         await asyncio.to_thread(
             generate_templated_recommendations,
             {"anomalies": final_snap.get("anomalies", [])},
         )
+        # Tier 3: now that the full picture is loaded and status is
+        # 'complete', do one Gemini reasoning pass over the detected
+        # anomalies. Templated cards appear instantly; reasoned ones
+        # supersede them as Gemini responds.
+        reasoning.schedule_if_changed(final_snap.get("anomalies", []))
         log.info(
             "backfill complete: %s spans, %s traces, %s chunks",
             total_spans, total_traces, processed,
@@ -543,12 +547,21 @@ async def run_backfill(hours: int | None = None) -> None:
 
 
 def start_backfill_if_idle() -> dict:
-    """Start backfill if no task is already running. Idempotent — safe
-    to call repeatedly (e.g. from the dashboard on each rerun)."""
+    """Start the onboarding backfill if no task is running AND the cache
+    is empty. Idempotent — safe to call repeatedly (e.g. from the
+    dashboard on each rerun).
+
+    The empty-cache guard means a normal restart with synced data never
+    re-imports: onboarding is a new-account, empty-cache operation only.
+    To force a fresh import, delete data/accountant.db first.
+    """
     global _active_task
 
     if _active_task is not None and not _active_task.done():
         return {"status": "already_running"}
+
+    if not cache_is_empty():
+        return {"status": "skipped", "reason": "cache already populated"}
 
     hours = int(BACKFILL_HOURS_ENV) if BACKFILL_HOURS_ENV else None
     _active_task = asyncio.create_task(run_backfill(hours=hours))

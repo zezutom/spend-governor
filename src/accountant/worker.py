@@ -27,6 +27,7 @@ from accountant.db import (
     set_meta,
     upsert_span,
 )
+from accountant import reasoning
 from accountant.detection import run_detection
 from accountant.pricing.gemini import MODELS
 from accountant.pricing.tools import TOOL_PRICES
@@ -127,10 +128,13 @@ def _process_payload(payload_json: str) -> int:
     return len(spans)
 
 
-def _refresh_state() -> None:
+def _refresh_state() -> dict:
     """Recompute live_state from the spans table after a worker batch
     has landed. Writes to the same single live_state key the backfill
     uses, so the dashboard's UI elements all read from one source.
+
+    Returns the detection state (with `anomalies`) so the caller can
+    schedule Gemini reasoning on state changes.
     """
     state = run_detection()
     generate_templated_recommendations(state)
@@ -174,6 +178,7 @@ def _refresh_state() -> None:
         "anomalies": state["anomalies"],
     }
     set_meta("live_state", json.dumps(live))
+    return state
 
 
 async def run_forever(idle_sleep: float = 0.1, batch_size: int = 20) -> None:
@@ -202,6 +207,9 @@ async def run_forever(idle_sleep: float = 0.1, batch_size: int = 20) -> None:
 
         if any_ok:
             try:
-                _refresh_state()
+                state = _refresh_state()
+                # Tier 3: schedule Gemini reasoning if the anomaly
+                # picture changed. Non-blocking — won't stall the loop.
+                reasoning.schedule_if_changed(state.get("anomalies", []))
             except Exception:
                 log.exception("state refresh failed")
