@@ -44,4 +44,4 @@ data/observed_config.json
 
 # Special
 gitignore
-ok
+accountant.db.*
