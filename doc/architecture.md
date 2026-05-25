@@ -1,7 +1,10 @@
 # Architecture
 
-Two agents, with the observed agent's traces flowing to the Accountant
-by two paths: a real-time event stream and a historical store.
+Agent Accountant is a runtime economic **governor**, not an analytics
+tool. It works in two planes: a **learning plane** that reads traces and
+decides what to govern, and an **enforcement plane** — an inline gateway
+the observed agent's traffic flows through — that intervenes in real
+time. It never edits prompts or touches source.
 
 ## Components
 
@@ -19,7 +22,32 @@ for the tools and the agent instruction.
 Every LLM call and every tool call becomes an OpenTelemetry span with
 token counts, latencies, and structured input/output in
 OpenInference's semantic conventions. The agent emits each span to
-**two destinations at once** (see "Data flow" below).
+**two destinations at once** (see "Data flow" below). Its tool and
+model calls also flow through the **governor** (see below) — in the
+demo via in-process wrappers + an ADK `before_model_callback`, the
+local stand-in for the network gateway a production deployment would
+route traffic through.
+
+### The governor (enforcement plane)
+
+`src/governor/` — the inline layer that acts on execution in real time.
+Self-contained: it depends on neither the Accountant nor the observed
+agent's internals.
+
+- `cache.py` — semantic cache. Serves a tool result only when the new
+  query is embedding-equivalent to a prior one (cosine ≥ threshold);
+  embeddings memoized by exact string. The equivalence check is the
+  quality guardrail — genuinely different queries still execute.
+- `governor.py` — wraps tool calls (semantic-cache interception, tagging
+  the trace span `governor.cache_hit` and pricing it $0) and routes
+  simple requests to a cheaper model via a `before_model_callback`
+  (tagging `governor.model_routed`). Policy-driven; no prompt/source access.
+- `store.py` — operator-activated policies + an append-only intervention
+  log (every action, with cost avoided) + policy activation timestamps.
+
+The governor only acts on an **operator-activated policy**. Activation
+is a runtime control the customer *can* grant (route traffic through the
+gateway) — unlike editing prompts or production code, which they won't.
 
 ### The trace bus (Phoenix)
 
@@ -34,79 +62,77 @@ spans to the Accountant. That's why the observed agent fans out
 directly (real-time path) and the Accountant backfills from Phoenix
 on first run (historical path).
 
-### The Accountant
+### The Accountant (learning plane)
 
-Attaches cost to every span, aggregates to per-trace and per-task-type
-unit economics, detects anomalies, and surfaces remediation
-recommendations on a live dashboard.
+Attaches cost to every span, aggregates to per-task-type unit
+economics, detects economically irrational patterns, quantifies the
+savings of a runtime policy, and — once a policy is active —
+**verifies the savings from the traces**.
 
-Lives in `src/accountant/`. Two layers:
+Lives in `src/accountant/`:
 
 **Cost core (pure, no I/O):**
 - `cost.py` — per-span / per-trace cost computation
-- `pricing/gemini.py` — Gemini 2.5 Flash & Pro per-1M-token rates
-- `pricing/tools.py` — per-call rates for the seven observed-agent tools
-- `verify_cost.py` — regression check for the math
+- `pricing/gemini.py` — Gemini Flash / Pro / Flash-Lite per-1M-token rates
+- `pricing/tools.py` — per-call rates for the observed-agent tools
 
-**Real-time pipeline (see [realtime-pipeline.md](./realtime-pipeline.md)):**
+**Detection, costing, and serving:**
 - `ingest_server.py` — FastAPI on `:8765`; receives spans, enqueues them
-- `db.py` — SQLite store (outbox queue, spans, recommendations, live state)
-- `worker.py` — drains the outbox, costs each span, refreshes state
-- `detection.py` — statistical anomaly detectors
-- `recommendations.py` — templated remediation text per anomaly
+- `db.py` — SQLite store (outbox, spans incl. `cache_hit`, recommendations, live state)
+- `worker.py` — drains the outbox, costs each span (cached calls priced $0), refreshes state
+- `detection.py` — statistical detectors over the trace set
+- `savings.py` — dedupes detector output into one costed **issue** per task class (+ a model-routing issue); projects per-ticket % and monthly $
+- `recommendations.py` / `reasoning.py` — turn issues into operator-facing policy recommendations (Gemini authors the rationale; it does **not** rewrite prompts)
+- `verification.py` — trace-measured cost-per-ticket before vs. after a policy's activation time — the audit proof
 - `backfill.py` — historical import from Phoenix for new accounts
-- `dashboard.py` — Streamlit UI; single command that boots the whole stack
+- `dashboard.py` — Streamlit UI; one command boots the whole stack
 
 **CLI / batch tools (secondary):**
-- `inspect_traces.py` + `analysis.py` — one-shot bulk pull from Phoenix,
-  prints per-trace and by-class breakdowns
-- `agent.py` + `main.py` — an ADK agent that reads traces via the Phoenix
-  MCP server and writes a JSON report (the conversational analysis path)
+- `inspect_traces.py` + `analysis.py` — one-shot bulk pull + breakdown
+- `agent.py` + `main.py` — an ADK agent that reads traces via Phoenix MCP and writes a JSON report
 
-The Gemini-driven reasoning layer that turns templated recommendations
-into individually-authored ones, and the approval-to-config-write loop,
-are in development.
-
-See [cost-model.md](./cost-model.md) for how cost attribution works.
+See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
+[cost-model.md](./cost-model.md) for cost attribution.
 
 ## Data flow
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  src/observed/  (Helpdesk Co-Pilot)                               │
-│  ADK agent + Gemini 2.5 Flash + 7 synthetic tools                 │
-│  emits each OTEL span to TWO exporters:                           │
+│  OBSERVED AGENT  — tool & model calls flow through the GOVERNOR    │
+│  (cache redundant tools · route simple reqs to cheaper model)      │
+│  emits each OTEL span — incl. governor.cache_hit / model_routed —  │
+│  to TWO exporters at once:                                         │
 └───────────────┬──────────────────────────────┬───────────────────┘
-                │ (1) historical                │ (2) real-time
-                │ arize-phoenix-otel            │ AccountantHTTPExporter
+                │ (1) Phoenix (system of record)│ (2) real-time
                 ▼                                ▼
 ┌─────────────────────────────┐   ┌──────────────────────────────────┐
 │  Phoenix Cloud              │   │  POST /ingest  (FastAPI :8765)    │
-│  project: agent-accountant  │   │  → transactional outbox INSERT    │
-│  durable store, MCP, SDK    │   │  → 200 immediately                │
-└───────────────┬─────────────┘   └───────────────┬──────────────────┘
-                │ backfill.py (new-account             │ worker.py
-                │  onboarding: 10-min chunks)          │  drains outbox
-                ▼                                       ▼
+│  durable store · MCP · SDK  │   │  → outbox INSERT → 200            │
+│  (filter governor.* tags)   │   └───────────────┬──────────────────┘
+└───────────────┬─────────────┘                   │ worker.py drains;
+                │ backfill (new account)           │ cached calls priced $0
+                ▼                                  ▼
         ┌───────────────────────────────────────────────────────┐
-        │  SQLite (db.py): spans + recommendations + live_state │
-        │  cost attached per span via cost.py                   │
-        │  detection.py + recommendations.py refresh live_state │
+        │  SQLite: spans · live_state · policies · interventions │
+        │  detection → savings (issues) → recommendations        │
         └───────────────────────────┬───────────────────────────┘
-                                     │ one read
-                                     ▼
-                          ┌────────────────────────┐
-                          │  dashboard.py          │
-                          │  (Streamlit, :8501)    │
-                          │  live counters, by-    │
-                          │  class table, rec cards│
-                          └────────────────────────┘
+                       activate policy │   ▲ reads
+                                       ▼   │
+                          ┌────────────────────────────┐
+                          │  dashboard.py (Streamlit)   │
+                          │  hero: avoidable waste / $   │
+                          │  saved · policy cards ·      │
+                          │  trace-verified before/after │
+                          └──────────────┬──────────────┘
+                                         │ Activate policy → governor store
+                                         ▼  (governor reads it, enforces live)
 ```
 
-Both ingest paths converge on the same SQLite `spans` table. The
-real-time path keeps the dashboard current as the observed agent runs;
-the backfill path populates history the first time a new account
-connects (empty cache).
+The loop: traces → detect & quantify → operator activates a policy →
+the governor enforces it on live traffic → the optimized calls are
+re-traced (tagged) → the Accountant re-measures the before/after from
+those traces. The savings are proven from the system of record, not
+claimed.
 
 ## Stack as built
 
@@ -120,22 +146,26 @@ connects (empty cache).
 - **Package manager:** [uv](https://docs.astral.sh/uv/)
 - **License:** MIT
 
-(The README's "Built with" section reflects the planned production
-deployment — Cloud Run, Firestore, Agent Builder. The stack above is
-what's wired up today. The SQLite store stands in for what would be
-BigQuery/Firestore in production.)
+(In production the inline governor is a network gateway on Cloud Run and
+the store is a managed queue + BigQuery; here they're in-process + SQLite
+so the whole demo runs from one command.)
 
 ## Boundaries
 
-- **No real external calls in the observed agent.** The seven tools
-  all return synthetic data — reproducible, no accidental side effects.
-- **The Accountant reads Phoenix, never writes to it.** Phoenix is
-  append-only from the Accountant's perspective.
-- **Cost computation is deterministic and stateless.** `cost.py` has
-  no I/O, no caching — same usage metadata and prices in, same
-  breakdown out.
-- **The SQLite cache is disposable.** It's rebuilt from the real-time
-  stream plus the Phoenix backfill; it is gitignored and safe to delete.
+- **The governor never edits prompts or source.** It acts only at the
+  traffic boundary, on operator-activated policies. Integration is one
+  hop (route traffic through the gateway), framework-agnostic.
+- **Quality is guarded.** A cached result is served only when the new
+  query is semantically equivalent to a prior one; only low-risk task
+  types are routed to the cheaper model. "Cost down, quality held" is
+  the contract.
+- **Savings are proven, not claimed.** Realized savings come from the
+  governor's intervention log; verified savings are re-measured from the
+  traces (before vs. after activation). Optimized calls are tagged in
+  Phoenix (`governor.cache_hit`, `governor.model_routed`).
+- **No real external calls in the observed agent.** Its tools return
+  synthetic data — reproducible, no accidental side effects.
+- **The SQLite cache is disposable** — rebuilt from the live stream plus
+  the Phoenix backfill; gitignored, safe to delete.
 - **One source of truth for the UI.** Every dashboard element reads a
-  single `live_state` blob, computed from one in-memory trace store —
-  see [realtime-pipeline.md](./realtime-pipeline.md).
+  single `live_state` blob — see [realtime-pipeline.md](./realtime-pipeline.md).

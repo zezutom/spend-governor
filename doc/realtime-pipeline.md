@@ -32,6 +32,13 @@ The second exporter activates only when `ACCOUNTANT_INGEST_URL` is set.
 When it's unset, the agent logs a one-line notice and emits to Phoenix
 only — so a missing env var is visible, not a silent no-op.
 
+> **Gotcha:** Phoenix's `TracerProvider.add_span_processor` defaults to
+> `replace_default_processor=True`, which shuts down Phoenix's own
+> exporter when you add a second one. We pass
+> `replace_default_processor=False` so both Phoenix and the Accountant
+> receive every span — Phoenix is the system of record and the audit
+> proof, so it must keep receiving traffic.
+
 Export is best-effort: if the Accountant is down, the export fails, OTel
 logs a warning, and Phoenix still receives everything. (A production
 emitter would need a durable local queue; in this setup both processes
@@ -73,12 +80,15 @@ worker write concurrently without blocking each other.
 | Table | Purpose |
 |-------|---------|
 | `span_outbox` | the queue — incoming span batches awaiting processing |
-| `spans` | every ingested span, with cost already attached |
-| `recommendations` | active remediations, keyed by anomaly signature (cross-session persistence) |
+| `spans` | every ingested span, with cost attached (incl. `cache_hit`, priced $0) |
+| `recommendations` | one costed issue per task class, keyed by issue signature |
+| `governor_policies` | operator-activated rules the governor enforces (with activation time) |
+| `governor_interventions` | append-only log of every governor action + cost avoided |
 | `state_meta` | key/value store; holds the `live_state` blob the dashboard reads |
 
-WAL mode is enabled so the receiver and worker (and the backfill task)
-can write without blocking each other.
+WAL mode is enabled so the receiver, worker, backfill, and the governor
+(running in the observed agent's process) can all touch the store
+without blocking each other.
 
 ## Onboarding backfill (`backfill.py`)
 
@@ -126,20 +136,47 @@ Both writers use the same key:
 - `backfill.py` writes `live_state` per span during onboarding.
 - `worker.py` writes `live_state` after each live batch.
 
-## Detection & recommendations
+## Detect → quantify → activate → enforce → verify
 
-`detection.py` runs two statistical detectors over the trace set:
+This is the product loop. Each step:
 
-- **`class_cost_uplift`** — a task class whose average cost is ≥ 2.0× the
-  `password_reset` baseline.
-- **`repeated_tool`** — a tool fired ≥ 3 times within a single trace, in
-  ≥ 10% of that class's traces.
+**Detect** (`detection.py`) — two statistical detectors over the traces:
+- `class_cost_uplift` — a task class averaging ≥ 2.0× the `password_reset` baseline.
+- `repeated_tool` — a tool fired ≥ 3 times within a trace, in ≥ 10% of that class.
 
-`recommendations.py` maps each detected anomaly signature to templated
-remediation text (e.g. refund/`web_search` → "remove the mandatory
-3× web_search rule, or cache web_search"). Cards render with a
-`📋 pattern` badge. The Gemini-authored variant (`🤖 reasoned`) is in
-development.
+**Quantify** (`savings.py`) — dedupe the raw detector output into **one
+costed issue per task class** (a refund's cost-uplift + its repeated
+web_search collapse into a single issue), plus a model-routing issue for
+simple classes. Each issue carries projected per-ticket % and a monthly
+$ projection from the observed traffic window. `recommendations.py` /
+`reasoning.py` turn issues into operator-facing cards (Gemini authors the
+rationale; `📋 pattern` upgrades to `🤖 reasoned`).
+
+**Activate** — the operator clicks **Activate policy** on a card. That
+writes a `governor_policies` row (e.g. `cache_tool:web_search`,
+`route_model:simple`) with the activation timestamp. No prompt or source
+change — a runtime control the customer can grant.
+
+**Enforce** (`src/governor/`) — the governor runs inline in the observed
+agent's call path. On an active policy it:
+- **Caches tools** — before executing a governed tool (e.g. `web_search`),
+  it checks the semantic cache (`cache.py`). On a hit (query embedding
+  cosine ≥ threshold against a prior call) it returns the cached result,
+  the real paid call never fires, and it tags the span
+  `governor.cache_hit` so the cost model prices it **$0**. Different
+  queries miss and execute normally — the quality guardrail.
+- **Routes models** — a `before_model_callback` downgrades simple
+  requests to a cheaper model and tags the span `governor.model_routed`.
+- Records each action in `governor_interventions` with the cost avoided.
+
+**Verify** (`verification.py`) — the audit proof. For the task types a
+policy affects, it compares average cost-per-ticket **before** the
+policy's activation time vs **after**, straight from the traces. Because
+cached calls are priced $0 and routed calls carry the cheaper model, the
+"after" cost genuinely drops. The dashboard shows this beside the
+governor's own realized-savings log; when they agree, the number is
+trustworthy. Optimized calls are filterable in Phoenix by the
+`governor.*` tags.
 
 ## Accuracy
 
