@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 from phoenix.client import Client
 
-from accountant.cost import compute_trace_cost
+from accountant.pricing.cost import compute_trace_cost
 from accountant.pricing.gemini import MODELS
 from accountant.pricing.tools import TOOL_PRICES
 

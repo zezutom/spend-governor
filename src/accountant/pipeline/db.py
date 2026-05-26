@@ -22,7 +22,7 @@ from pathlib import Path
 
 DEFAULT_DB_PATH = os.environ.get(
     "ACCOUNTANT_DB",
-    str(Path(__file__).resolve().parents[2] / "data" / "accountant.db"),
+    str(Path(__file__).resolve().parents[3] / "data" / "accountant.db"),
 )
 
 

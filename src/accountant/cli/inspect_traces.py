@@ -8,7 +8,7 @@ signals are (a) the % of refund traces with >= 3 web_search calls and
 — the anti-pattern, in dollars.
 
 Run with:
-    uv run python -m accountant.inspect_traces [--since 1h] [--show N] [--limit N]
+    uv run python -m accountant.cli.inspect_traces [--since 1h] [--show N] [--limit N]
 
 --since accepts a relative window: '30m', '4h', '7d'. Without it, all
 spans returned (up to --limit) are included; this is useful for a broad
@@ -34,7 +34,7 @@ PROJECT_NAME = os.environ.get("PHOENIX_PROJECT_NAME", "agent-accountant")
 
 from phoenix.client import Client
 
-from accountant.cost import compute_trace_cost
+from accountant.pricing.cost import compute_trace_cost
 from accountant.pricing.gemini import MODELS
 from accountant.pricing.tools import TOOL_PRICES
 

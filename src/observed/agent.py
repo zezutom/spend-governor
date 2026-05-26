@@ -1,6 +1,12 @@
 from google.adk.agents import LlmAgent
 
-from governor.governor import govern_tools, model_routing_callback
+from accountant.wrapper.wrapper import (
+    cost_after_model_callback,
+    model_routing_callback,
+    trace_finalize_callback,
+    trace_start_callback,
+    wrap_tools,
+)
 from observed.config import load_instruction
 from observed.tools import (
     customer_lookup,
@@ -14,12 +20,12 @@ from observed.tools import (
 
 
 def build_agent() -> LlmAgent:
-    # Tools are wrapped by the runtime governor (the enforcement-plane
-    # stand-in): their execution flows through the boundary where
-    # active economic policies — semantic-cache interception, etc. —
-    # apply. Harmless when no policy is active. The instruction is the
-    # baseline; the governor never edits it.
-    tools = govern_tools([
+    # Tool and model calls flow through the Accountant wrapper (the
+    # enforcement-plane stand-in): active policies apply at the boundary
+    # and every span is annotated with the accountant.* schema. Harmless
+    # when no policy is active. The instruction is the baseline; the
+    # wrapper never edits it.
+    tools = wrap_tools([
         task_classifier,
         kb_lookup,
         web_search,
@@ -33,8 +39,12 @@ def build_agent() -> LlmAgent:
         model="gemini-2.5-flash",
         instruction=load_instruction(),
         tools=tools,
-        # Enforcement hook for model routing — downgrades simple requests
-        # to a cheaper model when a route_model policy is active. No-op
-        # otherwise.
+        # before_model decides model routing; after_model computes the
+        # LLM-call cost (baseline vs actual) once token counts are known.
         before_model_callback=model_routing_callback,
+        after_model_callback=cost_after_model_callback,
+        # Open a per-trace savings accumulator and flush it onto the root
+        # span at finalization (trace-level accountant.* rollups).
+        before_agent_callback=trace_start_callback,
+        after_agent_callback=trace_finalize_callback,
     )

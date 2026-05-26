@@ -9,7 +9,7 @@
 # The backup means an undo is instant instead of a slow Phoenix
 # re-import. Relaunch yourself afterwards to watch the backfill live:
 #
-#   uv run streamlit run src/accountant/dashboard.py
+#   uv run streamlit run src/accountant/ui/dashboard.py
 #
 set -euo pipefail
 
@@ -37,4 +37,4 @@ else
   echo "No DB at $DB — already empty (will onboard as a new account)."
 fi
 
-echo "Relaunch:  uv run streamlit run src/accountant/dashboard.py"
+echo "Relaunch:  uv run streamlit run src/accountant/ui/dashboard.py"

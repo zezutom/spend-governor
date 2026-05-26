@@ -14,11 +14,11 @@ import asyncio
 import json
 import logging
 
-from accountant.cost import (
+from accountant.pricing.cost import (
     TokenUsage,
     compute_llm_cost,
 )
-from accountant.db import (
+from accountant.pipeline.db import (
     claim_pending_batches,
     connect,
     get_meta,
@@ -27,11 +27,11 @@ from accountant.db import (
     set_meta,
     upsert_span,
 )
-from accountant import reasoning
-from accountant.detection import run_detection
+from accountant.analytics import reasoning
+from accountant.analytics.detection import run_detection
 from accountant.pricing.gemini import MODELS
 from accountant.pricing.tools import TOOL_PRICES
-from accountant.recommendations import generate_templated_recommendations
+from accountant.analytics.recommendations import generate_templated_recommendations
 
 
 log = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def _cost_for_span(raw: dict) -> tuple[float, float]:
             llm = compute_llm_cost(usage, MODELS[model])["total_usd"]
 
     if kind == "TOOL":
-        # A governor cache hit means the real (paid) call never ran —
+        # A wrapper cache hit means the real (paid) call never ran —
         # price it at $0 so the trace-measured cost reflects the saving.
         if raw.get("cache_hit"):
             tool = 0.0
@@ -156,7 +156,7 @@ def _refresh_state() -> dict:
             pass
 
     # Count spans directly (run_detection's trace list doesn't expose this).
-    from accountant.db import connect as _connect
+    from accountant.pipeline.db import connect as _connect
     with _connect() as c:
         row = c.execute("SELECT COUNT(*) AS n FROM spans").fetchone()
         total_spans = int(row["n"] or 0)

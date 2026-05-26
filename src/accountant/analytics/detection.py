@@ -16,7 +16,7 @@ import json
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
-from accountant.db import connect
+from accountant.pipeline.db import connect
 
 
 UPLIFT_THRESHOLD_X = 2.0
@@ -187,7 +187,7 @@ def run_detection() -> dict:
     # Group raw anomalies into one actionable issue per task class, with
     # savings projected over the observed window. Imported here to keep
     # the dependency one-way (savings -> pricing only).
-    from accountant.savings import build_issues
+    from accountant.analytics.savings import build_issues
     issues = build_issues(by_class, anomalies, window_days)
     return {
         "now": datetime.now(timezone.utc).isoformat(),

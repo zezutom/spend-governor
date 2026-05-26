@@ -12,7 +12,7 @@ dashboard reads them to render the headline (% per ticket + $/mo).
 
 import json
 
-from accountant.db import (
+from accountant.pipeline.db import (
     connect,
     supersede_recommendations,
     upsert_recommendation,

@@ -1,18 +1,18 @@
 """Trace-measured before/after verification.
 
-The governor's intervention log says what it *thinks* it saved. This
+The wrapper's intervention log says what it *thinks* it saved. This
 module proves it from the customer's own traces: for the task types a
 policy affects, it compares the actual average cost-per-ticket before
 the policy was activated vs. after — where "after" traces already carry
-the governor's effect (flash-lite model, $0 cached tool calls).
+the wrapper's effect (flash-lite model, $0 cached tool calls).
 
-When the measured drop matches the governor's reported savings, the
+When the measured drop matches the wrapper's reported savings, the
 number is trustworthy, not claimed.
 """
 
 from datetime import datetime, timezone
 
-from accountant.db import connect
+from accountant.pipeline.db import connect
 
 
 def _parse(ts: str | None) -> datetime | None:

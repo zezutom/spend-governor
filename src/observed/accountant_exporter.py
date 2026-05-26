@@ -61,7 +61,7 @@ def _serialize_span(span: ReadableSpan) -> dict:
         ),
         "tool_name": _attr(attrs, "tool.name", "attributes.tool.name"),
         "output_value": _attr(attrs, "output.value", "attributes.output.value"),
-        "cache_hit": bool(_attr(attrs, "governor.cache_hit")),
+        "cache_hit": bool(_attr(attrs, "accountant.cache_hit")),
         "prompt_tokens": _attr(attrs, "llm.token_count.prompt"),
         "cached_input_tokens": _attr(
             attrs,

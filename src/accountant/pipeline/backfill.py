@@ -26,15 +26,15 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 from phoenix.client import Client
 
-from accountant import reasoning
-from accountant.db import connect, set_meta, upsert_span
-from accountant.detection import (
+from accountant.analytics import reasoning
+from accountant.pipeline.db import connect, set_meta, upsert_span
+from accountant.analytics.detection import (
     _aggregate_by_class,
     _detect_anomalies,
     run_detection,
 )
-from accountant.recommendations import generate_templated_recommendations
-from accountant.worker import _row_for_span
+from accountant.analytics.recommendations import generate_templated_recommendations
+from accountant.pipeline.worker import _row_for_span
 
 
 log = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ def _phoenix_row_to_normalized(row) -> dict | None:
         ),
         "tool_name": _attr(row, "attributes.tool.name", "tool.name"),
         "output_value": _attr(row, "attributes.output.value", "output.value"),
-        "cache_hit": bool(_attr(row, "attributes.governor.cache_hit", "governor.cache_hit")),
+        "cache_hit": bool(_attr(row, "attributes.accountant.cache_hit", "accountant.cache_hit")),
         "prompt_tokens": _attr(row, "attributes.llm.token_count.prompt"),
         "cached_input_tokens": _attr(
             row,

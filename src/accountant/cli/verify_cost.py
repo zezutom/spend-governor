@@ -1,9 +1,9 @@
 """Sanity-check the cost computation against a known usage_metadata.
 
-Run with: uv run python -m accountant.verify_cost
+Run with: uv run python -m accountant.cli.verify_cost
 """
 
-from accountant.cost import compute_llm_cost, token_usage_from_gemini
+from accountant.pricing.cost import compute_llm_cost, token_usage_from_gemini
 from accountant.pricing.gemini import GEMINI_2_5_FLASH
 
 

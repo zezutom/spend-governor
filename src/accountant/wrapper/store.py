@@ -1,13 +1,12 @@
-"""Shared store for the governor's policies and interventions.
+"""Shared store for the wrapper's policies and interventions.
 
-Lives in the same SQLite file as the Accountant's cache (the demo's
-shared store) but owns its own tables, so the governor stays
-self-contained — the observed agent never imports Accountant code.
+Lives in the same SQLite file as the rest of Agent Accountant (the demo's
+shared store) and owns its policy + intervention tables.
 
-- governor_policies: operator-activated governance rules. The dashboard
-  writes them; the governor reads the active ones at runtime.
-- governor_interventions: an append-only log of every real-time action
-  the governor took (cache hit served, model downgraded) with the cost
+- accountant_policies: operator-activated policies. The dashboard writes
+  them; the wrapper reads the active ones at runtime.
+- accountant_interventions: an append-only log of every real-time action
+  the wrapper took (cache hit served, model downgraded) with the cost
   avoided. The dashboard aggregates these into the live savings number.
 """
 
@@ -20,13 +19,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# This module lives at src/accountant/wrapper/store.py, so the repo root
+# (which holds data/accountant.db) is four parents up.
 DB_PATH = os.environ.get(
     "ACCOUNTANT_DB",
-    str(Path(__file__).resolve().parents[2] / "data" / "accountant.db"),
+    str(Path(__file__).resolve().parents[3] / "data" / "accountant.db"),
 )
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS governor_policies (
+CREATE TABLE IF NOT EXISTS accountant_policies (
     signature TEXT PRIMARY KEY,
     policy_type TEXT NOT NULL,
     params TEXT,
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS governor_policies (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS governor_interventions (
+CREATE TABLE IF NOT EXISTS accountant_interventions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     kind TEXT NOT NULL,
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS governor_interventions (
     detail TEXT,
     cost_avoided_usd REAL NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_interventions_ts ON governor_interventions(ts);
+CREATE INDEX IF NOT EXISTS idx_interventions_ts ON accountant_interventions(ts);
 """
 
 _lock = threading.Lock()
@@ -83,7 +84,7 @@ def activate_policy(signature: str, policy_type: str, params: dict) -> None:
     now = datetime.now(timezone.utc).isoformat()
     with connect() as c:
         c.execute(
-            "INSERT INTO governor_policies (signature, policy_type, params, active, updated_at) "
+            "INSERT INTO accountant_policies (signature, policy_type, params, active, updated_at) "
             "VALUES (?, ?, ?, 1, ?) "
             "ON CONFLICT(signature) DO UPDATE SET "
             "policy_type=excluded.policy_type, params=excluded.params, "
@@ -95,7 +96,7 @@ def activate_policy(signature: str, policy_type: str, params: dict) -> None:
 def policy_activated_at(signature: str) -> str | None:
     with connect() as c:
         row = c.execute(
-            "SELECT updated_at FROM governor_policies WHERE signature=? AND active=1",
+            "SELECT updated_at FROM accountant_policies WHERE signature=? AND active=1",
             (signature,),
         ).fetchone()
     return row["updated_at"] if row else None
@@ -104,7 +105,7 @@ def policy_activated_at(signature: str) -> str | None:
 def deactivate_policy(signature: str) -> None:
     with connect() as c:
         c.execute(
-            "UPDATE governor_policies SET active=0, updated_at=CURRENT_TIMESTAMP "
+            "UPDATE accountant_policies SET active=0, updated_at=CURRENT_TIMESTAMP "
             "WHERE signature=?",
             (signature,),
         )
@@ -113,7 +114,7 @@ def deactivate_policy(signature: str) -> None:
 def active_policies() -> list[dict]:
     with connect() as c:
         rows = c.execute(
-            "SELECT signature, policy_type, params FROM governor_policies WHERE active=1"
+            "SELECT signature, policy_type, params FROM accountant_policies WHERE active=1"
         ).fetchall()
     out = []
     for r in rows:
@@ -128,7 +129,7 @@ def active_policies() -> list[dict]:
 def is_active(signature: str) -> bool:
     with connect() as c:
         row = c.execute(
-            "SELECT active FROM governor_policies WHERE signature=?", (signature,)
+            "SELECT active FROM accountant_policies WHERE signature=?", (signature,)
         ).fetchone()
     return bool(row and row["active"])
 
@@ -144,7 +145,7 @@ def record_intervention(
 ) -> None:
     with connect() as c:
         c.execute(
-            "INSERT INTO governor_interventions (kind, tool, task_class, detail, cost_avoided_usd) "
+            "INSERT INTO accountant_interventions (kind, tool, task_class, detail, cost_avoided_usd) "
             "VALUES (?, ?, ?, ?, ?)",
             (kind, tool, task_class, json.dumps(detail or {}), float(cost_avoided_usd)),
         )
@@ -154,11 +155,11 @@ def intervention_summary() -> dict:
     with connect() as c:
         total = c.execute(
             "SELECT COUNT(*) AS n, COALESCE(SUM(cost_avoided_usd),0) AS saved "
-            "FROM governor_interventions"
+            "FROM accountant_interventions"
         ).fetchone()
         by_kind = c.execute(
             "SELECT kind, COUNT(*) AS n, COALESCE(SUM(cost_avoided_usd),0) AS saved "
-            "FROM governor_interventions GROUP BY kind"
+            "FROM accountant_interventions GROUP BY kind"
         ).fetchall()
     return {
         "total_interventions": int(total["n"] or 0),

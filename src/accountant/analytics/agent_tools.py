@@ -10,7 +10,7 @@ import json
 import os
 from datetime import timedelta
 
-from accountant.analysis import (
+from accountant.analytics.analysis import (
     aggregate_by_task_class,
     fetch_traces,
     find_anomalies,

@@ -27,7 +27,7 @@ import os
 from google import genai
 from google.genai import types
 
-from accountant.db import get_meta, set_meta, upsert_recommendation
+from accountant.pipeline.db import get_meta, set_meta, upsert_recommendation
 
 
 log = logging.getLogger(__name__)
@@ -46,13 +46,13 @@ _in_flight: set[str] = set()
 _client: genai.Client | None = None
 
 
-# Context for Gemini: the Accountant is a RUNTIME GOVERNOR. It does not
+# Context for Gemini: the Accountant is a RUNTIME WRAPPER. It does not
 # edit prompts or touch source — it enforces economic policy inline at a
 # gateway the observed agent's tool/LLM traffic flows through. The
 # operator activates a policy; the gateway enforces it in real time.
-GOVERNOR_CONTEXT = """\
-You advise a runtime economic governor for AI agents. The governor sits
-inline (an API gateway the agent's tool and model calls route through)
+WRAPPER_CONTEXT = """\
+You advise Agent Accountant, a runtime cost wrapper for AI agents. The
+wrapper sits inline (an API gateway the agent's tool and model calls route through)
 and enforces economic policies in real time — WITHOUT editing prompts or
 accessing source. Available policy types:
 - Semantic-cache a tool: serve a cached, semantically-equivalent result
@@ -111,11 +111,11 @@ def _issue_changed(sig: str, magnitude: float, reasoned: dict) -> bool:
 
 
 def _build_prompt(issue: dict) -> str:
-    return f"""You advise a runtime economic governor for AI agents. A \
+    return f"""You advise Agent Accountant, a runtime cost wrapper for AI agents. A \
 detector flagged a costly execution pattern and quantified the savings \
 of a runtime policy. Write the operator-facing rationale.
 
-{GOVERNOR_CONTEXT}
+{WRAPPER_CONTEXT}
 
 Detected issue (deduped, with projected savings):
 {json.dumps(issue, indent=2)}

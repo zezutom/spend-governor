@@ -11,7 +11,7 @@ Single entry point — running this file spins up the entire stack:
    active recommendation cards. Auto-refreshes every 2 seconds.
 
 Run:
-    uv run streamlit run src/accountant/dashboard.py
+    uv run streamlit run src/accountant/ui/dashboard.py
 """
 
 import json
@@ -29,13 +29,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from accountant.db import connect, get_meta
+from accountant.pipeline.db import connect, get_meta
 
 
 INGEST_HOST = "127.0.0.1"
 INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
 INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}"
-LOG_PATH = Path(__file__).resolve().parents[2] / "data" / "ingest_server.log"
+LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
 
 st.set_page_config(
@@ -70,7 +70,7 @@ def _ensure_ingest_server() -> None:
     subprocess.Popen(
         [
             sys.executable, "-m", "uvicorn",
-            "accountant.ingest_server:app",
+            "accountant.pipeline.ingest_server:app",
             "--host", INGEST_HOST,
             "--port", str(INGEST_PORT),
             "--log-level", "info",
@@ -203,7 +203,7 @@ def _render_onboarding(live: dict) -> None:
 def _render_hero(live: dict) -> None:
     """Value on the nose: lead with avoidable waste and realized savings,
     not trace counters. The two numbers a stressed CFO needs first."""
-    from governor.store import active_policies, intervention_summary
+    from accountant.wrapper.store import active_policies, intervention_summary
 
     summary = live.get("summary") or {}
     total_traces = int(summary.get("total_traces") or 0)
@@ -211,7 +211,7 @@ def _render_hero(live: dict) -> None:
     last_updated = summary.get("last_updated_at") or "—"
 
     # Total avoidable waste = sum of every detected policy's monthly
-    # opportunity. Realized = what the governor has actually saved so far.
+    # opportunity. Realized = what the wrapper has actually saved so far.
     recs = _load_recommendations()
     opportunity = 0.0
     for r in recs:
@@ -233,7 +233,7 @@ def _render_hero(live: dict) -> None:
     c2.metric(
         "✅ Saved so far",
         f"${realized:,.4f}",
-        help="Actual cost the governor has avoided since you activated "
+        help="Actual cost the wrapper has avoided since you activated "
              "policies — logged per intervention.",
     )
     c3.metric(
@@ -315,7 +315,7 @@ def _issue_of(rec: dict) -> dict:
 
 
 def _policy_for_issue(issue: dict):
-    """Map a detected issue to the governor policy that fixes it at
+    """Map a detected issue to the wrapper policy that fixes it at
     runtime. Returns (signature, policy_type, params) or None."""
     kind = issue.get("kind")
     if kind == "tool_cache" and issue.get("primary_tool"):
@@ -325,7 +325,7 @@ def _policy_for_issue(issue: dict):
                 {"tool": tool, "cost_per_call_usd": unit})
     if kind == "model_routing":
         # Spread the per-ticket saving across ~4 LLM calls/ticket for a
-        # per-call estimate the governor records on each downgrade.
+        # per-call estimate the wrapper records on each downgrade.
         per_call = round((issue.get("savings_per_ticket_usd", 0) or 0) / 4.0, 6)
         return ("route_model:simple", "route_model",
                 {"cheap_model": issue.get("cheap_model", "gemini-2.5-flash-lite"),
@@ -401,12 +401,12 @@ def _render_savings_math(issue: dict) -> None:
 
 
 def _render_realized_savings() -> None:
-    from governor.store import intervention_summary
+    from accountant.wrapper.store import intervention_summary
     s = intervention_summary()
     if s["total_interventions"] == 0:
         st.caption(
             "No realized savings yet — activate a policy below, then run "
-            "the observed agent to see the governor intervene live."
+            "the observed agent to see the wrapper intervene live."
         )
         return
     c1, c2 = st.columns(2)
@@ -429,8 +429,8 @@ def _affected_classes(issue: dict) -> list[str]:
 
 
 def _render_verification(issue: dict, policy_sig: str) -> None:
-    from accountant.verification import measured_before_after
-    from governor import store as gov_store
+    from accountant.analytics.verification import measured_before_after
+    from accountant.wrapper import store as gov_store
 
     classes = _affected_classes(issue)
     since = gov_store.policy_activated_at(policy_sig)
@@ -454,7 +454,7 @@ def _render_verification(issue: dict, policy_sig: str) -> None:
 
 
 def _render_recommendations(recs: list[dict]) -> None:
-    from governor import store as gov_store
+    from accountant.wrapper import store as gov_store
 
     st.markdown("#### Realized savings")
     _render_realized_savings()

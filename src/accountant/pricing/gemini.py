@@ -10,7 +10,7 @@ exceeds 200k input tokens we'll need the large-context tier added
 explicitly, but our agent's prompts are well under that ceiling.
 """
 
-from accountant.cost import ModelPrice
+from accountant.pricing.cost import ModelPrice
 
 
 GEMINI_2_5_FLASH = ModelPrice(
@@ -29,7 +29,7 @@ GEMINI_2_5_PRO = ModelPrice(
 )
 
 
-# Cheaper tier the governor routes simple requests to.
+# Cheaper tier the wrapper routes simple requests to.
 GEMINI_2_5_FLASH_LITE = ModelPrice(
     name="gemini-2.5-flash-lite",
     input_uncached_per_1m_usd=0.10,

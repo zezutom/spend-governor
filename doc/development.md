@@ -80,7 +80,7 @@ try again.
 ### Launch the live dashboard (the main entry point)
 
 ```bash
-uv run streamlit run src/accountant/dashboard.py
+uv run streamlit run src/accountant/ui/dashboard.py
 ```
 
 This one command boots the whole Accountant stack: it auto-spawns the
@@ -97,7 +97,7 @@ within ~0.5s.
 The ingest server can also be started on its own (e.g. for debugging):
 
 ```bash
-uv run uvicorn accountant.ingest_server:app --port 8765
+uv run uvicorn accountant.pipeline.ingest_server:app --port 8765
 ```
 
 ### Run the observed agent once
@@ -125,7 +125,7 @@ per-minute quota comfortable in `us-central1`.
 ### Inspect traces
 
 ```bash
-uv run python -m accountant.inspect_traces --since 1h --show 20
+uv run python -m accountant.cli.inspect_traces --since 1h --show 20
 ```
 
 Pulls spans from Phoenix, groups by trace, prints per-trace tool
@@ -146,7 +146,7 @@ traces in hand.
 ### Verify the cost computation
 
 ```bash
-uv run python -m accountant.verify_cost
+uv run python -m accountant.cli.verify_cost
 ```
 
 Runs `cost.py` against a hand-picked `usage_metadata` and prints

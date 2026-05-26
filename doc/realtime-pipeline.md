@@ -6,13 +6,13 @@ the pieces are shaped the way they are.
 ## One command boots everything
 
 ```bash
-uv run streamlit run src/accountant/dashboard.py
+uv run streamlit run src/accountant/ui/dashboard.py
 ```
 
 The dashboard is the single entry point. On first render it:
 
 1. Probes `127.0.0.1:8765`; if nothing is listening, spawns the ingest
-   server (`uvicorn accountant.ingest_server:app`) as a background
+   server (`uvicorn accountant.pipeline.ingest_server:app`) as a background
    subprocess.
 2. Checks the SQLite cache. If empty (a new account), POSTs
    `/backfill/start` to import history from Phoenix.
@@ -82,11 +82,11 @@ worker write concurrently without blocking each other.
 | `span_outbox` | the queue — incoming span batches awaiting processing |
 | `spans` | every ingested span, with cost attached (incl. `cache_hit`, priced $0) |
 | `recommendations` | one costed issue per task class, keyed by issue signature |
-| `governor_policies` | operator-activated rules the governor enforces (with activation time) |
-| `governor_interventions` | append-only log of every governor action + cost avoided |
+| `accountant_policies` | operator-activated rules the wrapper enforces (with activation time) |
+| `accountant_interventions` | append-only log of every wrapper action + cost avoided |
 | `state_meta` | key/value store; holds the `live_state` blob the dashboard reads |
 
-WAL mode is enabled so the receiver, worker, backfill, and the governor
+WAL mode is enabled so the receiver, worker, backfill, and the wrapper
 (running in the observed agent's process) can all touch the store
 without blocking each other.
 
@@ -153,30 +153,31 @@ $ projection from the observed traffic window. `recommendations.py` /
 rationale; `📋 pattern` upgrades to `🤖 reasoned`).
 
 **Activate** — the operator clicks **Activate policy** on a card. That
-writes a `governor_policies` row (e.g. `cache_tool:web_search`,
+writes a `accountant_policies` row (e.g. `cache_tool:web_search`,
 `route_model:simple`) with the activation timestamp. No prompt or source
 change — a runtime control the customer can grant.
 
-**Enforce** (`src/governor/`) — the governor runs inline in the observed
-agent's call path. On an active policy it:
+**Enforce** (`src/accountant/wrapper/`) — the wrapper runs inline in the
+observed agent's call path. On an active policy it:
 - **Caches tools** — before executing a governed tool (e.g. `web_search`),
   it checks the semantic cache (`cache.py`). On a hit (query embedding
   cosine ≥ threshold against a prior call) it returns the cached result,
   the real paid call never fires, and it tags the span
-  `governor.cache_hit` so the cost model prices it **$0**. Different
+  `accountant.cache_hit` so the cost model prices it **$0**. Different
   queries miss and execute normally — the quality guardrail.
 - **Routes models** — a `before_model_callback` downgrades simple
-  requests to a cheaper model and tags the span `governor.model_routed`.
-- Records each action in `governor_interventions` with the cost avoided.
+  requests to a cheaper model and tags the span
+  `accountant.modification = model_swap`.
+- Records each action in `accountant_interventions` with the cost avoided.
 
 **Verify** (`verification.py`) — the audit proof. For the task types a
 policy affects, it compares average cost-per-ticket **before** the
 policy's activation time vs **after**, straight from the traces. Because
 cached calls are priced $0 and routed calls carry the cheaper model, the
 "after" cost genuinely drops. The dashboard shows this beside the
-governor's own realized-savings log; when they agree, the number is
+wrapper's own realized-savings log; when they agree, the number is
 trustworthy. Optimized calls are filterable in Phoenix by the
-`governor.*` tags.
+`accountant.*` tags.
 
 ## Accuracy
 

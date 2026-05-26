@@ -7,7 +7,7 @@ worker (running as an asyncio task in the same process) drains the
 outbox in the background.
 
 Run with:
-    uv run uvicorn accountant.ingest_server:app --port 8000
+    uv run uvicorn accountant.pipeline.ingest_server:app --port 8000
 
 The observed agent's accountant_exporter posts to /ingest when
 ACCOUNTANT_INGEST_URL is set in its environment.
@@ -23,8 +23,8 @@ load_dotenv()
 
 from fastapi import FastAPI, Request, Response
 
-from accountant import backfill, worker
-from accountant.db import enqueue_span_batch, ensure_initialized, get_meta
+from accountant.pipeline import backfill, worker
+from accountant.pipeline.db import enqueue_span_batch, ensure_initialized, get_meta
 
 
 log = logging.getLogger(__name__)

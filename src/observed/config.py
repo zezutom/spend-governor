@@ -1,7 +1,7 @@
 """Baseline instruction for the observed agent.
 
-The runtime governor never edits prompts or source — it enforces
-economic policy inline at the gateway — so this is read-only: the
+The Accountant wrapper never edits prompts or source — it enforces
+economic policy inline at the boundary — so this is read-only: the
 agent simply loads its system prompt here. (An optional
 `data/observed_config.json` can override it for local experiments, but
 nothing in the product writes that file.)
@@ -20,7 +20,7 @@ CONFIG_PATH = os.environ.get(
 
 # The refund-procedure paragraph is the intentional anti-pattern: it
 # forces 3 redundant web_search calls per refund ticket. That's the
-# wasteful runtime behavior the governor detects and optimizes — by
+# wasteful runtime behavior the wrapper detects and optimizes — by
 # caching the redundant calls, not by editing this text.
 DEFAULT_INSTRUCTION = """You are Helpdesk Co-Pilot for Stratus Forms, a SaaS form
 builder. You handle inbound customer support tickets end-to-end.
