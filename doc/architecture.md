@@ -158,11 +158,41 @@ claimed.
 the store is a managed queue + BigQuery; here they're in-process + SQLite
 so the whole demo runs from one command.)
 
+## Cost tracking — Phoenix is the source of truth for LLM actuals
+
+Phoenix natively computes the **actual cost** of every LLM call from
+Gemini's token-count attributes and a model pricing table configured in
+the Phoenix UI. We don't duplicate that math. Anywhere a dashboard or
+report needs "what did this call actually cost," the answer comes from
+Phoenix's native `cost` field — not from local computation. This makes
+the savings claim independently verifiable in the customer's own
+Phoenix UI, without trusting our dashboard.
+
+Two important asymmetries:
+
+- **Tool actuals are ours.** Phoenix's pricing table is for models; it
+  doesn't price tool calls. The wrapper writes `accountant.cost.actual_usd`
+  on tool spans from our local `TOOL_PRICES` table.
+- **Counterfactuals are ours.** Phoenix has no concept of "what this
+  would have cost without the policy." On modified spans the wrapper
+  writes `accountant.cost.baseline_usd` + `accountant.cost.savings_usd`
+  + `accountant.counterfactual.*` (the would-have-been parameters used
+  to derive baseline). This is the part Phoenix can't help with — and
+  the part that proves the savings claim.
+
+The full schema is in [`instrumentation-schema.md`](./instrumentation-schema.md).
+Phoenix's model pricing config and our tool pricing table together form
+the single audit reference, documented in
+[`phoenix-pricing-config.md`](./phoenix-pricing-config.md).
+
 ## Boundaries
 
 - **The wrapper never edits prompts or source.** It acts only at the
   traffic boundary, on operator-activated policies. Integration is one
   hop (route traffic through the gateway), framework-agnostic.
+- **We don't compete with Phoenix on cost.** Actual LLM cost comes from
+  Phoenix's native pricing pipeline. We own only tool actual cost and
+  the counterfactual / savings math — see the section above.
 - **Quality is guarded.** A cached result is served only when the new
   query is semantically equivalent to a prior one; only low-risk task
   types are routed to the cheaper model. "Cost down, quality held" is

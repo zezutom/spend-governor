@@ -3,7 +3,7 @@
 Run with: uv run python -m accountant.cli.verify_cost
 """
 
-from accountant.pricing.cost import compute_llm_cost, token_usage_from_gemini
+from accountant.pricing.cost import compute_baseline_llm_cost, token_usage_from_gemini
 from accountant.pricing.gemini import GEMINI_2_5_FLASH
 
 
@@ -16,7 +16,7 @@ SAMPLE_USAGE = {
 
 def main() -> None:
     usage = token_usage_from_gemini(SAMPLE_USAGE)
-    breakdown = compute_llm_cost(usage, GEMINI_2_5_FLASH)
+    breakdown = compute_baseline_llm_cost(usage, GEMINI_2_5_FLASH)
     for key, value in breakdown.items():
         if isinstance(value, float):
             print(f"{key}: {value:.8f}")

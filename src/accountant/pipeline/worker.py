@@ -16,7 +16,7 @@ import logging
 
 from accountant.pricing.cost import (
     TokenUsage,
-    compute_llm_cost,
+    compute_baseline_llm_cost,
 )
 from accountant.pipeline.db import (
     claim_pending_batches,
@@ -79,7 +79,10 @@ def _cost_for_span(raw: dict) -> tuple[float, float]:
                 cached_input_tokens=cached,
                 output_tokens=completion + reasoning,
             )
-            llm = compute_llm_cost(usage, MODELS[model])["total_usd"]
+            # INTERIM: local mirror of actual LLM cost. Phoenix is the
+            # canonical source; this gets retired when refactor #2 wires
+            # the dashboard to read Phoenix's native cost field.
+            llm = compute_baseline_llm_cost(usage, MODELS[model])["total_usd"]
 
     if kind == "TOOL":
         # A wrapper cache hit means the real (paid) call never ran —

@@ -1,8 +1,22 @@
-"""Cost computation for agent traces.
+"""Counterfactual (baseline) cost computation.
 
-Pure functions that take token usage + price config and return cost
-breakdowns. No I/O, no instrumentation-specific assumptions; callers
-wire this to actual Phoenix trace data.
+**Phoenix owns the actual cost of LLM calls** — it derives `cost` from
+token-count attributes + a model pricing table configured in the Phoenix
+UI. We don't duplicate that work.
+
+This module is the primitive for the OTHER cost number the product needs:
+the COUNTERFACTUAL — what an LLM call WOULD have cost without an
+Accountant policy applied (e.g. on the original, pre-routed model). The
+wrapper writes `accountant.cost.baseline_usd` and
+`accountant.cost.savings_usd` using these functions; the schema doc
+(`doc/instrumentation-schema.md`) is the contract.
+
+Also used by:
+- the audit CLI tools (`inspect_traces.py`, `verify_cost.py`) to recompute
+  totals from token data as a cross-check against Phoenix;
+- the worker, **interim**, as a local mirror of actual LLM cost while the
+  dashboard still reads SQLite — to be retired when refactor #2 wires
+  Phoenix as the dashboard's actual-cost source.
 
 Token-counting conventions follow Gemini 2.5's usage_metadata shape:
 
@@ -12,12 +26,11 @@ Token-counting conventions follow Gemini 2.5's usage_metadata shape:
     thoughts_token_count        = reasoning output (billed at output rate)
 
 Cached input is priced separately and lower than uncached input on
-Gemini 2.5. Thinking tokens are billed at the output rate, not the
-input rate. A naive `total_tokens × input_price` formula misses both.
+Gemini 2.5. Thinking tokens are billed at the output rate, not the input
+rate. A naive `total_tokens × input_price` misses both.
 
-Every dict returned by these functions exposes the token bucket and the
-unit rate that produced each cost component, so the dashboard can show
-the math behind any number it displays.
+Every dict returned exposes the token bucket and the unit rate that
+produced each cost component, so any number is auditable.
 """
 
 from dataclasses import dataclass
@@ -55,7 +68,14 @@ def token_usage_from_gemini(usage_metadata: dict) -> TokenUsage:
     )
 
 
-def compute_llm_cost(usage: TokenUsage, price: ModelPrice) -> dict:
+def compute_baseline_llm_cost(usage: TokenUsage, price: ModelPrice) -> dict:
+    """Compute counterfactual (baseline) LLM cost from token usage + a
+    model price. Phoenix is the source of truth for ACTUAL LLM cost; this
+    function answers "what would this call have cost on a different
+    model?" — the wrapper uses it for `accountant.cost.baseline_usd`.
+
+    Audit tools and the worker's interim actual-cost mirror also call
+    this with the actually-used model's price; see module docstring."""
     input_uncached_usd = usage.uncached_input_tokens * price.input_uncached_per_1m_usd / 1_000_000
     input_cached_usd = usage.cached_input_tokens * price.input_cached_per_1m_usd / 1_000_000
     output_usd = usage.output_tokens * price.output_per_1m_usd / 1_000_000
@@ -108,7 +128,7 @@ def compute_trace_cost(
         if model_name not in model_prices:
             raise KeyError(f"no price configured for model: {model_name}")
         usage = token_usage_from_gemini(usage_metadata)
-        llm_breakdowns.append(compute_llm_cost(usage, model_prices[model_name]))
+        llm_breakdowns.append(compute_baseline_llm_cost(usage, model_prices[model_name]))
 
     tool_breakdowns = [compute_tool_cost(name, tool_prices) for name in tool_calls]
 
