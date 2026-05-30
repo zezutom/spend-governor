@@ -15,19 +15,35 @@ doc.
 
 ---
 
-## 1. Model pricing — configure in the Phoenix UI
+## 1. Model pricing — Phoenix's built-in defaults are sufficient
 
-For LLM **actual** cost, Phoenix computes from token attributes and the
-pricing table you configure in **Settings → Models**. Set the rates
-below for each model the observed agent might call. **Use Phoenix's
-"Advanced" pricing to enter the cached-input and reasoning-token rates
-separately** — a single blended input rate is wrong for Gemini 2.5
-because cached input is priced much lower than uncached, and reasoning
-("thoughts") tokens are billed at the output rate, not the input rate.
+For LLM **actual** cost, Phoenix computes from token attributes and a
+model pricing table. **Phoenix ships built-in default pricing that
+already covers the Gemini 2.5 models the observed agent uses — no manual
+`Settings → Models` configuration is required.** Reasoning ("thoughts")
+tokens are priced at the output rate by Phoenix automatically.
 
-### Rates as of 2026-05-23
+**Verified 2026-05-30** by reconciliation: we pulled Phoenix's computed
+cost via GraphQL (`getSpanByOtelId(spanId).costSummary.total.cost`) for
+sampled `gemini-2.5-flash` and `gemini-2.5-flash-lite` spans and it
+matched our `gemini.py`-based computation **to the cent** — including a
+call with 286 reasoning tokens, confirming Phoenix prices thoughts at the
+output rate. So Phoenix's defaults and our table agree; nothing to add or
+override.
+
+> **Caveat — what's verified vs not.** The reconciliation exercised the
+> **uncached-input** and **output** rates (and reasoning at the output
+> rate). The **cached-input** rate was NOT exercised — the sampled spans
+> had zero cache-read tokens. Before relying on cached pricing, reconcile
+> one cache-heavy span the same way; cached input is the one rate Gemini
+> prices very differently (~4× lower), so a wrong default there would only
+> surface on cache-read-heavy calls.
+
+### Reference rates (for the audit trail; not something you configure)
 Source: <https://cloud.google.com/vertex-ai/generative-ai/pricing>
-(Gemini 2.5 section). Re-verify when running for the demo / submission.
+(Gemini 2.5 section), as of 2026-05-23. These are what the defaults
+*should* equal — use them only to spot-check if a future reconciliation
+ever drifts.
 
 | Model | Input (uncached) per 1M | Input (cached) per 1M | Output per 1M | Notes |
 |-------|------------------------|----------------------|---------------|-------|
@@ -35,33 +51,23 @@ Source: <https://cloud.google.com/vertex-ai/generative-ai/pricing>
 | `gemini-2.5-flash-lite` | $0.10 | $0.025 | $0.40 | The cheaper tier the wrapper routes simple requests to |
 | `gemini-2.5-pro` | $1.25 | $0.3125 | $10.00 | Small-context tier (≤200k input tokens); used for Accountant reasoning. **Add a large-context tier if any call exceeds 200k input tokens** — the rate doubles. |
 
-### Per-component rates (for Phoenix Advanced pricing)
-- **Reasoning ("thoughts") tokens** → priced at the **output rate** above.
-- **Cache-read tokens** → the **input (cached)** rate above.
-- **Cache-write tokens** → currently 0 in our calculation (Gemini's
-  `usage_metadata` does not yet expose this distinctly). If Phoenix's UI
-  asks for a cache-write rate, leave it consistent with Google's published
-  cache-write pricing for that model.
-
-### Configuration checklist (manual, in Phoenix Cloud)
-- [ ] Settings → Models → add `gemini-2.5-flash` with the rates above.
-- [ ] Add `gemini-2.5-flash-lite` with the rates above.
-- [ ] Add `gemini-2.5-pro` (small-context tier) with the rates above.
-- [ ] For each, open **Advanced** pricing and set the cached-input rate
-      and the reasoning-token rate explicitly. A flat blended rate will
-      under- or over-price every cached / thinking-token-heavy call.
-- [ ] Sanity-check: run a known prompt through the observed agent, note
-      the token counts on the LLM span in Phoenix, and verify the `cost`
-      field equals `tokens × rates` from this table.
+### If a future reconciliation drifts
+If a later run shows Phoenix's `cost` disagreeing with our number, only
+then touch `Settings → Models`: open the model's **Advanced** pricing and
+set the cached-input and reasoning-token rates explicitly to match the
+table above (a flat blended input rate is wrong for Gemini 2.5). Re-run
+the GraphQL reconciliation to confirm.
 
 ### Cross-check against our code
 Our local model price table lives in
 [`src/accountant/pricing/gemini.py`](../src/accountant/pricing/gemini.py).
-The numbers MUST match the Phoenix UI — the wrapper uses this same table
-to compute counterfactual (baseline) cost, and the local "actual" mirror
-in the worker (see `src/accountant/pipeline/worker.py`, marked INTERIM)
-uses it until refactor #2 wires Phoenix as the dashboard's actual source.
-If you change one, change the other.
+It is the **counterfactual engine** — Phoenix can't price calls the
+wrapper *prevented* (model swaps, suppressed tool calls), so the wrapper
+uses this table to compute baseline/savings. It must stay in agreement
+with Phoenix's effective rates (verified 2026-05-30 — they agree). The
+worker's INTERIM local "actual" mirror (`src/accountant/pipeline/worker.py`)
+also uses it until refactor #2 wires Phoenix as the dashboard's actual
+source. If Phoenix's defaults ever change, update this table to match.
 
 ---
 
@@ -99,22 +105,27 @@ toolkit.
 
 ---
 
-## 3. Keeping the two in sync
+## 3. Keeping things in sync
 
-When updating prices, do it in **both places**:
+Model rates come from **Phoenix's built-in defaults** — you don't
+normally edit them. Our `gemini.py` table must agree with those defaults
+(verified 2026-05-30). So when prices change:
 
-1. Phoenix UI → Settings → Models (model rates).
-2. `src/accountant/pricing/gemini.py` (model rates, mirrored).
-3. `src/accountant/pricing/tools.py` (tool rates only).
+1. `src/accountant/pricing/gemini.py` — update to match Phoenix's current
+   default rates (this is the counterfactual engine).
+2. `src/accountant/pricing/tools.py` — tool rates only (Phoenix doesn't
+   price tools).
+3. Phoenix UI → Settings → Models — **only if** reconciliation shows
+   Phoenix's defaults are wrong for a model (rare); override there.
 
-Then re-run `uv run python -m accountant.cli.verify_cost` for a sanity
-check that token math hasn't drifted, and visit a recent trace in
-Phoenix to confirm Phoenix's `cost` field agrees with our local mirror
-on the same tokens.
+Then re-run `uv run python -m accountant.cli.verify_cost` for a token-math
+sanity check, and re-run the GraphQL reconciliation
+(`getSpanByOtelId(spanId).costSummary` vs our number on the same tokens)
+on a recent trace.
 
-If they ever disagree, the savings number on a span (computed locally
-at emit time with our model table) will not match what Phoenix displays
-for the same span — and the trust-through-data contract is violated.
+If they disagree, the savings number on a span (computed locally at emit
+time with our model table) won't match what Phoenix displays for the same
+span — and the trust-through-data contract is violated.
 
 ---
 
