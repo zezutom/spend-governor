@@ -313,6 +313,18 @@ def cost_after_model_callback(callback_context, llm_response):
     span = otel_trace.get_current_span()
     _annotate_presence(span)
 
+    # The OpenInference google-adk instrumentor does not surface Gemini's
+    # cached-input tokens, so Phoenix prices the entire prompt at the
+    # uncached rate and overcounts every cache-heavy call (and the agent
+    # reuses a large system prompt, so most calls are cache-heavy). Emit
+    # the OpenInference cache_read attribute ourselves from the raw usage
+    # so Phoenix's native cost applies the cheaper cached-input rate.
+    um = getattr(llm_response, "usage_metadata", None)
+    if um is not None and span is not None and span.is_recording():
+        cached = int(getattr(um, "cached_content_token_count", 0) or 0)
+        if cached:
+            span.set_attribute("llm.token_count.prompt_details.cache_read", cached)
+
     decision = _route_decision.get() or {
         "original": DEFAULT_MODEL, "actual": DEFAULT_MODEL,
         "swapped": False, "policy_id": None,
@@ -324,7 +336,6 @@ def cost_after_model_callback(callback_context, llm_response):
         # baseline == actual ⇒ savings 0, nothing more to add.
         return None
 
-    um = getattr(llm_response, "usage_metadata", None)
     if um is None:
         # Modified but no usage to cost the baseline. Emit the
         # modification marker; baseline / savings default to 0.

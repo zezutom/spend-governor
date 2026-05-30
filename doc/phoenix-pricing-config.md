@@ -23,33 +23,36 @@ already covers the Gemini 2.5 models the observed agent uses — no manual
 `Settings → Models` configuration is required.** Reasoning ("thoughts")
 tokens are priced at the output rate by Phoenix automatically.
 
-**Verified 2026-05-30** by reconciliation: we pulled Phoenix's computed
-cost via GraphQL (`getSpanByOtelId(spanId).costSummary.total.cost`) for
-sampled `gemini-2.5-flash` and `gemini-2.5-flash-lite` spans and it
-matched our `gemini.py`-based computation **to the cent** — including a
-call with 286 reasoning tokens, confirming Phoenix prices thoughts at the
-output rate. So Phoenix's defaults and our table agree; nothing to add or
-override.
+**Verified 2026-05-30** by reconciliation against Phoenix's GraphQL
+`getSpanByOtelId(spanId).costSummary` — uncached-input, output, reasoning
+(priced at the output rate), **and cached-input** all match our
+`gemini.py` computation to the cent. Phoenix's defaults are correct;
+nothing to override.
 
-> **Caveat — what's verified vs not.** The reconciliation exercised the
-> **uncached-input** and **output** rates (and reasoning at the output
-> rate). The **cached-input** rate was NOT exercised — the sampled spans
-> had zero cache-read tokens. Before relying on cached pricing, reconcile
-> one cache-heavy span the same way; cached input is the one rate Gemini
-> prices very differently (~4× lower), so a wrong default there would only
-> surface on cache-read-heavy calls.
+> **Cached input — required an instrumentation fix.** The OpenInference
+> google-adk instrumentor does **not** surface Gemini's cached-input
+> tokens, so Phoenix originally priced the whole prompt at the uncached
+> rate and overcounted every cache-heavy call by ~50–60% (the agent
+> reuses a large system prompt → most tokens are cached). Fixed in
+> `cost_after_model_callback` (`wrapper/wrapper.py`), which now emits
+> `llm.token_count.prompt_details.cache_read` from the raw usage so
+> Phoenix applies the cached rate. **Also corrected:** our `gemini.py`
+> cached rates were ~25% of input (wrong); Gemini 2.5+ bills cached input
+> at **10% of the uncached rate** (90% discount). After both fixes,
+> cache-heavy spans reconcile exactly. (Implicit caching only — no TTL
+> storage charge to model.)
 
 ### Reference rates (for the audit trail; not something you configure)
 Source: <https://cloud.google.com/vertex-ai/generative-ai/pricing>
-(Gemini 2.5 section), as of 2026-05-23. These are what the defaults
-*should* equal — use them only to spot-check if a future reconciliation
-ever drifts.
+(Gemini 2.5 section), as of 2026-05-30. Cached input = **10% of uncached
+input** for all 2.5+ models. These are what the defaults *should* equal —
+use them only to spot-check if a future reconciliation drifts.
 
-| Model | Input (uncached) per 1M | Input (cached) per 1M | Output per 1M | Notes |
+| Model | Input (uncached) per 1M | Input (cached, 10%) per 1M | Output per 1M | Notes |
 |-------|------------------------|----------------------|---------------|-------|
-| `gemini-2.5-flash` | $0.30 | $0.075 | $2.50 | Default observed-agent model |
-| `gemini-2.5-flash-lite` | $0.10 | $0.025 | $0.40 | The cheaper tier the wrapper routes simple requests to |
-| `gemini-2.5-pro` | $1.25 | $0.3125 | $10.00 | Small-context tier (≤200k input tokens); used for Accountant reasoning. **Add a large-context tier if any call exceeds 200k input tokens** — the rate doubles. |
+| `gemini-2.5-flash` | $0.30 | $0.030 | $2.50 | Default observed-agent model |
+| `gemini-2.5-flash-lite` | $0.10 | $0.010 | $0.40 | The cheaper tier the wrapper routes simple requests to |
+| `gemini-2.5-pro` | $1.25 | $0.125 | $10.00 | Small-context tier (≤200k input tokens); used for Accountant reasoning. **Add a large-context tier if any call exceeds 200k input tokens** — the rate doubles. |
 
 ### If a future reconciliation drifts
 If a later run shows Phoenix's `cost` disagreeing with our number, only
