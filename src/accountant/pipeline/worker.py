@@ -70,14 +70,16 @@ def _cost_for_span(raw: dict) -> tuple[float, float]:
     if kind == "LLM":
         prompt = int(raw.get("prompt_tokens") or 0)
         cached = int(raw.get("cached_input_tokens") or 0)
+        # completion_tokens is the instrumentor's llm.token_count.completion,
+        # which ALREADY includes reasoning (candidates + thoughts). Do NOT add
+        # reasoning_tokens again — that double-counts thinking tokens.
         completion = int(raw.get("completion_tokens") or 0)
-        reasoning = int(raw.get("reasoning_tokens") or 0)
         if prompt or completion:
             model = _normalize_model(raw.get("model_name"))
             usage = TokenUsage(
                 uncached_input_tokens=max(prompt - cached, 0),
                 cached_input_tokens=cached,
-                output_tokens=completion + reasoning,
+                output_tokens=completion,
             )
             # INTERIM: local mirror of actual LLM cost. Phoenix is the
             # canonical source; this gets retired when refactor #2 wires

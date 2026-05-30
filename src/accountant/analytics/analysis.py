@@ -61,6 +61,17 @@ def _parse_classifier_output(raw):
 
 
 def _gemini_usage_from_span(span) -> dict:
+    # The OpenInference instrumentor sets llm.token_count.completion to
+    # candidates + thoughts, and reports reasoning as a SUBSET of it via
+    # completion_details.reasoning. token_usage_from_gemini follows raw
+    # Gemini semantics (candidates EXCLUDES thoughts, then adds them back),
+    # so feed it candidates = completion - reasoning; otherwise reasoning
+    # tokens are counted twice.
+    completion = int(_attr(span, "attributes.llm.token_count.completion") or 0)
+    reasoning = int(_attr(
+        span,
+        "attributes.llm.token_count.completion_details.reasoning",
+    ) or 0)
     return {
         "prompt_token_count": int(_attr(span, "attributes.llm.token_count.prompt") or 0),
         "cached_content_token_count": int(_attr(
@@ -68,11 +79,8 @@ def _gemini_usage_from_span(span) -> dict:
             "attributes.llm.token_count.prompt_details.cache_read",
             "attributes.llm.token_count.cache_read",
         ) or 0),
-        "candidates_token_count": int(_attr(span, "attributes.llm.token_count.completion") or 0),
-        "thoughts_token_count": int(_attr(
-            span,
-            "attributes.llm.token_count.completion_details.reasoning",
-        ) or 0),
+        "candidates_token_count": max(completion - reasoning, 0),
+        "thoughts_token_count": reasoning,
     }
 
 

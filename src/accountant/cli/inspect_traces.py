@@ -88,6 +88,15 @@ def _parse_since(value: str) -> datetime:
 
 def _gemini_usage_from_span(span) -> dict:
     """Reshape OpenInference LLM token attributes into Gemini usage_metadata."""
+    # llm.token_count.completion is candidates + thoughts (reasoning is a
+    # SUBSET reported via completion_details.reasoning). token_usage_from_gemini
+    # uses raw Gemini semantics (candidates excludes thoughts, then adds them),
+    # so pass candidates = completion - reasoning to avoid double-counting.
+    completion = int(_attr(span, "attributes.llm.token_count.completion") or 0)
+    reasoning = int(_attr(
+        span,
+        "attributes.llm.token_count.completion_details.reasoning",
+    ) or 0)
     return {
         "prompt_token_count": int(_attr(span, "attributes.llm.token_count.prompt") or 0),
         "cached_content_token_count": int(_attr(
@@ -95,11 +104,8 @@ def _gemini_usage_from_span(span) -> dict:
             "attributes.llm.token_count.prompt_details.cache_read",
             "attributes.llm.token_count.cache_read",
         ) or 0),
-        "candidates_token_count": int(_attr(span, "attributes.llm.token_count.completion") or 0),
-        "thoughts_token_count": int(_attr(
-            span,
-            "attributes.llm.token_count.completion_details.reasoning",
-        ) or 0),
+        "candidates_token_count": max(completion - reasoning, 0),
+        "thoughts_token_count": reasoning,
     }
 
 
