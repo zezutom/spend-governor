@@ -500,8 +500,11 @@ def _render_experiment_proof() -> None:
         c3.metric("Saved (Phoenix delta)", f"${proof['savings_usd']:,.6f}")
         url = proof.get("compare_url")
         if url:
-            st.markdown(f"[🔬 Compare in Phoenix ↗]({url}) — both experiments, "
-                        "cost computed by Phoenix.")
+            # st.link_button takes the URL as a raw arg — st.markdown would
+            # HTML-escape the '&' between the repeated experimentId params and
+            # Phoenix would land on the bare /compare ("No Experiment Selected").
+            st.link_button("🔬 Compare in Phoenix ↗", url)
+            st.caption("Opens both experiments side by side; cost computed by Phoenix.")
         st.caption(
             f"{proof.get('tickets','?')} tickets · ran {str(proof.get('ran_at',''))[:19]} UTC "
             "· LLM-cost (model-routing) only — tool/cache savings aren't Phoenix-priced."
