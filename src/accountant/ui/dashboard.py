@@ -489,9 +489,23 @@ def _render_experiment_proof() -> None:
 
     st.markdown("###### Prove it in Phoenix — baseline vs governed")
     if status == "running":
-        st.info("⏳ Running baseline vs governed in Phoenix… (~a few minutes). "
-                "Rerun the page to see the result.")
-    elif status == "done" and proof.get("savings_usd") is not None:
+        started = proof.get("started_at")
+        elapsed = ""
+        if started:
+            try:
+                import datetime as _dt
+                t0 = _dt.datetime.fromisoformat(started)
+                secs = (_dt.datetime.now(_dt.timezone.utc) - t0).total_seconds()
+                elapsed = f" — {int(secs // 60)}m {int(secs % 60)}s elapsed"
+            except Exception:
+                pass
+        st.info(f"⏳ Running baseline vs governed{elapsed}. ~5 min; this panel "
+                "updates on its own when it finishes.")
+        if st.button("Reset", key="exp_reset", help="Clear a stuck run."):
+            set_meta("experiment_proof", _json.dumps({"status": "idle"}))
+            st.rerun()
+        return
+    if status == "done" and proof.get("savings_usd") is not None:
         b = (proof.get("baseline") or {}).get("total_cost_usd") or 0.0
         g = (proof.get("governed") or {}).get("total_cost_usd") or 0.0
         c1, c2, c3 = st.columns(3)
@@ -513,22 +527,31 @@ def _render_experiment_proof() -> None:
         st.warning(f"Last experiment run failed: {str(proof.get('error',''))[:200]}")
 
     if st.button("🔬 Run baseline-vs-governed in Phoenix",
-                 disabled=(status == "running"),
                  help="Runs the agent over a sample dataset twice (policies off vs on) "
-                      "so Phoenix computes the cost delta. Offline, ~a few minutes."):
-        set_meta("experiment_proof", _json.dumps({"status": "running"}))
+                      "so Phoenix computes the cost delta. Offline, ~5 min."):
+        import datetime as _dt
+        set_meta("experiment_proof", _json.dumps(
+            {"status": "running", "started_at": _dt.datetime.now(_dt.timezone.utc).isoformat()}))
         repo = Path(__file__).resolve().parents[3]
         subprocess.Popen(
-            [_sys.executable, "-m", "accountant.cli.run_experiments", "demo", "3"],
+            [_sys.executable, "-m", "accountant.cli.run_experiments", "demo", "2"],
             cwd=str(repo), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         st.rerun()
 
 
-@st.cache_data(show_spinner=False)
+_PROJECT_GID: str | None = None
+
+
 def _project_gid() -> str | None:
-    from accountant.pipeline.phoenix_cost import project_gid
-    return project_gid()
+    """Phoenix project node id for span deeplinks. Module-cached so a
+    transient None is retried next render — st.cache_data would pin the
+    None forever and silently kill the verify links."""
+    global _PROJECT_GID
+    if not _PROJECT_GID:
+        from accountant.pipeline.phoenix_cost import project_gid
+        _PROJECT_GID = project_gid()
+    return _PROJECT_GID
 
 
 def _story_cause(issue: dict) -> str:
@@ -539,34 +562,37 @@ def _story_cause(issue: dict) -> str:
         return (f"Simple tickets (password resets, FAQs) ran on the standard model. "
                 f"Routed to **{cheap}** at the gateway — same answer, far cheaper input.")
     tool = issue.get("primary_tool") or "the tool"
-    removed = comp.get("avg_tool_calls_removed", 0) or 0
-    return (f"Tickets re-ran the **same `{tool}`** ~{removed:g}× — pure waste. "
-            f"Served from a semantic cache; the paid call never fires.")
+    removed = round(comp.get("avg_tool_calls_removed", 0) or 0)
+    return (f"Tickets re-ran the **same `{tool}`** ~{removed}× — pure waste. "
+            f"Now served from a semantic cache; the paid call never fires.")
 
 
-def _verify_link(issue: dict, gid: str | None, routing_compare_url: str | None):
-    """(label, url, caption) for the per-policy verify-in-Phoenix link, or None.
-    Cache → a real annotated cached span; routing → the experiment compare page.
-    The link is supporting evidence to spot-check; the card's numbers are the
-    Phoenix-sourced proof."""
+def _verify_link(issue: dict, gid: str | None):
+    """(label, url, caption) → a real annotated span in Phoenix proving this
+    policy fired: cache → a served cache hit, routing → a downgraded call.
+    Both are wrapper-annotated, so the evidence is instant and always
+    available (no experiment run needed). Supporting evidence to spot-check;
+    the card's numbers are the Phoenix-sourced proof."""
+    if not gid:
+        return None
+    from accountant.pipeline.db import representative_saving_span
+    from accountant.pipeline.phoenix_cost import span_deeplink
     kind = issue.get("kind")
-    if kind == "tool_cache" and gid:
-        from accountant.pipeline.db import representative_saving_span
-        from accountant.pipeline.phoenix_cost import span_deeplink
+    if kind == "tool_cache":
         rep = representative_saving_span(cache_hit=True)
-        if rep:
-            url = span_deeplink(gid, rep["trace_id"], rep["phoenix_node_id"])
-            if url:
-                return ("🔍 Verify in Phoenix ↗", url,
-                        "Opens a real cached call — annotated “served from cache”.")
-    if kind == "model_routing" and routing_compare_url:
-        return ("🔬 Verify in Phoenix ↗", routing_compare_url,
-                "Baseline-vs-governed experiment — cost computed by Phoenix.")
-    return None
+        cap = "Opens a real cached call — annotated “served from cache”."
+    elif kind == "model_routing":
+        rep = representative_saving_span(cache_hit=False)
+        cap = "Opens a real downgraded call — annotated “routed to a cheaper model”."
+    else:
+        return None
+    if not rep:
+        return None
+    url = span_deeplink(gid, rep["trace_id"], rep["phoenix_node_id"])
+    return ("🔍 Verify in Phoenix ↗", url, cap) if url else None
 
 
-def _render_story_card(rec, issue, policy, sig, active, gov_store,
-                       saved, gid, routing_compare_url) -> None:
+def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -> None:
     kind = issue.get("kind")
     icon = "🔀" if kind == "model_routing" else "🗄️"
     badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
@@ -583,9 +609,8 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store,
     with st.container(border=True):
         head = st.columns([5, 2])
         with head[0]:
-            tag = "  ·  ✅ governing live" if active else ""
             st.markdown(f"### {icon} {rec['title']}")
-            st.caption(f"_{badge}_{tag}")
+            st.caption(f"{badge}" + ("  ·  ✅ governing live" if active else ""))
         with head[1]:
             if policy and active:
                 if st.button("Turn off", key=f"deact_{sig}", use_container_width=True,
@@ -599,36 +624,41 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store,
                     gov_store.activate_policy(sig, policy[1], policy[2])
                     st.rerun()
 
-        # 1. Cause + fix — the AHA trigger.
-        st.markdown(_story_cause(issue))
+        # 1. Cause + fix in plain English — the AHA trigger.
+        st.write(_story_cause(issue))
 
-        # 2. The dramatic before → after (two-number arrow).
-        if kind == "tool_cache" and has_savings:
+        # 2. Before → after as clean metrics (human, not a code formula).
+        if has_savings and kind == "tool_cache":
             unit = comp.get("tool_unit_price_usd", 0) or 0
-            st.markdown(
-                f"**`{issue.get('primary_tool','tool')}` per call:**  "
-                f"`${unit:.4f}`  →  `$0.0000`  ✅ served from cache"
-            )
-            st.markdown(f"**per ticket (overall):**  `${cur:.4f}`  →  `${proj:.4f}`")
+            tool = issue.get("primary_tool", "tool")
+            st.caption(f"Cost of each `{tool}` call")
+            b, a = st.columns(2)
+            b.metric("Before", f"${unit:.4f}")
+            a.metric("After", "$0.0000", "-100%", delta_color="inverse")
+            st.caption(f"Whole ticket: ${cur:.4f} → ${proj:.4f}")
         elif has_savings:
-            st.markdown(f"**per simple ticket:**  `${cur:.4f}`  →  `${proj:.4f}`  (−{pct}%)")
+            st.caption("Cost per simple ticket")
+            b, a = st.columns(2)
+            b.metric("Before", f"${cur:.4f}")
+            a.metric("After", f"${proj:.4f}", f"-{pct}%", delta_color="inverse")
 
-        # 3. Realized (measured, Phoenix-backed) vs projected (forecast, labeled).
+        # 3. Realized (measured/Phoenix) vs projected (forecast) — plain text,
+        #    no mixed bold/italic markdown (it renders garbled).
         if has_savings:
-            st.markdown(
-                f"Realized: **${realized:.4f}** saved so far  ·  "
-                f"_est. ~${monthly:,.2f}/mo at current volume (forecast)_"
+            st.caption(
+                f"Realized ${realized:.4f} saved so far (measured)  ·  "
+                f"est. ~${monthly:,.0f}/mo at current volume (forecast)"
             )
 
-        # 4. Verify in Phoenix — spot-check one real instance.
-        link = _verify_link(issue, gid, routing_compare_url)
+        # 4. Verify in Phoenix — opens a real annotated span proving it fired.
+        link = _verify_link(issue, gid)
         if link:
             st.link_button(link[0], link[1])
             st.caption(link[2])
 
         if explain:
-            st.caption(f"🔒 {explain['safeguard']}  ·  Runtime only — never changes "
-                       "your prompts or code.")
+            st.caption("🔒 Runtime only — never changes your prompts or code, "
+                       "reversible in one click.")
         if active and policy:
             _render_verification(issue, sig)
         with st.expander("The math"):
@@ -651,26 +681,15 @@ def _render_recommendations(recs: list[dict]) -> None:
         st.success("No cost issues detected — the agent is running clean.")
         return
 
-    from accountant.pipeline.db import savings_summary, get_meta
+    from accountant.pipeline.db import savings_summary
     saved = savings_summary()
     gid = _project_gid()
-    routing_compare_url = None
-    _raw = get_meta("experiment_proof")
-    if _raw:
-        try:
-            _p = json.loads(_raw)
-            if _p.get("status") == "done":
-                routing_compare_url = _p.get("compare_url")
-        except Exception:
-            pass
-
     for rec in recs:
         issue = _issue_of(rec)
         policy = _policy_for_issue(issue)
         sig = policy[0] if policy else rec["signature"]
         active = gov_store.is_active(sig) if policy else False
-        _render_story_card(rec, issue, policy, sig, active, gov_store,
-                            saved, gid, routing_compare_url)
+        _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid)
 
 
 @st.fragment(run_every="500ms")
