@@ -851,9 +851,9 @@ def render_dashboard() -> None:
     st.divider()
     _render_breakdown(rows, recs)
     st.divider()
-    _render_fixes(recs, default_mt, rates, totals["total_n"], gov_store)
-    st.divider()
     _render_math_drawer(recs, gid, rates)
+    st.divider()
+    _render_fixes(recs, default_mt, rates, totals["total_n"], gov_store)
 
 
 def main() -> None:
