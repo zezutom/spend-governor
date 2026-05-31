@@ -525,6 +525,119 @@ def _render_experiment_proof() -> None:
         st.rerun()
 
 
+@st.cache_data(show_spinner=False)
+def _project_gid() -> str | None:
+    from accountant.pipeline.phoenix_cost import project_gid
+    return project_gid()
+
+
+def _story_cause(issue: dict) -> str:
+    """Plain-English cause + fix — the line that triggers the AHA."""
+    comp = issue.get("components") or {}
+    if issue.get("kind") == "model_routing":
+        cheap = issue.get("cheap_model", "a cheaper model")
+        return (f"Simple tickets (password resets, FAQs) ran on the standard model. "
+                f"Routed to **{cheap}** at the gateway — same answer, far cheaper input.")
+    tool = issue.get("primary_tool") or "the tool"
+    removed = comp.get("avg_tool_calls_removed", 0) or 0
+    return (f"Tickets re-ran the **same `{tool}`** ~{removed:g}× — pure waste. "
+            f"Served from a semantic cache; the paid call never fires.")
+
+
+def _verify_link(issue: dict, gid: str | None, routing_compare_url: str | None):
+    """(label, url, caption) for the per-policy verify-in-Phoenix link, or None.
+    Cache → a real annotated cached span; routing → the experiment compare page.
+    The link is supporting evidence to spot-check; the card's numbers are the
+    Phoenix-sourced proof."""
+    kind = issue.get("kind")
+    if kind == "tool_cache" and gid:
+        from accountant.pipeline.db import representative_saving_span
+        from accountant.pipeline.phoenix_cost import span_deeplink
+        rep = representative_saving_span(cache_hit=True)
+        if rep:
+            url = span_deeplink(gid, rep["trace_id"], rep["phoenix_node_id"])
+            if url:
+                return ("🔍 Verify in Phoenix ↗", url,
+                        "Opens a real cached call — annotated “served from cache”.")
+    if kind == "model_routing" and routing_compare_url:
+        return ("🔬 Verify in Phoenix ↗", routing_compare_url,
+                "Baseline-vs-governed experiment — cost computed by Phoenix.")
+    return None
+
+
+def _render_story_card(rec, issue, policy, sig, active, gov_store,
+                       saved, gid, routing_compare_url) -> None:
+    kind = issue.get("kind")
+    icon = "🔀" if kind == "model_routing" else "🗄️"
+    badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
+    comp = issue.get("components") or {}
+    cur = issue.get("current_avg_usd", 0) or 0
+    proj = issue.get("projected_avg_usd", 0) or 0
+    pct = int(round(issue.get("pct_reduction", 0) * 100))
+    monthly = issue.get("monthly_savings_usd", 0) or 0
+    has_savings = (issue.get("savings_per_ticket_usd", 0) or 0) > 0
+    explain = _policy_explainer(issue) if policy else None
+    realized = (saved.get("cache_savings_usd") if kind == "tool_cache"
+                else saved.get("model_savings_usd")) or 0.0
+
+    with st.container(border=True):
+        head = st.columns([5, 2])
+        with head[0]:
+            tag = "  ·  ✅ governing live" if active else ""
+            st.markdown(f"### {icon} {rec['title']}")
+            st.caption(f"_{badge}_{tag}")
+        with head[1]:
+            if policy and active:
+                if st.button("Turn off", key=f"deact_{sig}", use_container_width=True,
+                             help="Stop enforcing this policy. Takes effect immediately."):
+                    gov_store.deactivate_policy(sig)
+                    st.rerun()
+            elif policy:
+                if st.button(explain["button"], key=f"act_{sig}", type="primary",
+                             use_container_width=True,
+                             help="Enforced at the gateway in real time. Reversible in one click."):
+                    gov_store.activate_policy(sig, policy[1], policy[2])
+                    st.rerun()
+
+        # 1. Cause + fix — the AHA trigger.
+        st.markdown(_story_cause(issue))
+
+        # 2. The dramatic before → after (two-number arrow).
+        if kind == "tool_cache" and has_savings:
+            unit = comp.get("tool_unit_price_usd", 0) or 0
+            st.markdown(
+                f"**`{issue.get('primary_tool','tool')}` per call:**  "
+                f"`${unit:.4f}`  →  `$0.0000`  ✅ served from cache"
+            )
+            st.markdown(f"**per ticket (overall):**  `${cur:.4f}`  →  `${proj:.4f}`")
+        elif has_savings:
+            st.markdown(f"**per simple ticket:**  `${cur:.4f}`  →  `${proj:.4f}`  (−{pct}%)")
+
+        # 3. Realized (measured, Phoenix-backed) vs projected (forecast, labeled).
+        if has_savings:
+            st.markdown(
+                f"Realized: **${realized:.4f}** saved so far  ·  "
+                f"_est. ~${monthly:,.2f}/mo at current volume (forecast)_"
+            )
+
+        # 4. Verify in Phoenix — spot-check one real instance.
+        link = _verify_link(issue, gid, routing_compare_url)
+        if link:
+            st.link_button(link[0], link[1])
+            st.caption(link[2])
+
+        if explain:
+            st.caption(f"🔒 {explain['safeguard']}  ·  Runtime only — never changes "
+                       "your prompts or code.")
+        if active and policy:
+            _render_verification(issue, sig)
+        with st.expander("The math"):
+            if has_savings:
+                _render_savings_math(issue)
+            else:
+                st.caption("No quantified savings for this item yet.")
+
+
 def _render_recommendations(recs: list[dict]) -> None:
     from accountant.wrapper import store as gov_store
 
@@ -538,71 +651,26 @@ def _render_recommendations(recs: list[dict]) -> None:
         st.success("No cost issues detected — the agent is running clean.")
         return
 
+    from accountant.pipeline.db import savings_summary, get_meta
+    saved = savings_summary()
+    gid = _project_gid()
+    routing_compare_url = None
+    _raw = get_meta("experiment_proof")
+    if _raw:
+        try:
+            _p = json.loads(_raw)
+            if _p.get("status") == "done":
+                routing_compare_url = _p.get("compare_url")
+        except Exception:
+            pass
+
     for rec in recs:
         issue = _issue_of(rec)
         policy = _policy_for_issue(issue)
-        badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
         sig = policy[0] if policy else rec["signature"]
         active = gov_store.is_active(sig) if policy else False
-
-        pct = int(round(issue.get("pct_reduction", 0) * 100))
-        monthly = issue.get("monthly_savings_usd", 0) or 0
-        cur = issue.get("current_avg_usd", 0) or 0
-        proj = issue.get("projected_avg_usd", 0) or 0
-        volume = issue.get("monthly_volume", 0) or 0
-        has_savings = (issue.get("savings_per_ticket_usd", 0) or 0) > 0
-
-        explain = _policy_explainer(issue) if policy else None
-
-        with st.container(border=True):
-            head = st.columns([5, 2])
-            with head[0]:
-                tag = "  ·  ✅ governing live" if active else ""
-                st.markdown(f"**{rec['title']}**  ·  _{badge}_{tag}")
-            with head[1]:
-                if policy:
-                    if active:
-                        if st.button("Turn off", key=f"deact_{sig}",
-                                     use_container_width=True,
-                                     help="Stop enforcing this policy. Takes effect immediately."):
-                            gov_store.deactivate_policy(sig)
-                            st.rerun()
-                    else:
-                        if st.button(explain["button"], key=f"act_{sig}",
-                                     type="primary", use_container_width=True,
-                                     help="Enforced at the gateway in real time. "
-                                          "Reversible in one click."):
-                            gov_store.activate_policy(sig, policy[1], policy[2])
-                            st.rerun()
-
-            if has_savings:
-                m1, m2 = st.columns(2)
-                m1.metric("Saving per ticket", f"{pct}%")
-                m2.metric("Saving per month", f"${monthly:,.2f}")
-                st.caption(
-                    f"${cur:.4f} → ${proj:.4f} per ticket  ·  "
-                    f"~{volume:,} tickets/month at current volume"
-                )
-
-            # The buyer's three questions, answered before they click.
-            if explain:
-                st.markdown(f"**What it does** — {explain['what']}")
-                st.markdown(f"**Safeguard** — {explain['safeguard']}")
-                st.caption(
-                    "🔒 Runtime only — never changes your prompts or code. "
-                    "Reversible in one click."
-                    + ("  ·  ✅ currently governing live." if active else "")
-                )
-
-            # Proof, once active: measured from the customer's own traces.
-            if active and policy:
-                _render_verification(issue, sig)
-
-            with st.expander("The math"):
-                if has_savings:
-                    _render_savings_math(issue)
-                else:
-                    st.caption("No quantified savings for this item yet.")
+        _render_story_card(rec, issue, policy, sig, active, gov_store,
+                            saved, gid, routing_compare_url)
 
 
 @st.fragment(run_every="500ms")

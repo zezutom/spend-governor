@@ -318,6 +318,8 @@ def savings_summary(conn=None) -> dict:
             "SUM(CASE WHEN savings_usd>0 THEN 1 ELSE 0 END) AS n, "
             "SUM(CASE WHEN savings_usd>0 AND cache_hit=1 THEN 1 ELSE 0 END) AS cache_hits, "
             "SUM(CASE WHEN savings_usd>0 AND cache_hit=0 THEN 1 ELSE 0 END) AS model_swaps, "
+            "COALESCE(SUM(CASE WHEN cache_hit=1 THEN savings_usd ELSE 0 END),0) AS cache_saved, "
+            "COALESCE(SUM(CASE WHEN cache_hit=0 THEN savings_usd ELSE 0 END),0) AS model_saved, "
             "SUM(CASE WHEN cost_source='phoenix' THEN 1 ELSE 0 END) AS reconciled "
             "FROM spans"
         ).fetchone()
@@ -326,8 +328,28 @@ def savings_summary(conn=None) -> dict:
             "spans_with_savings": int(row["n"] or 0),
             "cache_hits": int(row["cache_hits"] or 0),
             "model_swaps": int(row["model_swaps"] or 0),
+            "cache_savings_usd": round(float(row["cache_saved"] or 0), 6),
+            "model_savings_usd": round(float(row["model_saved"] or 0), 6),
             "spans_reconciled": int(row["reconciled"] or 0),
         }
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
+def representative_saving_span(cache_hit: bool, conn=None) -> dict | None:
+    """A recent saving span of a mechanism (cache_hit True ⇒ a served cache
+    hit, False ⇒ a model downgrade) for the per-policy "verify in Phoenix"
+    deeplink. Returns {trace_id, phoenix_node_id} or None."""
+    def _run(c):
+        r = c.execute(
+            "SELECT trace_id, phoenix_node_id FROM spans "
+            "WHERE savings_usd > 0 AND cache_hit = ? AND trace_id IS NOT NULL "
+            "ORDER BY reconciled_at DESC, start_time DESC LIMIT 1",
+            (1 if cache_hit else 0,),
+        ).fetchone()
+        return {"trace_id": r["trace_id"], "phoenix_node_id": r["phoenix_node_id"]} if r else None
     if conn is None:
         with connect() as c:
             return _run(c)

@@ -66,6 +66,38 @@ def _accountant_savings(attributes) -> float:
         return 0.0
 
 
+def project_gid(project: str | None = None, *, timeout: float = 15.0) -> str | None:
+    """Resolve the Phoenix project node id (e.g. 'UHJvamVjdDo0') for building
+    span deeplinks. Stable per project — callers should cache."""
+    project = project or os.environ.get("PHOENIX_PROJECT_NAME")
+    if not project:
+        return None
+    url, key = _endpoint_and_key()
+    try:
+        resp = httpx.post(
+            url,
+            json={"query": "query($n:String!){ getProjectByName(name:$n){ id } }",
+                  "variables": {"n": project}},
+            headers={"authorization": f"Bearer {key}", "content-type": "application/json"},
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        return ((resp.json().get("data") or {}).get("getProjectByName") or {}).get("id")
+    except Exception:
+        return None
+
+
+def span_deeplink(project_gid: str, trace_id: str, node_id: str | None) -> str | None:
+    """Phoenix UI URL that opens a trace with one span selected — the exact
+    shape the spans table builds for a row. node_id is the span's Phoenix
+    node id (`spans.phoenix_node_id`); without it we still open the trace."""
+    ui_base = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "").rstrip("/")
+    if not (ui_base and project_gid and trace_id):
+        return None
+    base = f"{ui_base}/projects/{project_gid}/spans/{trace_id}"
+    return f"{base}?selectedSpanNodeId={node_id}" if node_id else base
+
+
 _EXPERIMENT_COST_QUERY = """
 query($id:ID!){ node(id:$id){ ... on Experiment {
   name runCount averageRunLatencyMs
