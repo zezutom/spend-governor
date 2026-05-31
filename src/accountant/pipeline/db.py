@@ -356,6 +356,44 @@ def representative_saving_span(cache_hit: bool, conn=None) -> dict | None:
     return _run(conn)
 
 
+def policy_savings_series(cache_hit: bool, conn=None) -> list[dict]:
+    """Per-span savings over time for a policy kind (cache_hit True ⇒ tool
+    cache hits, False ⇒ model downgrades), oldest-first — feeds the
+    cumulative-savings timeline chart."""
+    def _run(c) -> list[dict]:
+        rows = c.execute(
+            "SELECT start_time, savings_usd FROM spans "
+            "WHERE savings_usd > 0 AND cache_hit = ? AND start_time IS NOT NULL "
+            "ORDER BY start_time",
+            (1 if cache_hit else 0,),
+        ).fetchall()
+        return [{"start_time": r["start_time"], "savings_usd": float(r["savings_usd"] or 0)}
+                for r in rows]
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
+def policy_saving_spans(cache_hit: bool, limit: int = 25, offset: int = 0,
+                        conn=None) -> list[dict]:
+    """One page of the saving spans for a policy kind, newest-first — each row
+    carries the ids to deeplink into Phoenix (paginated drill-down)."""
+    def _run(c) -> list[dict]:
+        rows = c.execute(
+            "SELECT span_id, trace_id, phoenix_node_id, savings_usd, start_time, "
+            "tool_name, model_name FROM spans "
+            "WHERE savings_usd > 0 AND cache_hit = ? "
+            "ORDER BY start_time DESC LIMIT ? OFFSET ?",
+            (1 if cache_hit else 0, limit, offset),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
 def unannotated_saving_spans(limit: int = 500, conn=None) -> list[dict]:
     """Saving spans not yet tagged in Phoenix — fed to the annotator so each
     governed span gets an `accountant.savings` annotation exactly once."""

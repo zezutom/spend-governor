@@ -244,7 +244,7 @@ def _render_hero(live: dict) -> None:
     )
     upd = last_updated.split("T")[1][:8] if "T" in last_updated else last_updated
     st.caption(
-        f"{total_traces:,} tickets · ${total_cost:.2f} analyzed · updated {upd} UTC"
+        f"{total_traces:,} tickets · \\${total_cost:.2f} analyzed · updated {upd} UTC"
     )
 
 
@@ -379,11 +379,11 @@ def _render_savings_math(issue: dict) -> None:
             f"- Routing to `{comp.get('cheap_model')}` retains ~"
             f"{int(comp.get('llm_cost_retained_ratio', 0)*100)}% of LLM cost "
             f"(estimated, input-heavy tasks)\n"
-            f"- Saving per ticket: **${issue.get('savings_per_ticket_usd', 0):.4f}** "
-            f"(${issue.get('current_avg_usd', 0):.4f} → ${issue.get('projected_avg_usd', 0):.4f})\n"
+            f"- Saving per ticket: **\\${issue.get('savings_per_ticket_usd', 0):.4f}** "
+            f"(\\${issue.get('current_avg_usd', 0):.4f} → \\${issue.get('projected_avg_usd', 0):.4f})\n"
             f"- × {issue.get('monthly_volume', 0):,} tickets/month "
             f"(observed over {comp.get('window_days', 0):g} days) = "
-            f"**${issue.get('monthly_savings_usd', 0):,.2f}/month**"
+            f"**\\${issue.get('monthly_savings_usd', 0):,.2f}/month**"
         )
         return
     removed = comp.get("avg_tool_calls_removed", 0)
@@ -391,14 +391,14 @@ def _render_savings_math(issue: dict) -> None:
     unit = comp.get("tool_unit_price_usd", 0)
     st.markdown(
         f"- Serves ~{removed:g} repeated `{tool}` calls/ticket from semantic cache "
-        f"× ${unit:.4f} = **${comp.get('tool_savings_per_ticket_usd', 0):.4f}** tool cost\n"
+        f"× \\${unit:.4f} = **\\${comp.get('tool_savings_per_ticket_usd', 0):.4f}** tool cost\n"
         f"- Plus the LLM reasoning those calls triggered: "
-        f"**${comp.get('llm_savings_per_ticket_usd', 0):.4f}**\n"
-        f"- Saving per ticket: **${issue.get('savings_per_ticket_usd', 0):.4f}** "
-        f"(${issue.get('current_avg_usd', 0):.4f} → ${issue.get('projected_avg_usd', 0):.4f})\n"
+        f"**\\${comp.get('llm_savings_per_ticket_usd', 0):.4f}**\n"
+        f"- Saving per ticket: **\\${issue.get('savings_per_ticket_usd', 0):.4f}** "
+        f"(\\${issue.get('current_avg_usd', 0):.4f} → \\${issue.get('projected_avg_usd', 0):.4f})\n"
         f"- × {issue.get('monthly_volume', 0):,} tickets/month "
         f"(observed over {comp.get('window_days', 0):g} days) = "
-        f"**${issue.get('monthly_savings_usd', 0):,.2f}/month**"
+        f"**\\${issue.get('monthly_savings_usd', 0):,.2f}/month**"
     )
 
 
@@ -462,8 +462,8 @@ def _render_verification(issue: dict, policy_sig: str) -> None:
     st.success(
         f"**Verified from your traces:** {m['before_n']:,} tickets before vs "
         f"{m['after_n']:,} since activation — cost-per-ticket "
-        f"**${m['before_avg_usd']:.4f} → ${m['after_avg_usd']:.4f}** "
-        f"(**−{pct}%**), **${m['measured_savings_usd']:,.4f}** saved so far."
+        f"**\\${m['before_avg_usd']:.4f} → \\${m['after_avg_usd']:.4f}** "
+        f"(**−{pct}%**), **\\${m['measured_savings_usd']:,.4f}** saved so far."
     )
 
 
@@ -494,29 +494,54 @@ def _story_cause(issue: dict) -> str:
             f"Now served from a semantic cache; the paid call never fires.")
 
 
-def _verify_link(issue: dict, gid: str | None):
-    """(label, url, caption) → a real annotated span in Phoenix proving this
-    policy fired: cache → a served cache hit, routing → a downgraded call.
-    Both are wrapper-annotated, so the evidence is instant and always
-    available (no experiment run needed). Supporting evidence to spot-check;
-    the card's numbers are the Phoenix-sourced proof."""
-    if not gid:
-        return None
-    from accountant.pipeline.db import representative_saving_span
+def _render_policy_proof(kind: str, sig: str, saved: dict, gid: str | None) -> None:
+    """The cumulative proof for ONE policy: an aggregated savings timeline
+    (the curve) + a paginated, Phoenix-linked list of the individual spans
+    that saved. Aggregate lives here (our dashboard); Phoenix proves each
+    part (per-span deeplinks)."""
+    import math
+    import pandas as pd
+    from accountant.pipeline.db import policy_savings_series, policy_saving_spans
     from accountant.pipeline.phoenix_cost import span_deeplink
-    kind = issue.get("kind")
-    if kind == "tool_cache":
-        rep = representative_saving_span(cache_hit=True)
-        cap = "Opens a real cached call — annotated “served from cache”."
-    elif kind == "model_routing":
-        rep = representative_saving_span(cache_hit=False)
-        cap = "Opens a real downgraded call — annotated “routed to a cheaper model”."
-    else:
-        return None
-    if not rep:
-        return None
-    url = span_deeplink(gid, rep["trace_id"], rep["phoenix_node_id"])
-    return ("🔍 Verify in Phoenix ↗", url, cap) if url else None
+
+    ch = (kind == "tool_cache")
+    total = (saved.get("cache_hits") if ch else saved.get("model_swaps")) or 0
+    if total == 0:
+        return
+
+    # Aggregated view — cumulative savings over time.
+    series = policy_savings_series(ch)
+    if series:
+        df = pd.DataFrame(series)
+        df["t"] = pd.to_datetime(df["start_time"], errors="coerce", utc=True)
+        df = df.dropna(subset=["t"]).sort_values("t")
+        if not df.empty:
+            df["Cumulative saved (USD)"] = df["savings_usd"].cumsum()
+            st.caption("Cumulative savings over time")
+            st.area_chart(df.set_index("t")[["Cumulative saved (USD)"]], height=160)
+
+    # Drill-down — paginated list, each row opens that span in Phoenix.
+    with st.expander(f"Verify in Phoenix — the {total} spans that saved (paginated)"):
+        PAGE = 25
+        npages = max(1, math.ceil(total / PAGE))
+        page = int(st.number_input("Page", 1, npages, 1, key=f"pg_{sig}"))
+        rows = policy_saving_spans(ch, limit=PAGE, offset=(page - 1) * PAGE)
+        table = pd.DataFrame([{
+            "when (UTC)": str(r.get("start_time", ""))[:19],
+            "what": r.get("tool_name") or r.get("model_name") or "",
+            "saved (USD)": round(r.get("savings_usd", 0) or 0, 6),
+            "verify": (span_deeplink(gid, r.get("trace_id"), r.get("phoenix_node_id"))
+                       if gid else None),
+        } for r in rows])
+        st.dataframe(
+            table, hide_index=True, use_container_width=True,
+            column_config={
+                "saved (USD)": st.column_config.NumberColumn(format="$%.6f"),
+                "verify": st.column_config.LinkColumn("verify", display_text="open span ↗"),
+            },
+        )
+        st.caption(f"Page {page} of {npages} · each row opens that span in Phoenix "
+                   "(its `accountant.savings` annotation is under the Annotations tab).")
 
 
 def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -> None:
@@ -554,7 +579,9 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -
         # 1. Cause + fix in plain English — the AHA trigger.
         st.write(_story_cause(issue))
 
-        # 2. Before → after as clean metrics (human, not a code formula).
+        # 2. Before → after as clean metric tiles. NOTE: st.metric values are
+        #    NOT markdown, so "$" is safe here; everywhere else "$" must be
+        #    escaped as "\$" or Streamlit renders $…$ as LaTeX math.
         if has_savings and kind == "tool_cache":
             unit = comp.get("tool_unit_price_usd", 0) or 0
             tool = issue.get("primary_tool", "tool")
@@ -562,33 +589,28 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -
             b, a = st.columns(2)
             b.metric("Before", f"${unit:.4f}")
             a.metric("After", "$0.0000", "-100%", delta_color="inverse")
-            st.caption(f"Whole ticket: ${cur:.4f} → ${proj:.4f}")
         elif has_savings:
             st.caption("Cost per simple ticket")
             b, a = st.columns(2)
             b.metric("Before", f"${cur:.4f}")
             a.metric("After", f"${proj:.4f}", f"-{pct}%", delta_color="inverse")
 
-        # 3. Realized (measured/Phoenix) vs projected (forecast) — plain text,
-        #    no mixed bold/italic markdown (it renders garbled).
+        # 3. Cumulative "how much it saved" (measured, Phoenix-sourced) + forecast.
+        #    "$" escaped — st.caption renders markdown and treats $…$ as LaTeX.
         if has_savings:
             st.caption(
-                f"Realized ${realized:.4f} saved so far (measured)  ·  "
-                f"est. ~${monthly:,.0f}/mo at current volume (forecast)"
+                f"Realized \\${realized:.4f} saved so far (measured in Phoenix) "
+                f"· ~\\${monthly:,.0f}/mo projected at current volume."
             )
 
-        # 4. Verify in Phoenix — opens a real annotated span proving it fired.
-        link = _verify_link(issue, gid)
-        if link:
-            st.link_button(link[0], link[1])
-            st.caption(link[2])
+        # 4. Aggregated timeline + paginated, Phoenix-linked span list.
+        _render_policy_proof(kind, sig, saved, gid)
 
-        if explain:
-            st.caption("🔒 Runtime only — never changes your prompts or code, "
-                       "reversible in one click.")
-        if active and policy:
-            _render_verification(issue, sig)
-        with st.expander("The math"):
+        st.caption("🔒 Runtime only — never changes your prompts or code; "
+                   "reversible in one click.")
+        with st.expander("Before/after & the math"):
+            if active and policy:
+                _render_verification(issue, sig)
             if has_savings:
                 _render_savings_math(issue)
             else:
