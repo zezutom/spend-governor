@@ -37,6 +37,10 @@ INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
 INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}"
 LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
+# Cheapest task class — the cost-per-ticket baseline every other class is
+# compared against.
+BASELINE_CLASS = "password_reset"
+
 
 st.set_page_config(
     page_title="Agent Accountant",
@@ -200,115 +204,6 @@ def _render_onboarding(live: dict) -> None:
             st.caption(f"Currently reviewing activity from {lookback}.")
 
 
-def _render_hero(live: dict) -> None:
-    """Value on the nose: lead with avoidable waste and realized savings,
-    not trace counters. The two numbers a stressed CFO needs first."""
-    from accountant.wrapper.store import active_policies
-
-    summary = live.get("summary") or {}
-    total_traces = int(summary.get("total_traces") or 0)
-    total_cost = float(summary.get("total_cost_usd") or 0.0)
-    last_updated = summary.get("last_updated_at") or "—"
-
-    # Total avoidable waste = sum of every detected policy's monthly
-    # opportunity. Realized = what the wrapper has actually saved so far —
-    # re-derived from Phoenix-sourced per-span savings (refactor #2), so a
-    # customer can verify it from their own traces.
-    recs = _load_recommendations()
-    opportunity = 0.0
-    for r in recs:
-        try:
-            opportunity += float(json.loads(r.get("data") or "{}").get("monthly_savings_usd") or 0)
-        except Exception:
-            pass
-    realized = float(summary.get("total_savings_usd") or 0.0)
-    n_active = len(active_policies())
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric(
-        "💸 Avoidable AI waste",
-        f"${opportunity:,.2f}/mo",
-        help="Projected monthly cost of the wasteful execution patterns "
-             "detected in your traces, at current volume.",
-    )
-    c2.metric(
-        "✅ Saved so far",
-        f"${realized:,.4f}",
-        help="Actual cost the wrapper has avoided since you activated "
-             "policies — summed from per-span savings in Phoenix, so it's "
-             "verifiable from your own traces.",
-    )
-    c3.metric(
-        "⚡ Policies governing live",
-        f"{n_active}",
-    )
-    upd = last_updated.split("T")[1][:8] if "T" in last_updated else last_updated
-    st.caption(
-        f"{total_traces:,} tickets · \\${total_cost:.2f} analyzed · updated {upd} UTC"
-    )
-
-
-BASELINE_CLASS = "password_reset"
-
-
-def _render_by_class(live: dict) -> None:
-    by_class = live.get("by_task_class") or {}
-    if not by_class:
-        st.info("Waiting for data…")
-        return
-
-    # Spend share per class — answers "where is the money going?"
-    spend = {tc: (s["avg_cost_usd"] * s["n"]) for tc, s in by_class.items()}
-    total_spend = sum(spend.values()) or 1e-9
-    baseline = (by_class.get(BASELINE_CLASS) or {}).get("avg_cost_usd") or 1e-9
-
-    ranked = sorted(by_class.items(), key=lambda kv: spend[kv[0]], reverse=True)
-
-    # Signal-first headline: name the single biggest avoidable waste.
-    worst_tc, worst_x = None, 1.0
-    for tc, s in by_class.items():
-        if tc in (BASELINE_CLASS, "unknown"):
-            continue
-        x = s["avg_cost_usd"] / baseline
-        if x > worst_x:
-            worst_tc, worst_x = tc, x
-    if worst_tc:
-        share = spend[worst_tc] / total_spend
-        st.markdown(
-            f"**{worst_tc.replace('_',' ').title()}** is your biggest avoidable "
-            f"cost — **{worst_x:.1f}× the baseline** per ticket and "
-            f"**{share*100:.0f}% of total spend**. See the policy below to fix it."
-        )
-
-    rows = []
-    for tc, s in ranked:
-        x = s["avg_cost_usd"] / baseline
-        flag = "🟢 baseline" if tc == BASELINE_CLASS else (
-            "🔴 wasteful" if x >= 2.0 else ("🟡 elevated" if x >= 1.5 else "🟢 ok")
-        )
-        rows.append({
-            "Task type": tc.replace("_", " "),
-            "Share of spend": f"{spend[tc]/total_spend*100:.0f}%",
-            "Cost vs baseline": "—" if tc == BASELINE_CLASS else f"{x:.1f}×",
-            "Status": flag,
-        })
-    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-
-    with st.expander("Full per-class breakdown"):
-        detail = []
-        for tc, s in ranked:
-            detail.append({
-                "Task type": tc.replace("_", " "),
-                "Tickets": s["n"],
-                "Avg $/ticket": round(s["avg_cost_usd"], 5),
-                "Avg LLM $": round(s["avg_llm_cost_usd"], 5),
-                "Avg tool $": round(s["avg_tool_cost_usd"], 5),
-                "Avg tools/ticket": s["avg_tools"],
-                "Avg web_search/ticket": s["avg_web_search"],
-            })
-        st.dataframe(pd.DataFrame(detail), hide_index=True, use_container_width=True)
-
-
 def _issue_of(rec: dict) -> dict:
     try:
         return json.loads(rec.get("data") or "{}")
@@ -333,73 +228,6 @@ def _policy_for_issue(issue: dict):
                 {"cheap_model": issue.get("cheap_model", "gemini-2.5-flash-lite"),
                  "est_savings_per_call_usd": per_call})
     return None
-
-
-def _policy_explainer(issue: dict) -> dict:
-    """Plain-English answers to the buyer's questions: what does it do,
-    is it safe, what's the action labelled."""
-    kind = issue.get("kind")
-    if kind == "model_routing":
-        cheap = issue.get("cheap_model", "a cheaper model")
-        return {
-            "what": (
-                f"Routes **simple tickets** (password resets, account questions) "
-                f"to **{cheap}** instead of the standard model — at the gateway, "
-                f"as requests pass through."
-            ),
-            "safeguard": (
-                "Only low-risk request types are routed. Refunds, plan changes, "
-                "and anything involving money or a decision stay on the standard "
-                "model — they're never downgraded."
-            ),
-            "button": "Activate routing",
-        }
-    tool = issue.get("primary_tool") or "the tool"
-    return {
-        "what": (
-            f"Serves **repeated `{tool}` calls** from a cache instead of "
-            f"re-running them — so the same external lookup isn't paid for "
-            f"twice across tickets."
-        ),
-        "safeguard": (
-            "A call is only served from cache when its query is **semantically "
-            "equivalent** to a prior one (embedding check). A genuinely "
-            "different query still runs — so answers don't degrade."
-        ),
-        "button": "Activate caching",
-    }
-
-
-def _render_savings_math(issue: dict) -> None:
-    comp = issue.get("components") or {}
-    st.markdown("**How this is calculated**")
-    if issue.get("kind") == "model_routing":
-        st.markdown(
-            f"- {issue['n_traces']} simple tickets currently run on the standard model\n"
-            f"- Routing to `{comp.get('cheap_model')}` retains ~"
-            f"{int(comp.get('llm_cost_retained_ratio', 0)*100)}% of LLM cost "
-            f"(estimated, input-heavy tasks)\n"
-            f"- Saving per ticket: **\\${issue.get('savings_per_ticket_usd', 0):.4f}** "
-            f"(\\${issue.get('current_avg_usd', 0):.4f} → \\${issue.get('projected_avg_usd', 0):.4f})\n"
-            f"- × {issue.get('monthly_volume', 0):,} tickets/month "
-            f"(observed over {comp.get('window_days', 0):g} days) = "
-            f"**\\${issue.get('monthly_savings_usd', 0):,.2f}/month**"
-        )
-        return
-    removed = comp.get("avg_tool_calls_removed", 0)
-    tool = issue.get("primary_tool") or "tool"
-    unit = comp.get("tool_unit_price_usd", 0)
-    st.markdown(
-        f"- Serves ~{removed:g} repeated `{tool}` calls/ticket from semantic cache "
-        f"× \\${unit:.4f} = **\\${comp.get('tool_savings_per_ticket_usd', 0):.4f}** tool cost\n"
-        f"- Plus the LLM reasoning those calls triggered: "
-        f"**\\${comp.get('llm_savings_per_ticket_usd', 0):.4f}**\n"
-        f"- Saving per ticket: **\\${issue.get('savings_per_ticket_usd', 0):.4f}** "
-        f"(\\${issue.get('current_avg_usd', 0):.4f} → \\${issue.get('projected_avg_usd', 0):.4f})\n"
-        f"- × {issue.get('monthly_volume', 0):,} tickets/month "
-        f"(observed over {comp.get('window_days', 0):g} days) = "
-        f"**\\${issue.get('monthly_savings_usd', 0):,.2f}/month**"
-    )
 
 
 def _render_realized_savings() -> None:
@@ -544,79 +372,6 @@ def _render_policy_proof(kind: str, sig: str, saved: dict, gid: str | None) -> N
                    "(its `accountant.savings` annotation is under the Annotations tab).")
 
 
-def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -> None:
-    kind = issue.get("kind")
-    icon = "🔀" if kind == "model_routing" else "🗄️"
-    badge = "🤖 reasoned" if rec["source"] == "gemini" else "📋 pattern"
-    comp = issue.get("components") or {}
-    cur = issue.get("current_avg_usd", 0) or 0
-    proj = issue.get("projected_avg_usd", 0) or 0
-    pct = int(round(issue.get("pct_reduction", 0) * 100))
-    monthly = issue.get("monthly_savings_usd", 0) or 0
-    has_savings = (issue.get("savings_per_ticket_usd", 0) or 0) > 0
-    explain = _policy_explainer(issue) if policy else None
-    realized = (saved.get("cache_savings_usd") if kind == "tool_cache"
-                else saved.get("model_savings_usd")) or 0.0
-
-    with st.container(border=True):
-        head = st.columns([5, 2])
-        with head[0]:
-            st.markdown(f"### {icon} {rec['title']}")
-            st.caption(f"{badge}" + ("  ·  ✅ governing live" if active else ""))
-        with head[1]:
-            if policy and active:
-                if st.button("Turn off", key=f"deact_{sig}", use_container_width=True,
-                             help="Stop enforcing this policy. Takes effect immediately."):
-                    gov_store.deactivate_policy(sig)
-                    st.rerun()
-            elif policy:
-                if st.button(explain["button"], key=f"act_{sig}", type="primary",
-                             use_container_width=True,
-                             help="Enforced at the gateway in real time. Reversible in one click."):
-                    gov_store.activate_policy(sig, policy[1], policy[2])
-                    st.rerun()
-
-        # 1. Cause + fix in plain English — the AHA trigger.
-        st.write(_story_cause(issue))
-
-        # 2. Before → after as clean metric tiles. NOTE: st.metric values are
-        #    NOT markdown, so "$" is safe here; everywhere else "$" must be
-        #    escaped as "\$" or Streamlit renders $…$ as LaTeX math.
-        if has_savings and kind == "tool_cache":
-            unit = comp.get("tool_unit_price_usd", 0) or 0
-            tool = issue.get("primary_tool", "tool")
-            st.caption(f"Cost of each `{tool}` call")
-            b, a = st.columns(2)
-            b.metric("Before", f"${unit:.4f}")
-            a.metric("After", "$0.0000", "-100%", delta_color="inverse")
-        elif has_savings:
-            st.caption("Cost per simple ticket")
-            b, a = st.columns(2)
-            b.metric("Before", f"${cur:.4f}")
-            a.metric("After", f"${proj:.4f}", f"-{pct}%", delta_color="inverse")
-
-        # 3. Cumulative "how much it saved" (measured, Phoenix-sourced) + forecast.
-        #    "$" escaped — st.caption renders markdown and treats $…$ as LaTeX.
-        if has_savings:
-            st.caption(
-                f"Realized \\${realized:.4f} saved so far (measured in Phoenix) "
-                f"· ~\\${monthly:,.0f}/mo projected at current volume."
-            )
-
-        # 4. Aggregated timeline + paginated, Phoenix-linked span list.
-        _render_policy_proof(kind, sig, saved, gid)
-
-        st.caption("🔒 Runtime only — never changes your prompts or code; "
-                   "reversible in one click.")
-        with st.expander("Before/after & the math"):
-            if active and policy:
-                _render_verification(issue, sig)
-            if has_savings:
-                _render_savings_math(issue)
-            else:
-                st.caption("No quantified savings for this item yet.")
-
-
 def _render_tool_pricing() -> None:
     """Read-only view of the operator-configured per-call tool rates. Phoenix
     prices LLM tokens but NOT tools, so tool dollars = Phoenix-measured call
@@ -733,102 +488,321 @@ def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
             )
 
 
-def _render_recommendations(recs: list[dict]) -> None:
-    from accountant.wrapper import store as gov_store
-    from accountant.pipeline.db import savings_summary
-    saved = savings_summary()
-    gid = _project_gid()
+def _default_ws_rate() -> float:
+    from accountant.pricing.tools import TOOL_PRICES
+    return TOOL_PRICES.get("web_search", 0.005)
 
-    _render_waste_breakdown(recs, gid)
-    st.divider()
-    st.markdown("#### Realized savings")
-    _render_realized_savings()
-    st.divider()
-    st.markdown("#### Optimization policies")
-    if not recs:
+
+def _observed_hours(recs: list[dict]) -> float:
+    for r in recs:
+        wd = (_issue_of(r).get("components") or {}).get("window_days")
+        if wd:
+            return wd * 24
+    return 12.0
+
+
+def _default_monthly_tickets(live: dict, recs: list[dict]) -> int:
+    by = live.get("by_task_class") or {}
+    total_n = int((live.get("summary") or {}).get("total_traces") or 0) or sum(s["n"] for s in by.values())
+    wd = 0.5
+    for r in recs:
+        wd = (_issue_of(r).get("components") or {}).get("window_days") or wd
+        break
+    return int(round(total_n / max(wd, 1e-9) * 30)) if total_n else 0
+
+
+def _issue_rows(live: dict, recs: list[dict], ws_rate: float):
+    """Per-class derived view + page totals, recomputed from the live
+    web_search rate. Reuses stored measured values; only the web_search-priced
+    parts move with the rate. Returns (rows, totals)."""
+    by = live.get("by_task_class") or {}
+    total_n = int((live.get("summary") or {}).get("total_traces") or 0) or sum(s["n"] for s in by.values())
+    cache_rec, routing = {}, None
+    for r in recs:
+        i = _issue_of(r)
+        if i.get("kind") == "tool_cache" and i.get("task_class"):
+            cache_rec[i["task_class"]] = i
+        elif i.get("kind") == "model_routing":
+            routing = i
+    base_cost = (by.get(BASELINE_CLASS) or {}).get("avg_cost_usd") or 1e-9
+    d_ws = ws_rate - _default_ws_rate()
+    rows, rec_tot, cost_tot = [], 0.0, 0.0
+    for tc, s in by.items():
+        n = s["n"]; avg_ws = s.get("avg_web_search", 0) or 0
+        llm = s["avg_llm_cost_usd"]; tool = s["avg_tool_cost_usd"] + avg_ws * d_ws
+        cost = llm + tool
+        saving = 0.0
+        ci = cache_rec.get(tc)
+        if ci:
+            comp = ci.get("components") or {}
+            if ci.get("primary_tool") == "web_search":
+                ts = (comp.get("avg_tool_calls_removed", 0) or 0) * ws_rate
+            else:
+                ts = comp.get("tool_savings_per_ticket_usd", 0) or 0
+            ls = (ci.get("savings_per_ticket_usd", 0) or 0) - (comp.get("tool_savings_per_ticket_usd", 0) or 0)
+            saving += ts + ls
+        if routing and tc in (routing.get("classes") or []):
+            saving += routing.get("savings_per_ticket_usd", 0) or 0
+        rows.append({"tc": tc, "n": n, "cost": cost, "llm": llm, "tool": tool,
+                     "saving": saving, "mult": cost / base_cost,
+                     "is_base": tc == BASELINE_CLASS})
+        rec_tot += saving * n; cost_tot += cost * n
+    for r in rows:
+        r["share"] = (r["cost"] * r["n"]) / (cost_tot or 1e-9)
+    rows.sort(key=lambda r: r["cost"] * r["n"], reverse=True)
+    cpt = cost_tot / total_n if total_n else 0
+    rpt = rec_tot / total_n if total_n else 0
+    return rows, {"total_n": total_n, "cost_per_ticket": cpt,
+                  "recoverable_per_ticket": rpt,
+                  "pct_avoidable": (rpt / cpt) if cpt else 0}
+
+
+def _badge(text: str, danger: bool) -> str:
+    bg, fg = ("#fde7e6", "#b3261e") if danger else ("#e3f4e8", "#1e7a3c")
+    return (f"<span style='background:{bg};color:{fg};padding:1px 8px;border-radius:10px;"
+            f"font-size:0.78rem;font-weight:700;white-space:nowrap'>{text}</span>")
+
+
+def _bar(llm: float, tool: float, maxv: float) -> str:
+    lw = (llm / maxv * 100) if maxv else 0
+    tw = (tool / maxv * 100) if maxv else 0
+    hatch = ("repeating-linear-gradient(45deg,#e08a3c,#e08a3c 4px,#f3c89a 4px,#f3c89a 8px)")
+    return (f"<div style='display:flex;height:18px;border-radius:4px;overflow:hidden;"
+            f"background:#eee;margin:2px 0 10px'>"
+            f"<div title='tokens (Phoenix)' style='width:{lw:.2f}%;background:#3b6fd4'></div>"
+            f"<div title='tools (count × rate)' style='width:{tw:.2f}%;background:{hatch}'></div>"
+            f"</div>")
+
+
+def _class_reasons(recs: list[dict]) -> dict:
+    out: dict = {}
+    for r in recs:
+        i = _issue_of(r)
+        if i.get("kind") == "tool_cache" and i.get("task_class"):
+            comp = i.get("components") or {}
+            n = round(comp.get("avg_tool_calls_removed", 0) or 0)
+            out.setdefault(i["task_class"], []).append(
+                f"re-runs the same `{i.get('primary_tool', 'tool')}` ~{n}×")
+        if i.get("kind") == "model_routing":
+            for c in (i.get("classes") or []):
+                out.setdefault(c, []).append("runs on the full-price model")
+    return {tc: " and ".join(parts) + "." for tc, parts in out.items()}
+
+
+def _policy_mo(issue: dict, ws_rate: float, mt: int, total_n: int) -> float:
+    n = issue.get("n_traces", 0) or 0
+    if issue.get("kind") == "tool_cache" and issue.get("primary_tool") == "web_search":
+        comp = issue.get("components") or {}
+        spt = ((comp.get("avg_tool_calls_removed", 0) or 0) * ws_rate
+               + ((issue.get("savings_per_ticket_usd", 0) or 0)
+                  - (comp.get("tool_savings_per_ticket_usd", 0) or 0)))
+    else:
+        spt = issue.get("savings_per_ticket_usd", 0) or 0
+    return spt * mt * (n / total_n if total_n else 0)
+
+
+def _fix_text(issue: dict):
+    if issue.get("kind") == "model_routing":
+        pct = int(round((issue.get("pct_reduction", 0) or 0) * 100))
+        return ("Route simple tickets to a cheaper model",
+                f"Resets and FAQs go to `{issue.get('cheap_model', 'a cheaper model')}` "
+                f"— same answer, {pct}% less.")
+    tool = issue.get("primary_tool", "the tool")
+    cls = (issue.get("task_class", "") or "").replace("_", " ")
+    return (f"Cache the repeated {cls} lookups",
+            f"Serve the duplicate `{tool}` from cache — the paid call never fires.")
+
+
+def _render_bill(recs, rows, totals, mt, n_active, realized, default_mt) -> None:
+    pct = int(round(totals["pct_avoidable"] * 100))
+    cpt = totals["cost_per_ticket"]
+    rec_mo = totals["recoverable_per_ticket"] * mt
+    st.markdown("<div style='color:#777;font-size:0.95rem'>This agent's support "
+                "ticket spend</div>", unsafe_allow_html=True)
+    head, ctrl = st.columns([3, 2])
+    with head:
+        if n_active == 0:
+            st.markdown(
+                f"<div style='font-size:3rem;font-weight:800;color:#c0392b;line-height:1.05'>"
+                f"−{pct}%</div><div style='color:#333'>of every dollar per ticket is "
+                f"avoidable</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"**\\${cpt:.4f}** per ticket now · **\\${rec_mo:,.0f}/mo** recoverable "
+                f"<span style='color:#999;font-size:0.85rem'>(upper bound — patterns "
+                f"overlap)</span>", unsafe_allow_html=True)
+        else:
+            st.markdown(
+                f"<div style='font-size:2.1rem;font-weight:800;color:#1e7a3c;line-height:1.1'>"
+                f"\\${realized:,.4f} saved so far</div>"
+                f"<div style='color:#333'>~\\${rec_mo:,.0f}/mo projected once fully governed "
+                f"· {pct}% of per-ticket spend still avoidable</div>", unsafe_allow_html=True)
+    with ctrl:
+        st.slider("Your monthly tickets", min_value=1000,
+                  max_value=max(100000, int(default_mt * 3)), step=1000, key="monthly_tickets")
+    st.caption(
+        f"Measured over {totals['total_n']:,} real tickets (~{_observed_hours(recs):.0f}h of "
+        f"traffic). Everything above is a measured per-ticket ratio × the volume you set — "
+        f"not an assumed rate.")
+
+
+def _render_where(rows, recs) -> None:
+    st.subheader("Where it goes — and why")
+    reasons = _class_reasons(recs)
+    for r in rows:
+        if r["tc"] == "unknown":  # unclassified partial traces — not a task type
+            continue
+        danger = (not r["is_base"]) and r["mult"] >= 2.0
+        badge = _badge(f"{r['share'] * 100:.0f}% · {r['mult']:.1f}×", danger)
+        if r["is_base"]:
+            why = "already at baseline — nothing to fix here."
+        else:
+            why = reasons.get(r["tc"]) or "near baseline — nothing worth fixing."
+        st.markdown(
+            f"{badge}&nbsp;&nbsp;**{r['tc'].replace('_', ' ').title()}** — {why}",
+            unsafe_allow_html=True)
+
+
+def _render_decomposition(rows) -> None:
+    st.subheader("What one ticket actually costs")
+    hatch = "repeating-linear-gradient(45deg,#e08a3c,#e08a3c 3px,#f3c89a 3px,#f3c89a 6px)"
+    st.markdown(
+        "<span style='font-size:0.85rem;color:#555'>Two parts, different certainty: "
+        "<span style='background:#3b6fd4;color:#fff;padding:0 6px;border-radius:3px'>tokens</span> "
+        "metered by Phoenix · <span style='background:" + hatch +
+        ";padding:0 6px;border-radius:3px'>tools</span> = call count (Phoenix) × your "
+        "configured rate (below).</span>", unsafe_allow_html=True)
+    maxv = max((r["cost"] for r in rows), default=1e-9)
+    for r in rows:
+        st.markdown(
+            f"**{r['tc'].replace('_', ' ').title()}** "
+            f"<span style='color:#888'>\\${r['cost']:.4f}</span>", unsafe_allow_html=True)
+        st.markdown(_bar(r["llm"], r["tool"], maxv), unsafe_allow_html=True)
+    c = st.columns([2, 3])
+    with c[0]:
+        st.number_input("✎ web_search rate $/call", min_value=0.0, step=0.001,
+                        format="%.4f", key="ws_rate")
+    with c[1]:
+        st.caption("This drives most of the refund-handling cost. If it's wrong, the "
+                   "headline is wrong. It's operator-set, not a Phoenix measurement.")
+
+
+def _render_fixes(recs, mt, ws, total_n, gov_store) -> None:
+    st.subheader("The fixes")
+    items = []
+    for r in recs:
+        i = _issue_of(r)
+        p = _policy_for_issue(i)
+        if p and (i.get("savings_per_ticket_usd", 0) or 0) > 0:
+            items.append((p, i, r))
+    if not items:
         st.success("No cost issues detected — the agent is running clean.")
         return
-    for rec in recs:
-        issue = _issue_of(rec)
-        policy = _policy_for_issue(issue)
-        sig = policy[0] if policy else rec["signature"]
-        active = gov_store.is_active(sig) if policy else False
-        _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid)
+    total_proj = 0.0
+    for policy, issue, rec in items:
+        sig = policy[0]
+        active = gov_store.is_active(sig)
+        mo = _policy_mo(issue, ws, mt, total_n)
+        total_proj += mo
+        title, reason = _fix_text(issue)
+        with st.container(border=True):
+            c = st.columns([5, 2])
+            with c[0]:
+                st.markdown(f"### {title}")
+                st.markdown(reason)
+                tag = "✅ governing live · " if active else ""
+                st.markdown(
+                    f"<span style='color:#1e7a3c;font-weight:700'>saves \\${mo:,.0f}/mo</span> "
+                    f"<span style='color:#888'>· {tag}runtime only, reversible</span>",
+                    unsafe_allow_html=True)
+            with c[1]:
+                if active:
+                    if st.button("Turn off", key=f"deact_{sig}", use_container_width=True):
+                        gov_store.deactivate_policy(sig)
+                        st.rerun()
+                else:
+                    if st.button("Activate ↗", key=f"act_{sig}", type="primary",
+                                 use_container_width=True):
+                        gov_store.activate_policy(sig, policy[1], policy[2])
+                        st.rerun()
+    st.markdown(
+        f"<div style='display:flex;justify-content:space-between;align-items:center;"
+        f"background:#f3f5ee;padding:10px 16px;border-radius:8px;margin-top:4px'>"
+        f"<span style='font-weight:600'>Activate all three</span>"
+        f"<span style='color:#1e7a3c;font-weight:800;font-size:1.3rem'>\\${total_proj:,.0f}/mo</span>"
+        f"</div>", unsafe_allow_html=True)
 
 
-@st.fragment(run_every="500ms")
-def render_live() -> None:
-    # Ensure the ingest server is up. Cheap port probe + subprocess
-    # spawn on the first fragment refresh only.
+def _render_math_drawer(recs, gid) -> None:
+    from accountant.pipeline.db import savings_summary
+    from accountant.wrapper import store as gov_store
+    saved = savings_summary()
+    with st.expander("Show the math — Phoenix traces, per-ticket proof, tool rates"):
+        _render_realized_savings()
+        st.divider()
+        _render_waste_breakdown(recs, gid)
+        st.divider()
+        st.markdown("##### Per-policy savings detail")
+        for rec in recs:
+            issue = _issue_of(rec)
+            policy = _policy_for_issue(issue)
+            if not policy:
+                continue
+            sig = policy[0]
+            st.markdown(f"**{rec['title']}**")
+            _render_policy_proof(issue.get("kind"), sig, saved, gid)
+            if gov_store.is_active(sig):
+                _render_verification(issue, sig)
+
+
+@st.fragment(run_every="2s")
+def render_dashboard() -> None:
+    # ONE fragment so a slider/rate change reruns the whole report and every
+    # section reflects it. The 2s heartbeat keeps realized numbers live during
+    # governed traffic without fighting slider drags or racing button clicks.
     _ensure_ingest_server()
-
-    # ONE read. ONE source. Every UI element below derives from this
-    # single blob.
     live = _load_live_state()
-    ingest = live.get("ingest") or {}
-    backfill_status = ingest.get("status")
-
+    status = (live.get("ingest") or {}).get("status")
     span_count = _cache_span_count()
-
-    # New account: empty cache. Trigger backfill if it hasn't started.
-    if span_count == 0 and backfill_status not in ("in_progress", "complete"):
+    if span_count == 0 and status not in ("in_progress", "complete"):
         _post_backfill_start()
         time.sleep(0.3)
         live = _load_live_state()
-        ingest = live.get("ingest") or {}
-        backfill_status = ingest.get("status")
-
-    # Banner policy: while a backfill is running OR the cache is empty,
-    # show the big onboarding banner ONLY — no header, no by-class
-    # table. After backfill completes, the banner disappears and the
-    # regular dashboard takes over. The same `live` blob feeds both
-    # modes, so no cadence divergence is possible.
-    show_onboarding = (
-        span_count == 0
-        or backfill_status in ("in_progress", "starting", None)
-    ) and backfill_status != "complete"
-
-    if show_onboarding:
+        status = (live.get("ingest") or {}).get("status")
+    if (span_count == 0 or status in ("in_progress", "starting", None)) and status != "complete":
         _render_onboarding(live)
         return
 
-    _render_hero(live)
+    from accountant.wrapper import store as gov_store
+    from accountant.wrapper.store import active_policies
+    from accountant.pipeline.db import savings_summary
+
+    recs = _load_recommendations()
+    default_mt = _default_monthly_tickets(live, recs)
+    st.session_state.setdefault("monthly_tickets", default_mt)
+    st.session_state.setdefault("ws_rate", _default_ws_rate())
+    mt = st.session_state["monthly_tickets"]
+    ws = st.session_state["ws_rate"]
+
+    rows, totals = _issue_rows(live, recs, ws)
+    n_active = len(active_policies())
+    realized = savings_summary().get("total_savings_usd", 0) or 0
+    gid = _project_gid()
+
+    _render_bill(recs, rows, totals, mt, n_active, realized, default_mt)
     st.divider()
-    st.subheader("Where the money goes")
-    _render_by_class(live)
-
-
-def _is_onboarding() -> bool:
-    live = _load_live_state()
-    status = (live.get("ingest") or {}).get("status")
-    return (
-        _cache_span_count() == 0
-        or status in ("in_progress", "starting", None)
-    ) and status != "complete"
-
-
-# Recommendations live in a separate, slower fragment. Two reasons:
-# (1) the Apply/Revert buttons are interactive — a 500ms auto-rerun
-# can race a click; 3s is gentle enough that clicks land reliably.
-# (2) recommendations change on the order of seconds (when Gemini
-# reasons), not per-span, so they don't need the fast cadence.
-@st.fragment(run_every="3s")
-def render_recommendations_section() -> None:
-    if _is_onboarding():
-        return
+    _render_where(rows, recs)
     st.divider()
-    st.subheader("Recommendations")
-    _render_recommendations(_load_recommendations())
+    _render_decomposition(rows)
+    st.divider()
+    _render_fixes(recs, mt, ws, totals["total_n"], gov_store)
+    st.divider()
+    _render_math_drawer(recs, gid)
 
 
 def main() -> None:
     st.title("Agent Accountant")
-    st.caption(
-        "Live unit economics for the observed agent. "
-        "Counters update in real time as new spans arrive."
-    )
-    render_live()
-    render_recommendations_section()
+    st.caption("Live unit economics for the observed agent — measured from Phoenix.")
+    render_dashboard()
 
 
 main()
