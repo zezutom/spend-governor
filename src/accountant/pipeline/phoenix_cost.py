@@ -66,6 +66,54 @@ def _accountant_savings(attributes) -> float:
         return 0.0
 
 
+_EXPERIMENT_COST_QUERY = """
+query($id:ID!){ node(id:$id){ ... on Experiment {
+  name runCount averageRunLatencyMs
+  costSummary{ total{cost tokens} prompt{cost tokens} completion{cost tokens} }
+}}}
+"""
+
+
+def experiment_cost(experiment_gid: str, *, timeout: float = 30.0) -> dict | None:
+    """Read a Phoenix experiment's aggregate cost (refactor #3). Phoenix
+    computes `Experiment.costSummary` from the runs' traced LLM spans — so
+    this number is Phoenix's own, the parity-clean basis for the savings
+    delta. Returns {name, run_count, total_cost_usd, total_tokens} or None."""
+    url, key = _endpoint_and_key()
+    try:
+        r = httpx.post(
+            url,
+            json={"query": _EXPERIMENT_COST_QUERY, "variables": {"id": experiment_gid}},
+            headers={"authorization": f"Bearer {key}", "content-type": "application/json"},
+            timeout=timeout,
+        )
+        r.raise_for_status()
+        node = (r.json().get("data") or {}).get("node")
+        if not node:
+            return None
+        total = (node.get("costSummary") or {}).get("total") or {}
+        return {
+            "name": node.get("name"),
+            "run_count": node.get("runCount"),
+            "total_cost_usd": total.get("cost"),
+            "total_tokens": total.get("tokens"),
+        }
+    except Exception:
+        return None
+
+
+def compare_url(dataset_gid: str, *experiment_gids: str) -> str | None:
+    """Phoenix compare-page URL for one or more experiments (baseline +
+    governed → side-by-side cost delta). URL-addressable via repeated
+    `experimentId=` params (confirmed from Phoenix's own emitted links)."""
+    ui = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "").rstrip("/")
+    gids = [g for g in experiment_gids if g]
+    if not (ui and dataset_gid and gids):
+        return None
+    qs = "&".join(f"experimentId={g}" for g in gids)
+    return f"{ui}/datasets/{dataset_gid}/compare?{qs}"
+
+
 def annotate_savings(spans: list[dict]) -> list[str]:
     """Tag each saving span in Phoenix with an `accountant.savings` annotation
     (label cache_hit / model_swap, score = saved USD, explanation), so the

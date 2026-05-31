@@ -73,6 +73,23 @@ _CACHE = SemanticCache()
 # carrying the cache key.
 CACHEABLE: dict[str, str] = {"web_search": "query"}
 
+# Experiment support (refactor #3): override the active policy set for the
+# duration of a baseline-vs-governed experiment run — `[]` forces baseline
+# (no interception), `None` means "use the store". A module global (not a
+# contextvar) so it's visible across run_experiment's worker threads.
+_policy_override: list | None = None
+
+
+def set_policy_override(policies: list | None) -> None:
+    """Force the effective policy set for experiment runs. `[]` = baseline
+    (agent runs ungoverned); `None` = governed (read the store)."""
+    global _policy_override
+    _policy_override = policies
+
+
+def _effective_policies() -> list:
+    return _policy_override if _policy_override is not None else store.active_policies()
+
 
 def current_task_class() -> str | None:
     return _task_class.get()
@@ -148,7 +165,7 @@ def _parse_task_class(result) -> str | None:
 def _active_cache_policy(tool: str) -> dict | None:
     # Match on tool only. The query content scopes the semantic cache;
     # caching a tool globally is the correct, higher-savings behavior.
-    for p in store.active_policies():
+    for p in _effective_policies():
         if p["policy_type"] != "cache_tool":
             continue
         if p["params"].get("tool") != tool:
@@ -277,7 +294,7 @@ def _is_simple_request(message: str) -> bool:
 
 
 def _active_route_policy() -> dict | None:
-    for p in store.active_policies():
+    for p in _effective_policies():
         if p["policy_type"] == "route_model":
             return p
     return None
