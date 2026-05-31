@@ -394,7 +394,8 @@ def class_trace_costs(task_classes: list[str], limit: int = 20, offset: int = 0,
         rows = c.execute(
             f"WITH tc AS (SELECT DISTINCT trace_id FROM spans "
             f"            WHERE classifier_task_class IN ({ph})) "
-            f"SELECT s.trace_id, SUM(s.llm_cost_usd + s.tool_cost_usd) cost, "
+            f"SELECT s.trace_id, "
+            f"SUM(s.llm_cost_usd) llm_cost, SUM(s.tool_cost_usd) tool_cost, "
             f"SUM(CASE WHEN s.tool_name='web_search' THEN 1 ELSE 0 END) n_ws, "
             f"MIN(s.start_time) t "
             f"FROM spans s JOIN tc ON s.trace_id = tc.trace_id "

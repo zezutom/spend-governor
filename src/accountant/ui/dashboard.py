@@ -617,6 +617,28 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -
                 st.caption("No quantified savings for this item yet.")
 
 
+def _render_tool_pricing() -> None:
+    """Read-only view of the operator-configured per-call tool rates. Phoenix
+    prices LLM tokens but NOT tools, so tool dollars = Phoenix-measured call
+    count × these configured rates. Surfacing them keeps the dollar figures
+    honest (the rates are an input, not a Phoenix measurement)."""
+    import pandas as pd
+    from accountant.pricing.tools import TOOL_PRICES
+    df = pd.DataFrame(
+        [{"tool": k, "$ / call": v} for k, v in
+         sorted(TOOL_PRICES.items(), key=lambda kv: -kv[1])]
+    )
+    st.dataframe(df, hide_index=True, use_container_width=True, column_config={
+        "$ / call": st.column_config.NumberColumn(format="$%.4f"),
+    })
+    st.caption(
+        "Operator-configured tool rates (read-only for now — edit "
+        "`src/accountant/pricing/tools.py`). Phoenix prices LLM tokens, not "
+        "tools, so **tool dollars = call count (measured in Phoenix) × these "
+        "rates**. The rates are an input you set, not a Phoenix measurement."
+    )
+
+
 def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
     """Full traceability for the headline 'Avoidable AI waste': a per-pattern
     table, the exact projection formula (so 'assumed based on what' is answered
@@ -665,6 +687,9 @@ def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
         f"types, so the total is an upper bound.)"
     )
 
+    with st.expander("Tool pricing (configured) — what the tool dollars are based on"):
+        _render_tool_pricing()
+
     for rec, issue in items:
         classes = _affected_classes(issue)
         if not classes:
@@ -685,17 +710,27 @@ def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
             traces = class_trace_costs(classes, PAGE, (page - 1) * PAGE)
             df = pd.DataFrame([{
                 "trace": (t.get("trace_id") or "")[:12] + "…",
-                "cost/ticket (USD)": round(t.get("cost", 0) or 0, 6),
+                "LLM $ (Phoenix)": round(t.get("llm_cost", 0) or 0, 6),
                 "web_search calls": t.get("n_ws", 0),
+                "tool $ (calls × rate)": round(t.get("tool_cost", 0) or 0, 6),
+                "total $": round((t.get("llm_cost", 0) or 0) + (t.get("tool_cost", 0) or 0), 6),
                 "open in Phoenix": (span_deeplink(gid, t.get("trace_id"), None)
                                     if gid else None),
             } for t in traces])
             st.dataframe(df, hide_index=True, use_container_width=True, column_config={
-                "cost/ticket (USD)": st.column_config.NumberColumn(format="$%.6f"),
+                "LLM $ (Phoenix)": st.column_config.NumberColumn(format="$%.6f"),
+                "tool $ (calls × rate)": st.column_config.NumberColumn(format="$%.6f"),
+                "total $": st.column_config.NumberColumn(format="$%.6f"),
                 "open in Phoenix": st.column_config.LinkColumn(
                     "open in Phoenix", display_text="open trace ↗"),
             })
-            st.caption(f"Page {page}/{npages} · each row opens that trace in Phoenix.")
+            st.caption(
+                f"**LLM $** = the trace's cost **measured by Phoenix** (its header). "
+                f"**tool $** = `web_search calls` (counted in Phoenix) × your configured "
+                f"rate (Tool pricing above) — Phoenix doesn't price tools. So Phoenix's "
+                f"header shows the LLM column; total = LLM + tool. Open a trace to confirm "
+                f"the LLM cost and count the web_search calls. · Page {page}/{npages}."
+            )
 
 
 def _render_recommendations(recs: list[dict]) -> None:
