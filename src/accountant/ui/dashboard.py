@@ -25,6 +25,7 @@ from pathlib import Path
 import httpx
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -372,25 +373,21 @@ def _render_policy_proof(kind: str, sig: str, saved: dict, gid: str | None) -> N
                    "(its `accountant.savings` annotation is under the Annotations tab).")
 
 
-def _render_tool_pricing() -> None:
-    """Read-only view of the operator-configured per-call tool rates. Phoenix
-    prices LLM tokens but NOT tools, so tool dollars = Phoenix-measured call
-    count × these configured rates. Surfacing them keeps the dollar figures
-    honest (the rates are an input, not a Phoenix measurement)."""
-    import pandas as pd
-    from accountant.pricing.tools import TOOL_PRICES
-    df = pd.DataFrame(
-        [{"tool": k, "$ / call": v} for k, v in
-         sorted(TOOL_PRICES.items(), key=lambda kv: -kv[1])]
-    )
-    st.dataframe(df, hide_index=True, use_container_width=True, column_config={
-        "$ / call": st.column_config.NumberColumn(format="$%.4f"),
-    })
+def _render_tool_pricing(rates: dict) -> None:
+    """Editable per-call tool rates (refinement #3). Phoenix prices LLM tokens
+    but NOT tools, so tool dollars = Phoenix-measured call count × these
+    operator-set rates. Editing any rate mutates the shared `rates` dict in
+    session state; the next fragment rerun recomputes every bar and headline."""
+    st.markdown("**Tool rates** — $/call. Phoenix counts the calls; you set the price.")
+    cols = st.columns(3)
+    for i, tool in enumerate(sorted(rates, key=lambda k: -rates[k])):
+        with cols[i % 3]:
+            rates[tool] = st.number_input(
+                tool, min_value=0.0, step=0.0005, format="%.4f", value=float(rates[tool]))
     st.caption(
-        "Operator-configured tool rates (read-only for now — edit "
-        "`src/accountant/pricing/tools.py`). Phoenix prices LLM tokens, not "
-        "tools, so **tool dollars = call count (measured in Phoenix) × these "
-        "rates**. The rates are an input you set, not a Phoenix measurement."
+        "These are an **input you set**, not a Phoenix measurement. **Tool dollars = "
+        "call count (measured in Phoenix) × these rates.** Changing one recomputes the "
+        "bars and the headline above."
     )
 
 
@@ -442,9 +439,6 @@ def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
         f"types, so the total is an upper bound.)"
     )
 
-    with st.expander("Tool pricing (configured) — what the tool dollars are based on"):
-        _render_tool_pricing()
-
     for rec, issue in items:
         classes = _affected_classes(issue)
         if not classes:
@@ -488,9 +482,28 @@ def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
             )
 
 
-def _default_ws_rate() -> float:
+# --- Color discipline (refinement #5) -------------------------------------
+# success green = money/savings · blue = measured tokens · amber = estimated
+# tools + cost-vs-baseline badges. No large red surfaces anywhere.
+_GREEN = "#15803d"
+_BLUE = "#2563eb"
+_AMBER = "#b45309"
+_HATCH = "repeating-linear-gradient(45deg,#e0a44a,#e0a44a 4px,#f5d9a8 4px,#f5d9a8 8px)"
+
+
+def _default_tool_rates() -> dict:
+    """Operator-set per-call rates, editable in the math drawer. Drops the
+    structural zero-cost classifier — it's not a billable tool."""
     from accountant.pricing.tools import TOOL_PRICES
-    return TOOL_PRICES.get("web_search", 0.005)
+    return {k: float(v) for k, v in TOOL_PRICES.items() if k != "task_classifier"}
+
+
+def _tool_cost(counts: dict, rates: dict) -> float:
+    """Tool dollars for one ticket = Σ(calls_for_tool × rate_for_tool) over the
+    class's ACTUAL tool mix (refinement #3). At the default rates this equals
+    the stored avg_tool_cost_usd exactly — tools absent from `rates`
+    (task_classifier, merged spans) price at 0, as Phoenix counts them."""
+    return sum((counts.get(t, 0) or 0) * r for t, r in rates.items())
 
 
 def _observed_hours(recs: list[dict]) -> float:
@@ -511,10 +524,11 @@ def _default_monthly_tickets(live: dict, recs: list[dict]) -> int:
     return int(round(total_n / max(wd, 1e-9) * 30)) if total_n else 0
 
 
-def _issue_rows(live: dict, recs: list[dict], ws_rate: float):
-    """Per-class derived view + page totals, recomputed from the live
-    web_search rate. Reuses stored measured values; only the web_search-priced
-    parts move with the rate. Returns (rows, totals)."""
+def _issue_rows(live: dict, recs: list[dict], rates: dict):
+    """Per-class derived view + page totals, recomputed from the live per-tool
+    rate table. LLM cost is Phoenix-measured (fixed); the tool segment and the
+    tool half of each saving move with the rates. At default rates this
+    reproduces the stored numbers exactly. Returns (rows, totals)."""
     by = live.get("by_task_class") or {}
     total_n = int((live.get("summary") or {}).get("total_traces") or 0) or sum(s["n"] for s in by.values())
     cache_rec, routing = {}, None
@@ -524,21 +538,21 @@ def _issue_rows(live: dict, recs: list[dict], ws_rate: float):
             cache_rec[i["task_class"]] = i
         elif i.get("kind") == "model_routing":
             routing = i
-    base_cost = (by.get(BASELINE_CLASS) or {}).get("avg_cost_usd") or 1e-9
-    d_ws = ws_rate - _default_ws_rate()
+    base_s = by.get(BASELINE_CLASS) or {}
+    base_cost = ((base_s.get("avg_llm_cost_usd", 0) or 0)
+                 + _tool_cost(base_s.get("avg_tool_counts") or {}, rates)) or 1e-9
     rows, rec_tot, cost_tot = [], 0.0, 0.0
     for tc, s in by.items():
-        n = s["n"]; avg_ws = s.get("avg_web_search", 0) or 0
-        llm = s["avg_llm_cost_usd"]; tool = s["avg_tool_cost_usd"] + avg_ws * d_ws
+        n = s["n"]
+        llm = s["avg_llm_cost_usd"]
+        tool = _tool_cost(s.get("avg_tool_counts") or {}, rates)
         cost = llm + tool
         saving = 0.0
         ci = cache_rec.get(tc)
         if ci:
             comp = ci.get("components") or {}
-            if ci.get("primary_tool") == "web_search":
-                ts = (comp.get("avg_tool_calls_removed", 0) or 0) * ws_rate
-            else:
-                ts = comp.get("tool_savings_per_ticket_usd", 0) or 0
+            removed = comp.get("avg_tool_calls_removed", 0) or 0
+            ts = removed * rates.get(ci.get("primary_tool"), 0.0)  # tool half scales with rate
             ls = (ci.get("savings_per_ticket_usd", 0) or 0) - (comp.get("tool_savings_per_ticket_usd", 0) or 0)
             saving += ts + ls
         if routing and tc in (routing.get("classes") or []):
@@ -558,7 +572,8 @@ def _issue_rows(live: dict, recs: list[dict], ws_rate: float):
 
 
 def _badge(text: str, danger: bool) -> str:
-    bg, fg = ("#fde7e6", "#b3261e") if danger else ("#e3f4e8", "#1e7a3c")
+    # Amber for cost-vs-baseline badges (refinement #5) — never red.
+    bg, fg = ("#fdecd2", _AMBER) if danger else ("#e3f4e8", _GREEN)
     return (f"<span style='background:{bg};color:{fg};padding:1px 8px;border-radius:10px;"
             f"font-size:0.78rem;font-weight:700;white-space:nowrap'>{text}</span>")
 
@@ -566,11 +581,10 @@ def _badge(text: str, danger: bool) -> str:
 def _bar(llm: float, tool: float, maxv: float) -> str:
     lw = (llm / maxv * 100) if maxv else 0
     tw = (tool / maxv * 100) if maxv else 0
-    hatch = ("repeating-linear-gradient(45deg,#e08a3c,#e08a3c 4px,#f3c89a 4px,#f3c89a 8px)")
-    return (f"<div style='display:flex;height:18px;border-radius:4px;overflow:hidden;"
-            f"background:#eee;margin:2px 0 10px'>"
-            f"<div title='tokens (Phoenix)' style='width:{lw:.2f}%;background:#3b6fd4'></div>"
-            f"<div title='tools (count × rate)' style='width:{tw:.2f}%;background:{hatch}'></div>"
+    return (f"<div style='display:flex;height:13px;border-radius:4px;overflow:hidden;"
+            f"background:#f0f0f0;margin:3px 0 6px;max-width:520px'>"
+            f"<div title='tokens — measured by Phoenix' style='width:{lw:.2f}%;background:{_BLUE}'></div>"
+            f"<div title='tools — call count × your rates' style='width:{tw:.2f}%;background:{_HATCH}'></div>"
             f"</div>")
 
 
@@ -582,23 +596,32 @@ def _class_reasons(recs: list[dict]) -> dict:
             comp = i.get("components") or {}
             n = round(comp.get("avg_tool_calls_removed", 0) or 0)
             out.setdefault(i["task_class"], []).append(
-                f"re-runs the same `{i.get('primary_tool', 'tool')}` ~{n}×")
+                f"repeats the same `{i.get('primary_tool', 'tool')}` ~{n}×")
         if i.get("kind") == "model_routing":
             for c in (i.get("classes") or []):
                 out.setdefault(c, []).append("runs on the full-price model")
-    return {tc: " and ".join(parts) + "." for tc, parts in out.items()}
+    return {tc: " · ".join(parts) for tc, parts in out.items()}
 
 
-def _policy_mo(issue: dict, ws_rate: float, mt: int, total_n: int) -> float:
+def _policy_mo(issue: dict, rates: dict, mt: int, total_n: int) -> float:
     n = issue.get("n_traces", 0) or 0
-    if issue.get("kind") == "tool_cache" and issue.get("primary_tool") == "web_search":
+    if issue.get("kind") == "tool_cache":
         comp = issue.get("components") or {}
-        spt = ((comp.get("avg_tool_calls_removed", 0) or 0) * ws_rate
+        spt = ((comp.get("avg_tool_calls_removed", 0) or 0) * rates.get(issue.get("primary_tool"), 0.0)
                + ((issue.get("savings_per_ticket_usd", 0) or 0)
                   - (comp.get("tool_savings_per_ticket_usd", 0) or 0)))
     else:
         spt = issue.get("savings_per_ticket_usd", 0) or 0
     return spt * mt * (n / total_n if total_n else 0)
+
+
+def _policy_per_ticket(issue: dict, rates: dict) -> float:
+    if issue.get("kind") == "tool_cache":
+        comp = issue.get("components") or {}
+        return ((comp.get("avg_tool_calls_removed", 0) or 0) * rates.get(issue.get("primary_tool"), 0.0)
+                + ((issue.get("savings_per_ticket_usd", 0) or 0)
+                   - (comp.get("tool_savings_per_ticket_usd", 0) or 0)))
+    return issue.get("savings_per_ticket_usd", 0) or 0
 
 
 def _fix_text(issue: dict):
@@ -613,80 +636,112 @@ def _fix_text(issue: dict):
             f"Serve the duplicate `{tool}` from cache — the paid call never fires.")
 
 
-def _render_bill(recs, rows, totals, mt, n_active, realized, default_mt) -> None:
+def _render_bill(recs, totals, default_mt, n_active, realized) -> None:
+    """Calm hero (refinements #1, #2): recoverable dollars/month, large and
+    green, as the headline; % and per-ticket cost demoted to a subline. The
+    volume slider + the dollar figure live in ONE client-side island so the
+    money tracks the slider continuously (st.slider only fires on release)."""
+    _hero_island(totals, default_mt, n_active, realized,
+                 _observed_hours(recs), totals["total_n"])
+
+
+def _hero_island(totals, default_mt, n_active, realized, hours, total_n) -> None:
+    rpt = float(totals["recoverable_per_ticket"])
+    cpt = float(totals["cost_per_ticket"])
     pct = int(round(totals["pct_avoidable"] * 100))
-    cpt = totals["cost_per_ticket"]
-    rec_mo = totals["recoverable_per_ticket"] * mt
-    st.markdown("<div style='color:#777;font-size:0.95rem'>This agent's support "
-                "ticket spend</div>", unsafe_allow_html=True)
-    head, ctrl = st.columns([3, 2])
-    with head:
-        if n_active == 0:
-            st.markdown(
-                f"<div style='font-size:3rem;font-weight:800;color:#c0392b;line-height:1.05'>"
-                f"−{pct}%</div><div style='color:#333'>of every dollar per ticket is "
-                f"avoidable</div>", unsafe_allow_html=True)
-            st.markdown(
-                f"**\\${cpt:.4f}** per ticket now · **\\${rec_mo:,.0f}/mo** recoverable "
-                f"<span style='color:#999;font-size:0.85rem'>(upper bound — patterns "
-                f"overlap)</span>", unsafe_allow_html=True)
-        else:
-            st.markdown(
-                f"<div style='font-size:2.1rem;font-weight:800;color:#1e7a3c;line-height:1.1'>"
-                f"\\${realized:,.4f} saved so far</div>"
-                f"<div style='color:#333'>~\\${rec_mo:,.0f}/mo projected once fully governed "
-                f"· {pct}% of per-ticket spend still avoidable</div>", unsafe_allow_html=True)
-    with ctrl:
-        st.slider("Your monthly tickets", min_value=1000,
-                  max_value=max(100000, int(default_mt * 3)), step=1000, key="monthly_tickets")
-    st.caption(
-        f"Measured over {totals['total_n']:,} real tickets (~{_observed_hours(recs):.0f}h of "
-        f"traffic). Everything above is a measured per-ticket ratio × the volume you set — "
-        f"not an assumed rate.")
+    dflt = int(default_mt or 1000)
+    mx = max(100000, dflt * 3)
+    cfg = json.dumps({"rpt": rpt, "dflt": dflt, "min": 1000, "max": mx, "step": 1000})
+    measured = (f"Measured over {total_n:,} real tickets (~{hours:.0f}h of traffic). "
+                f"A measured per-ticket ratio × the volume you set — not an assumed rate.")
+    slider = f"""
+      <div style="display:flex;align-items:center;gap:14px;margin-top:4px">
+        <label style="color:#374151;white-space:nowrap;font-size:0.92rem">Your monthly tickets</label>
+        <input id="vol" type="range" min="{1000}" max="{mx}" step="1000" value="{dflt}"
+               style="flex:1;accent-color:{_GREEN};height:4px">
+        <span id="volout" style="font-variant-numeric:tabular-nums;font-weight:700;
+              min-width:72px;text-align:right;color:#111">{dflt:,}</span>
+      </div>"""
+    if n_active == 0:
+        head = f"""
+          <div style="color:#6b7280;font-size:0.9rem">Recoverable on this agent</div>
+          <div id="money" style="font-size:2.7rem;font-weight:800;color:{_GREEN};line-height:1.04">
+            ${rpt * dflt:,.0f}/mo</div>
+          <div style="color:#374151;margin:2px 0 12px">
+            about <b>{pct}%</b> of this agent's per-ticket cost · <b>${cpt:.4f}</b> per ticket today
+            <span style="color:#9ca3af;font-size:0.78rem;float:right">upper bound, patterns overlap</span>
+          </div>"""
+        js_target, js_expr = "money", "C.rpt*v"
+    else:
+        head = f"""
+          <div style="color:#6b7280;font-size:0.9rem">Saved so far on this agent</div>
+          <div style="font-size:2.7rem;font-weight:800;color:{_GREEN};line-height:1.04">
+            ${realized:,.4f}</div>
+          <div style="color:#374151;margin:2px 0 12px">
+            <b id="money" style="color:{_GREEN}">${rpt * dflt:,.0f}/mo</b> projected once fully governed
+            · {pct}% of per-ticket spend still avoidable
+          </div>"""
+        js_target, js_expr = "money", "C.rpt*v"
+    html = f"""
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+        {head}{slider}
+        <div style="color:#6b7280;font-size:0.78rem;margin-top:10px">{measured}</div>
+      </div>
+      <script>
+        const C = {cfg};
+        const s = document.getElementById('vol');
+        const money = document.getElementById('{js_target}');
+        const volout = document.getElementById('volout');
+        function fmtMo(n){{ return '$' + Math.round(n).toLocaleString() + '/mo'; }}
+        function upd(){{ const v = +s.value; money.textContent = fmtMo({js_expr});
+                        volout.textContent = v.toLocaleString(); }}
+        s.addEventListener('input', upd); upd();
+      </script>"""
+    components.html(html, height=210 if n_active == 0 else 215)
 
 
-def _render_where(rows, recs) -> None:
-    st.subheader("Where it goes — and why")
+def _render_breakdown(rows, recs) -> None:
+    """Merged 'where it goes' + 'what one ticket costs' (refinement #4). One
+    row per PROBLEM class: badge + name + reason + a slim measured/estimated
+    bar + a $/ticket caption. Baseline + minor classes collapse to one muted
+    line. One legend, once (refinements #4, #5)."""
+    st.subheader("Where the money goes")
+    st.markdown(
+        f"<span style='font-size:0.85rem;color:#555'>Tokens are metered exactly. Tools "
+        f"are call count × your configured rates "
+        f"<span style='background:{_BLUE};color:#fff;padding:0 6px;border-radius:3px'>tokens (Phoenix)</span> "
+        f"<span style='background:{_HATCH};padding:0 6px;border-radius:3px'>tools (your rates)</span> "
+        f"— editable in <i>Show the math</i>.</span>", unsafe_allow_html=True)
     reasons = _class_reasons(recs)
+    maxv = max((r["cost"] for r in rows), default=1e-9)
+    minor = []
     for r in rows:
-        if r["tc"] == "unknown":  # unclassified partial traces — not a task type
+        problem = (not r["is_base"]) and r["tc"] != "unknown" and r["mult"] >= 2.0
+        if not problem:
+            minor.append(r)
             continue
-        danger = (not r["is_base"]) and r["mult"] >= 2.0
-        badge = _badge(f"{r['share'] * 100:.0f}% · {r['mult']:.1f}×", danger)
-        if r["is_base"]:
-            why = "already at baseline — nothing to fix here."
-        else:
-            why = reasons.get(r["tc"]) or "near baseline — nothing worth fixing."
+        badge = _badge(f"{r['share'] * 100:.0f}% · {r['mult']:.1f}× baseline", danger=True)
+        why = reasons.get(r["tc"]) or "elevated vs baseline"
         st.markdown(
             f"{badge}&nbsp;&nbsp;**{r['tc'].replace('_', ' ').title()}** — {why}",
             unsafe_allow_html=True)
-
-
-def _render_decomposition(rows) -> None:
-    st.subheader("What one ticket actually costs")
-    hatch = "repeating-linear-gradient(45deg,#e08a3c,#e08a3c 3px,#f3c89a 3px,#f3c89a 6px)"
-    st.markdown(
-        "<span style='font-size:0.85rem;color:#555'>Two parts, different certainty: "
-        "<span style='background:#3b6fd4;color:#fff;padding:0 6px;border-radius:3px'>tokens</span> "
-        "metered by Phoenix · <span style='background:" + hatch +
-        ";padding:0 6px;border-radius:3px'>tools</span> = call count (Phoenix) × your "
-        "configured rate (below).</span>", unsafe_allow_html=True)
-    maxv = max((r["cost"] for r in rows), default=1e-9)
-    for r in rows:
-        st.markdown(
-            f"**{r['tc'].replace('_', ' ').title()}** "
-            f"<span style='color:#888'>\\${r['cost']:.4f}</span>", unsafe_allow_html=True)
         st.markdown(_bar(r["llm"], r["tool"], maxv), unsafe_allow_html=True)
-    c = st.columns([2, 3])
-    with c[0]:
-        st.number_input("✎ web_search rate $/call", min_value=0.0, step=0.001,
-                        format="%.4f", key="ws_rate")
-    with c[1]:
-        st.caption("This drives most of the refund-handling cost. If it's wrong, the "
-                   "headline is wrong. It's operator-set, not a Phoenix measurement.")
+        st.markdown(
+            f"<div style='color:#6b7280;font-size:0.82rem;margin:-2px 0 14px'>"
+            f"<b>\\${r['cost']:.4f}/ticket</b> — \\${r['llm']:.4f} tokens + \\${r['tool']:.4f} tools"
+            f"</div>", unsafe_allow_html=True)
+    if minor:
+        names = ", ".join(m["tc"].replace("_", " ") for m in minor if m["tc"] != "unknown")
+        st.markdown(
+            f"<div style='color:#9ca3af;font-size:0.86rem'>{names.capitalize()} are already "
+            f"at baseline — nothing to fix.</div>", unsafe_allow_html=True)
 
 
-def _render_fixes(recs, mt, ws, total_n, gov_store) -> None:
+def _render_fixes(recs, default_mt, rates, total_n, gov_store) -> None:
+    """Promoted fix cards (refinement #1/#5). Each shows the measured per-ticket
+    saving (the slider-independent atom) and its projection at the observed rate;
+    the live what-if total lives in the hero. Activate is a calm neutral button,
+    never alarm-red."""
     st.subheader("The fixes")
     items = []
     for r in recs:
@@ -701,7 +756,8 @@ def _render_fixes(recs, mt, ws, total_n, gov_store) -> None:
     for policy, issue, rec in items:
         sig = policy[0]
         active = gov_store.is_active(sig)
-        mo = _policy_mo(issue, ws, mt, total_n)
+        mo = _policy_mo(issue, rates, default_mt, total_n)
+        spt = _policy_per_ticket(issue, rates)
         total_proj += mo
         title, reason = _fix_text(issue)
         with st.container(border=True):
@@ -711,32 +767,36 @@ def _render_fixes(recs, mt, ws, total_n, gov_store) -> None:
                 st.markdown(reason)
                 tag = "✅ governing live · " if active else ""
                 st.markdown(
-                    f"<span style='color:#1e7a3c;font-weight:700'>saves \\${mo:,.0f}/mo</span> "
-                    f"<span style='color:#888'>· {tag}runtime only, reversible</span>",
-                    unsafe_allow_html=True)
+                    f"<span style='color:{_GREEN};font-weight:700'>saves \\${spt:.4f}/ticket</span> "
+                    f"<span style='color:#888'>≈ \\${mo:,.0f}/mo at the observed rate · "
+                    f"{tag}runtime only, reversible</span>", unsafe_allow_html=True)
             with c[1]:
                 if active:
                     if st.button("Turn off", key=f"deact_{sig}", use_container_width=True):
                         gov_store.deactivate_policy(sig)
                         st.rerun()
                 else:
-                    if st.button("Activate ↗", key=f"act_{sig}", type="primary",
-                                 use_container_width=True):
+                    # Neutral (secondary) button — calm accent, not alarm red.
+                    if st.button("Activate ↗", key=f"act_{sig}", use_container_width=True):
                         gov_store.activate_policy(sig, policy[1], policy[2])
                         st.rerun()
     st.markdown(
         f"<div style='display:flex;justify-content:space-between;align-items:center;"
         f"background:#f3f5ee;padding:10px 16px;border-radius:8px;margin-top:4px'>"
-        f"<span style='font-weight:600'>Activate all three</span>"
-        f"<span style='color:#1e7a3c;font-weight:800;font-size:1.3rem'>\\${total_proj:,.0f}/mo</span>"
+        f"<span style='font-weight:600'>Activate all {len(items)}</span>"
+        f"<span style='color:{_GREEN};font-weight:800;font-size:1.3rem'>\\${total_proj:,.0f}/mo</span>"
         f"</div>", unsafe_allow_html=True)
+    st.caption("Per-ticket savings are measured. The $/mo is that × the observed rate "
+               "(~{:,}/mo); use the slider up top to project your own volume.".format(default_mt))
 
 
-def _render_math_drawer(recs, gid) -> None:
+def _render_math_drawer(recs, gid, rates) -> None:
     from accountant.pipeline.db import savings_summary
     from accountant.wrapper import store as gov_store
     saved = savings_summary()
     with st.expander("Show the math — Phoenix traces, per-ticket proof, tool rates"):
+        _render_tool_pricing(rates)
+        st.divider()
         _render_realized_savings()
         st.divider()
         _render_waste_breakdown(recs, gid)
@@ -778,25 +838,22 @@ def render_dashboard() -> None:
 
     recs = _load_recommendations()
     default_mt = _default_monthly_tickets(live, recs)
-    st.session_state.setdefault("monthly_tickets", default_mt)
-    st.session_state.setdefault("ws_rate", _default_ws_rate())
-    mt = st.session_state["monthly_tickets"]
-    ws = st.session_state["ws_rate"]
+    # Per-tool rates live in session state, edited in the math drawer; every
+    # bar and headline recomputes from them on the next rerun.
+    rates = st.session_state.setdefault("tool_rates", _default_tool_rates())
 
-    rows, totals = _issue_rows(live, recs, ws)
+    rows, totals = _issue_rows(live, recs, rates)
     n_active = len(active_policies())
     realized = savings_summary().get("total_savings_usd", 0) or 0
     gid = _project_gid()
 
-    _render_bill(recs, rows, totals, mt, n_active, realized, default_mt)
+    _render_bill(recs, totals, default_mt, n_active, realized)
     st.divider()
-    _render_where(rows, recs)
+    _render_breakdown(rows, recs)
     st.divider()
-    _render_decomposition(rows)
+    _render_fixes(recs, default_mt, rates, totals["total_n"], gov_store)
     st.divider()
-    _render_fixes(recs, mt, ws, totals["total_n"], gov_store)
-    st.divider()
-    _render_math_drawer(recs, gid)
+    _render_math_drawer(recs, gid, rates)
 
 
 def main() -> None:
