@@ -710,7 +710,7 @@ def _render_breakdown(rows, recs) -> None:
         f"<span style='font-size:0.85rem;color:#555'>Tokens are metered exactly. Tools "
         f"are call count × your configured rates "
         f"<span style='background:{_BLUE};color:#fff;padding:0 6px;border-radius:3px'>tokens (Phoenix)</span> "
-        f"<span style='background:{_HATCH};padding:0 6px;border-radius:3px'>tools (your rates)</span> "
+        f"<span style='background:#e0a44a;color:#fff;padding:0 6px;border-radius:3px'>tools (your rates)</span> "
         f"— editable in <i>Show the math</i>.</span>", unsafe_allow_html=True)
     reasons = _class_reasons(recs)
     maxv = max((r["cost"] for r in rows), default=1e-9)
