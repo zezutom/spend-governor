@@ -1,0 +1,6 @@
+# Streamlit configuration for the Agent Accountant dashboard.
+[browser]
+# Disable Streamlit's anonymous usage telemetry (the POSTs to
+# webhooks.fivetran.com). Keeps the demo free of cross-site beacons and
+# avoids any outbound analytics during a recording.
+gatherUsageStats = false
