@@ -467,11 +467,67 @@ def _render_verification(issue: dict, policy_sig: str) -> None:
     )
 
 
+def _render_experiment_proof() -> None:
+    """Refactor #3: prove routing savings in Phoenix via a baseline-vs-
+    governed experiment. The cost delta is Phoenix-computed and shown on a
+    linkable compare page — parity-clean. The run is offline (minutes),
+    operator-triggered; this reads its result from `experiment_proof`."""
+    import json as _json
+    import subprocess
+    import sys as _sys
+    from pathlib import Path
+    from accountant.pipeline.db import get_meta, set_meta
+
+    raw = get_meta("experiment_proof")
+    proof = {}
+    if raw:
+        try:
+            proof = _json.loads(raw)
+        except Exception:
+            proof = {}
+    status = proof.get("status")
+
+    st.markdown("###### Prove it in Phoenix — baseline vs governed")
+    if status == "running":
+        st.info("⏳ Running baseline vs governed in Phoenix… (~a few minutes). "
+                "Rerun the page to see the result.")
+    elif status == "done" and proof.get("savings_usd") is not None:
+        b = (proof.get("baseline") or {}).get("total_cost_usd") or 0.0
+        g = (proof.get("governed") or {}).get("total_cost_usd") or 0.0
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Baseline (Phoenix)", f"${b:,.6f}")
+        c2.metric("Governed (Phoenix)", f"${g:,.6f}")
+        c3.metric("Saved (Phoenix delta)", f"${proof['savings_usd']:,.6f}")
+        url = proof.get("compare_url")
+        if url:
+            st.markdown(f"[🔬 Compare in Phoenix ↗]({url}) — both experiments, "
+                        "cost computed by Phoenix.")
+        st.caption(
+            f"{proof.get('tickets','?')} tickets · ran {str(proof.get('ran_at',''))[:19]} UTC "
+            "· LLM-cost (model-routing) only — tool/cache savings aren't Phoenix-priced."
+        )
+    elif status == "error":
+        st.warning(f"Last experiment run failed: {str(proof.get('error',''))[:200]}")
+
+    if st.button("🔬 Run baseline-vs-governed in Phoenix",
+                 disabled=(status == "running"),
+                 help="Runs the agent over a sample dataset twice (policies off vs on) "
+                      "so Phoenix computes the cost delta. Offline, ~a few minutes."):
+        set_meta("experiment_proof", _json.dumps({"status": "running"}))
+        repo = Path(__file__).resolve().parents[3]
+        subprocess.Popen(
+            [_sys.executable, "-m", "accountant.cli.run_experiments", "demo", "3"],
+            cwd=str(repo), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        st.rerun()
+
+
 def _render_recommendations(recs: list[dict]) -> None:
     from accountant.wrapper import store as gov_store
 
     st.markdown("#### Realized savings")
     _render_realized_savings()
+    _render_experiment_proof()
     st.divider()
     st.markdown("#### Optimization policies")
 
