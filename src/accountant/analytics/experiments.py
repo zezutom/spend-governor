@@ -18,6 +18,7 @@ import itertools
 import os
 import time
 
+import httpx
 from phoenix.client import Client
 
 from accountant.pipeline import phoenix_cost
@@ -25,6 +26,23 @@ from accountant.wrapper import wrapper as _wrapper
 
 
 APP_NAME = "agent-accountant"
+
+
+def _client() -> Client:
+    """Phoenix client with a generous read timeout. The SDK's default client
+    uses a 30s read timeout (httpx.Timeout(read=30)), which run_experiment's
+    result upload + dataset creation can exceed under load → ReadTimeout.
+    Passing our own http_client raises the read timeout for every call (and
+    we must set auth ourselves, since `headers` is ignored when http_client
+    is provided)."""
+    base = os.environ["PHOENIX_COLLECTOR_ENDPOINT"].rstrip("/")
+    key = os.environ.get("PHOENIX_API_KEY") or os.environ["PHOENIX_API_KEY_OBSERVED_WRITE"]
+    http = httpx.Client(
+        base_url=base,
+        headers={"authorization": f"Bearer {key}"},
+        timeout=httpx.Timeout(connect=10.0, read=180.0, write=60.0, pool=10.0),
+    )
+    return Client(http_client=http)
 # Classes whose tickets exercise the active policies (web_search cache +
 # model routing), so baseline-vs-governed shows a real delta.
 _CLASSES = ("refund_handling", "password_reset", "account_question")
@@ -110,7 +128,7 @@ def run_savings_experiments(label: str, per_class: int = 3, timeout: int = 180) 
     governed run reads them). Restores the policy override on exit.
     """
     os.environ.setdefault("PHOENIX_API_KEY", os.environ["PHOENIX_API_KEY_OBSERVED_WRITE"])
-    client = Client()
+    client = _client()
     task = _agent_task_factory()
     tickets = _build_tickets(per_class)
     ds = client.datasets.create_dataset(
@@ -118,6 +136,7 @@ def run_savings_experiments(label: str, per_class: int = 3, timeout: int = 180) 
         inputs=[{"ticket": t} for t in tickets],
         outputs=[{"ok": True} for _ in tickets],
         dataset_description="Refactor #3: baseline vs governed savings proof.",
+        timeout=60,
     )
     ds_id = getattr(ds, "id", None) or (ds.get("id") if isinstance(ds, dict) else None)
 
