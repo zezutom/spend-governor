@@ -34,7 +34,7 @@ from accountant.analytics.detection import (
     run_detection,
 )
 from accountant.analytics.recommendations import generate_templated_recommendations
-from accountant.pipeline.worker import _row_for_span
+from accountant.pipeline.worker import _row_for_span, reconcile_from_phoenix
 
 
 log = logging.getLogger(__name__)
@@ -518,6 +518,13 @@ async def run_backfill(hours: int | None = None) -> None:
             ),
         })
         _write_live_state(traces_in_memory, ingest)
+        # Refactor #2: backfilled spans are historical, so Phoenix has
+        # already computed their cost — reconcile now to source actual LLM
+        # cost + savings from Phoenix before detection runs over the cache.
+        try:
+            await asyncio.to_thread(reconcile_from_phoenix, 50000)
+        except Exception:
+            log.exception("post-backfill Phoenix reconcile failed")
         # Run detection from the DB to compute deduped, costed issues
         # (build_issues needs the aggregates + window), then generate
         # templated recommendations and kick off Gemini reasoning.

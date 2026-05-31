@@ -203,7 +203,7 @@ def _render_onboarding(live: dict) -> None:
 def _render_hero(live: dict) -> None:
     """Value on the nose: lead with avoidable waste and realized savings,
     not trace counters. The two numbers a stressed CFO needs first."""
-    from accountant.wrapper.store import active_policies, intervention_summary
+    from accountant.wrapper.store import active_policies
 
     summary = live.get("summary") or {}
     total_traces = int(summary.get("total_traces") or 0)
@@ -211,7 +211,9 @@ def _render_hero(live: dict) -> None:
     last_updated = summary.get("last_updated_at") or "—"
 
     # Total avoidable waste = sum of every detected policy's monthly
-    # opportunity. Realized = what the wrapper has actually saved so far.
+    # opportunity. Realized = what the wrapper has actually saved so far —
+    # re-derived from Phoenix-sourced per-span savings (refactor #2), so a
+    # customer can verify it from their own traces.
     recs = _load_recommendations()
     opportunity = 0.0
     for r in recs:
@@ -219,8 +221,7 @@ def _render_hero(live: dict) -> None:
             opportunity += float(json.loads(r.get("data") or "{}").get("monthly_savings_usd") or 0)
         except Exception:
             pass
-    gov = intervention_summary()
-    realized = gov["total_cost_avoided_usd"]
+    realized = float(summary.get("total_savings_usd") or 0.0)
     n_active = len(active_policies())
 
     c1, c2, c3 = st.columns(3)
@@ -234,7 +235,8 @@ def _render_hero(live: dict) -> None:
         "✅ Saved so far",
         f"${realized:,.4f}",
         help="Actual cost the wrapper has avoided since you activated "
-             "policies — logged per intervention.",
+             "policies — summed from per-span savings in Phoenix, so it's "
+             "verifiable from your own traces.",
     )
     c3.metric(
         "⚡ Policies governing live",
@@ -401,24 +403,30 @@ def _render_savings_math(issue: dict) -> None:
 
 
 def _render_realized_savings() -> None:
+    # Dollar figure is re-derived from Phoenix-sourced per-span savings
+    # (refactor #2) — verifiable from the customer's own traces. The
+    # interventions log is kept only as the wrapper's action count.
     from accountant.wrapper.store import intervention_summary
+    from accountant.pipeline.db import savings_summary
+    saved = savings_summary()
     s = intervention_summary()
-    if s["total_interventions"] == 0:
+    realized = saved["total_savings_usd"]
+    if realized <= 0 and s["total_interventions"] == 0:
         st.caption(
             "No realized savings yet — activate a policy below, then run "
             "the observed agent to see the wrapper intervene live."
         )
         return
     c1, c2 = st.columns(2)
-    c1.metric("Realized savings (governing live)", f"${s['total_cost_avoided_usd']:,.4f}")
+    c1.metric("Realized savings (from Phoenix)", f"${realized:,.4f}")
     c2.metric("Interventions", f"{s['total_interventions']:,}")
     labels = {"tool_cache_hit": "cache hits", "model_downgrade": "model downgrades"}
-    parts = [
-        f"{d['n']} {labels.get(k, k)} (${d['saved']:.4f})"
-        for k, d in s["by_kind"].items()
-    ]
+    parts = [f"{d['n']} {labels.get(k, k)}" for k, d in s["by_kind"].items()]
     if parts:
-        st.caption("  ·  ".join(parts))
+        st.caption(
+            "Wrapper actions: " + "  ·  ".join(parts)
+            + "  ·  dollar total summed from per-span savings in Phoenix"
+        )
 
 
 def _affected_classes(issue: dict) -> list[str]:

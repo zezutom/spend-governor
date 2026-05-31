@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS spans (
     model_name TEXT,
     llm_cost_usd REAL DEFAULT 0,
     tool_cost_usd REAL DEFAULT 0,
+    savings_usd REAL DEFAULT 0,
+    cost_source TEXT DEFAULT 'local',
+    reconciled_at TIMESTAMP,
     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_spans_trace ON spans(trace_id);
@@ -96,6 +99,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
     span_cols = {r[1] for r in conn.execute("PRAGMA table_info(spans)").fetchall()}
     if span_cols and "cache_hit" not in span_cols:
         conn.execute("ALTER TABLE spans ADD COLUMN cache_hit INTEGER NOT NULL DEFAULT 0")
+    # Refactor #2: Phoenix-sourced cost reconciliation columns.
+    if span_cols and "savings_usd" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN savings_usd REAL DEFAULT 0")
+    if span_cols and "cost_source" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN cost_source TEXT DEFAULT 'local'")
+    if span_cols and "reconciled_at" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN reconciled_at TIMESTAMP")
 
 
 def _initialize(path: str) -> None:
@@ -245,6 +255,70 @@ def upsert_span(span: dict, conn=None) -> None:
             c.execute(sql, span)
     else:
         conn.execute(sql, span)
+
+
+def update_phoenix_costs(rows: list[dict], conn=None) -> int:
+    """Reconcile cost columns from Phoenix (refactor #2).
+
+    Each row: {span_id, phoenix_cost_usd (None if Phoenix hasn't costed it
+    yet, or a tool span Phoenix doesn't price), savings_usd}.
+    - savings_usd is always written (from accountant.cost.savings_usd) so
+      the headline 'Saved so far' is re-derivable from Phoenix.
+    - llm_cost_usd is overwritten and cost_source flipped to 'phoenix' ONLY
+      when Phoenix has a cost (LLM spans); otherwise the local-compute
+      fallback stays in place (no blank cost during Phoenix's compute lag).
+    Returns the number of cache rows actually updated.
+    """
+    def _run(c) -> int:
+        n = 0
+        for r in rows:
+            pc = r.get("phoenix_cost_usd")
+            sav = float(r.get("savings_usd") or 0.0)
+            if pc is not None:
+                cur = c.execute(
+                    "UPDATE spans SET llm_cost_usd=?, savings_usd=?, "
+                    "cost_source='phoenix', reconciled_at=CURRENT_TIMESTAMP "
+                    "WHERE span_id=?",
+                    (float(pc), sav, r["span_id"]),
+                )
+            else:
+                cur = c.execute(
+                    "UPDATE spans SET savings_usd=?, reconciled_at=CURRENT_TIMESTAMP "
+                    "WHERE span_id=?",
+                    (sav, r["span_id"]),
+                )
+            n += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+        return n
+    if conn is None:
+        with connect() as c:
+            c.execute("BEGIN")
+            n = _run(c)
+            c.execute("COMMIT")
+            return n
+    return _run(conn)
+
+
+def savings_summary(conn=None) -> dict:
+    """Total realized savings from Phoenix-sourced per-span savings_usd
+    (refactor #2 — replaces the private accountant_interventions log as the
+    'Saved so far' source, so the number is re-derivable by a customer from
+    their own Phoenix spans)."""
+    def _run(c) -> dict:
+        row = c.execute(
+            "SELECT COALESCE(SUM(savings_usd),0) AS saved, "
+            "SUM(CASE WHEN savings_usd>0 THEN 1 ELSE 0 END) AS n, "
+            "SUM(CASE WHEN cost_source='phoenix' THEN 1 ELSE 0 END) AS reconciled "
+            "FROM spans"
+        ).fetchone()
+        return {
+            "total_savings_usd": round(float(row["saved"] or 0), 6),
+            "spans_with_savings": int(row["n"] or 0),
+            "spans_reconciled": int(row["reconciled"] or 0),
+        }
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
 
 
 def upsert_recommendation(rec: dict, conn=None) -> None:

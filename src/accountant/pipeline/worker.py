@@ -13,11 +13,13 @@ batch is fully ingested.
 import asyncio
 import json
 import logging
+import time
 
 from accountant.pricing.cost import (
     TokenUsage,
     compute_baseline_llm_cost,
 )
+from accountant.pipeline import phoenix_cost
 from accountant.pipeline.db import (
     claim_pending_batches,
     connect,
@@ -25,6 +27,7 @@ from accountant.pipeline.db import (
     mark_batch_failed,
     mark_batch_processed,
     set_meta,
+    update_phoenix_costs,
     upsert_span,
 )
 from accountant.analytics import reasoning
@@ -81,9 +84,12 @@ def _cost_for_span(raw: dict) -> tuple[float, float]:
                 cached_input_tokens=cached,
                 output_tokens=completion,
             )
-            # INTERIM: local mirror of actual LLM cost. Phoenix is the
-            # canonical source; this gets retired when refactor #2 wires
-            # the dashboard to read Phoenix's native cost field.
+            # Instant fallback: local compute so the dashboard shows a cost
+            # immediately on ingest. reconcile_from_phoenix (refactor #2)
+            # overwrites llm_cost_usd with Phoenix's authoritative cost and
+            # flips cost_source to 'phoenix' once Phoenix has costed the
+            # span; our compute matches Phoenix to the cent, so the number
+            # barely moves on reconcile.
             llm = compute_baseline_llm_cost(usage, MODELS[model])["total_usd"]
 
     if kind == "TOOL":
@@ -161,10 +167,13 @@ def _refresh_state() -> dict:
             pass
 
     # Count spans directly (run_detection's trace list doesn't expose this).
-    from accountant.pipeline.db import connect as _connect
+    from accountant.pipeline.db import connect as _connect, savings_summary
     with _connect() as c:
         row = c.execute("SELECT COUNT(*) AS n FROM spans").fetchone()
         total_spans = int(row["n"] or 0)
+    # Refactor #2: realized savings re-derived from Phoenix-sourced per-span
+    # savings_usd (SUM over the cache, which mirrors Phoenix).
+    saved = savings_summary()
 
     total_llm = sum(
         s["avg_llm_cost_usd"] * s["n"]
@@ -183,6 +192,8 @@ def _refresh_state() -> dict:
             "total_llm_cost_usd": round(total_llm, 6),
             "total_tool_cost_usd": round(total_tool, 6),
             "total_cost_usd": state["total_cost_usd"],
+            "total_savings_usd": saved["total_savings_usd"],
+            "spans_reconciled": saved["spans_reconciled"],
             "last_updated_at": state["now"],
         },
         "by_task_class": state["by_task_class"],
@@ -190,6 +201,22 @@ def _refresh_state() -> dict:
     }
     set_meta("live_state", json.dumps(live))
     return state
+
+
+def reconcile_from_phoenix(max_spans: int = 4000) -> int:
+    """Refactor #2: pull Phoenix's computed LLM cost + per-span savings and
+    overwrite the cache's local-compute fallback, making Phoenix the source
+    of truth. Cheap and bounded (newest-first sweep), idempotent, and safe
+    to call repeatedly — Phoenix's cost-compute lag settles within a sweep
+    or two. Returns the number of cache rows updated."""
+    rows = phoenix_cost.fetch_span_costs(max_spans=max_spans)
+    updated = update_phoenix_costs(rows)
+    log.info("reconciled %s/%s spans from Phoenix", updated, len(rows))
+    return updated
+
+
+# How often the live loop reconciles cost against Phoenix (seconds).
+RECONCILE_INTERVAL_S = 30.0
 
 
 async def initial_refresh() -> None:
@@ -212,7 +239,20 @@ async def initial_refresh() -> None:
 
 async def run_forever(idle_sleep: float = 0.1, batch_size: int = 20) -> None:
     log.info("worker starting")
+    last_reconcile = 0.0  # 0 ⇒ reconcile immediately on first iteration
     while True:
+        # Refactor #2: periodically overwrite the local-compute cost fallback
+        # with Phoenix's authoritative LLM cost + per-span savings. Runs off
+        # the event loop so it never stalls the outbox drain, and fires even
+        # when traffic is idle so Phoenix's cost-compute lag still settles.
+        if time.monotonic() - last_reconcile >= RECONCILE_INTERVAL_S:
+            last_reconcile = time.monotonic()
+            try:
+                if await asyncio.to_thread(reconcile_from_phoenix):
+                    await asyncio.to_thread(_refresh_state)
+            except Exception:
+                log.exception("Phoenix reconcile failed")
+
         try:
             batches = claim_pending_batches(limit=batch_size)
         except Exception:
