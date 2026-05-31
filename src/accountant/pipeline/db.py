@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS spans (
     savings_usd REAL DEFAULT 0,
     cost_source TEXT DEFAULT 'local',
     reconciled_at TIMESTAMP,
+    phoenix_node_id TEXT,
     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_spans_trace ON spans(trace_id);
@@ -106,6 +107,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE spans ADD COLUMN cost_source TEXT DEFAULT 'local'")
     if span_cols and "reconciled_at" not in span_cols:
         conn.execute("ALTER TABLE spans ADD COLUMN reconciled_at TIMESTAMP")
+    if span_cols and "phoenix_node_id" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN phoenix_node_id TEXT")
 
 
 def _initialize(path: str) -> None:
@@ -274,18 +277,21 @@ def update_phoenix_costs(rows: list[dict], conn=None) -> int:
         for r in rows:
             pc = r.get("phoenix_cost_usd")
             sav = float(r.get("savings_usd") or 0.0)
+            node = r.get("phoenix_node_id")
             if pc is not None:
                 cur = c.execute(
                     "UPDATE spans SET llm_cost_usd=?, savings_usd=?, "
+                    "phoenix_node_id=COALESCE(?, phoenix_node_id), "
                     "cost_source='phoenix', reconciled_at=CURRENT_TIMESTAMP "
                     "WHERE span_id=?",
-                    (float(pc), sav, r["span_id"]),
+                    (float(pc), sav, node, r["span_id"]),
                 )
             else:
                 cur = c.execute(
-                    "UPDATE spans SET savings_usd=?, reconciled_at=CURRENT_TIMESTAMP "
-                    "WHERE span_id=?",
-                    (sav, r["span_id"]),
+                    "UPDATE spans SET savings_usd=?, "
+                    "phoenix_node_id=COALESCE(?, phoenix_node_id), "
+                    "reconciled_at=CURRENT_TIMESTAMP WHERE span_id=?",
+                    (sav, node, r["span_id"]),
                 )
             n += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
         return n
@@ -307,14 +313,60 @@ def savings_summary(conn=None) -> dict:
         row = c.execute(
             "SELECT COALESCE(SUM(savings_usd),0) AS saved, "
             "SUM(CASE WHEN savings_usd>0 THEN 1 ELSE 0 END) AS n, "
+            "SUM(CASE WHEN savings_usd>0 AND cache_hit=1 THEN 1 ELSE 0 END) AS cache_hits, "
+            "SUM(CASE WHEN savings_usd>0 AND cache_hit=0 THEN 1 ELSE 0 END) AS model_swaps, "
             "SUM(CASE WHEN cost_source='phoenix' THEN 1 ELSE 0 END) AS reconciled "
             "FROM spans"
         ).fetchone()
         return {
             "total_savings_usd": round(float(row["saved"] or 0), 6),
             "spans_with_savings": int(row["n"] or 0),
+            "cache_hits": int(row["cache_hits"] or 0),
+            "model_swaps": int(row["model_swaps"] or 0),
             "spans_reconciled": int(row["reconciled"] or 0),
         }
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
+def list_saving_spans(limit: int = 200, conn=None) -> list[dict]:
+    """Saving spans for the realized-savings audit table (refactor #2): each
+    row carries the per-span saving + the ids to deeplink into Phoenix.
+    Ordered by saving desc. cache_hit=1 ⇒ tool cache hit, else model downgrade."""
+    def _run(c) -> list[dict]:
+        rows = c.execute(
+            "SELECT span_id, trace_id, phoenix_node_id, savings_usd, cache_hit "
+            "FROM spans WHERE savings_usd > 0 "
+            "ORDER BY savings_usd DESC, start_time DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [{
+            "span_id": r["span_id"],
+            "trace_id": r["trace_id"],
+            "phoenix_node_id": r["phoenix_node_id"],
+            "savings_usd": float(r["savings_usd"] or 0),
+            "kind": "cache hit" if r["cache_hit"] else "model downgrade",
+        } for r in rows]
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
+def representative_saving_span(cache_hit: bool, conn=None) -> dict | None:
+    """Most-recent saving span of a mechanism (cache_hit True ⇒ tool cache
+    hit, False ⇒ model downgrade) for the per-policy 'verify in Phoenix'
+    deeplink. Returns {trace_id, phoenix_node_id} or None."""
+    def _run(c):
+        r = c.execute(
+            "SELECT trace_id, phoenix_node_id FROM spans "
+            "WHERE savings_usd > 0 AND cache_hit = ? AND trace_id IS NOT NULL "
+            "ORDER BY reconciled_at DESC, start_time DESC LIMIT 1",
+            (1 if cache_hit else 0,),
+        ).fetchone()
+        return {"trace_id": r["trace_id"], "phoenix_node_id": r["phoenix_node_id"]} if r else None
     if conn is None:
         with connect() as c:
             return _run(c)

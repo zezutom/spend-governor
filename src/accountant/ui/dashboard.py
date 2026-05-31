@@ -227,7 +227,7 @@ def _render_hero(live: dict) -> None:
     c1, c2, c3 = st.columns(3)
     c1.metric(
         "💸 Avoidable AI waste",
-        f"${opportunity:,.0f}/mo",
+        f"${opportunity:,.2f}/mo",
         help="Projected monthly cost of the wasteful execution patterns "
              "detected in your traces, at current volume.",
     )
@@ -402,16 +402,58 @@ def _render_savings_math(issue: dict) -> None:
     )
 
 
+@st.cache_data(show_spinner=False)
+def _project_gid() -> str | None:
+    """Phoenix project node id for building span deeplinks (stable per
+    project, so cached for the whole session)."""
+    from accountant.pipeline.phoenix_cost import project_gid
+    return project_gid()
+
+
+def _render_savings_audit(headline_total: float) -> None:
+    """Itemized, Phoenix-verifiable breakdown behind the realized-savings
+    headline: every saving span with its per-span saving + a one-click
+    deeplink to that span in Phoenix, summing to the headline. This is what
+    backs the aggregate — Phoenix can't pre-filter a list via URL, so the
+    breakdown lives here and each row is independently verifiable."""
+    import pandas as pd
+    from accountant.pipeline.db import list_saving_spans
+    from accountant.pipeline.phoenix_cost import span_deeplink
+    spans = list_saving_spans()
+    if not spans:
+        return
+    gid = _project_gid()
+    with st.expander(f"Show the {len(spans)} saving spans · verify each in Phoenix"):
+        df = pd.DataFrame([{
+            "kind": s["kind"],
+            "savings (USD)": round(s["savings_usd"], 6),
+            "verify": span_deeplink(gid, s["trace_id"], s["phoenix_node_id"]) if gid else None,
+        } for s in spans])
+        st.dataframe(
+            df, hide_index=True, use_container_width=True,
+            column_config={
+                "savings (USD)": st.column_config.NumberColumn(format="$%.6f"),
+                "verify": st.column_config.LinkColumn("verify", display_text="open in Phoenix ↗"),
+            },
+        )
+        st.caption(
+            f"Σ = ${sum(s['savings_usd'] for s in spans):.6f}  ·  matches the "
+            "“Realized savings” headline above — each row opens that exact span "
+            "in Phoenix with `accountant.cost.savings_usd` beside Phoenix’s cost."
+        )
+
+
 def _render_realized_savings() -> None:
-    # Dollar figure is re-derived from Phoenix-sourced per-span savings
-    # (refactor #2) — verifiable from the customer's own traces. The
-    # interventions log is kept only as the wrapper's action count.
-    from accountant.wrapper.store import intervention_summary
+    # Both the dollar figure AND the intervention count come from
+    # Phoenix-reconciled per-span savings (refactor #2), so they describe
+    # the SAME population — a customer can verify both from their own
+    # traces. (The wrapper's interventions log is no longer the source:
+    # it counts every governed call incl. traffic not in this dataset.)
     from accountant.pipeline.db import savings_summary
     saved = savings_summary()
-    s = intervention_summary()
     realized = saved["total_savings_usd"]
-    if realized <= 0 and s["total_interventions"] == 0:
+    n = saved["spans_with_savings"]
+    if realized <= 0 and n == 0:
         st.caption(
             "No realized savings yet — activate a policy below, then run "
             "the observed agent to see the wrapper intervene live."
@@ -419,14 +461,15 @@ def _render_realized_savings() -> None:
         return
     c1, c2 = st.columns(2)
     c1.metric("Realized savings (from Phoenix)", f"${realized:,.4f}")
-    c2.metric("Interventions", f"{s['total_interventions']:,}")
-    labels = {"tool_cache_hit": "cache hits", "model_downgrade": "model downgrades"}
-    parts = [f"{d['n']} {labels.get(k, k)}" for k, d in s["by_kind"].items()]
+    c2.metric("Saving interventions", f"{n:,}")
+    parts = []
+    if saved["cache_hits"]:
+        parts.append(f"{saved['cache_hits']} cache hits")
+    if saved["model_swaps"]:
+        parts.append(f"{saved['model_swaps']} model downgrades")
     if parts:
-        st.caption(
-            "Wrapper actions: " + "  ·  ".join(parts)
-            + "  ·  dollar total summed from per-span savings in Phoenix"
-        )
+        st.caption("In analyzed traces: " + "  ·  ".join(parts))
+    _render_savings_audit(realized)
 
 
 def _affected_classes(issue: dict) -> list[str]:
@@ -459,6 +502,27 @@ def _render_verification(issue: dict, policy_sig: str) -> None:
         f"**${m['before_avg_usd']:.4f} → ${m['after_avg_usd']:.4f}** "
         f"(**−{pct}%**), **${m['measured_savings_usd']:,.4f}** saved so far."
     )
+    _render_policy_trace_link(issue)
+
+
+def _render_policy_trace_link(issue: dict) -> None:
+    """One-click deeplink to a representative span this policy governed, so
+    the before/after claim is backed by a real trace in Phoenix."""
+    from accountant.pipeline.db import representative_saving_span
+    from accountant.pipeline.phoenix_cost import span_deeplink
+    kind = issue.get("kind")
+    if kind == "model_routing":
+        rep, what = representative_saving_span(cache_hit=False), "a downgraded LLM call"
+    elif kind == "tool_cache":
+        rep, what = representative_saving_span(cache_hit=True), "a served cache hit"
+    else:
+        return
+    if not rep:
+        return
+    gid = _project_gid()
+    link = span_deeplink(gid, rep["trace_id"], rep["phoenix_node_id"]) if gid else None
+    if link:
+        st.caption(f"[🔍 Open {what} in Phoenix ↗]({link})")
 
 
 def _render_recommendations(recs: list[dict]) -> None:
