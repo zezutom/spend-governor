@@ -66,37 +66,42 @@ def _accountant_savings(attributes) -> float:
         return 0.0
 
 
-def project_gid(project: str | None = None, *, timeout: float = 15.0) -> str | None:
-    """Resolve the Phoenix GraphQL node id of the project (e.g. 'UHJvamVjdDo0'),
-    needed to build span deeplinks. Stable per project — callers should cache."""
-    project = project or os.environ.get("PHOENIX_PROJECT_NAME")
-    if not project:
-        return None
-    url, key = _endpoint_and_key()
+def annotate_savings(spans: list[dict]) -> list[str]:
+    """Tag each saving span in Phoenix with an `accountant.savings` annotation
+    (label cache_hit / model_swap, score = saved USD, explanation), so the
+    intervention is visible in the trace view's Annotations tab.
+
+    spans: [{span_id (OTEL hex), kind ('cache hit'|'model downgrade'),
+    savings_usd}]. Returns the span_ids successfully tagged. Idempotent on
+    Phoenix's side (annotation upserts by span_id + name)."""
+    if not spans:
+        return []
+    # phoenix.client reads PHOENIX_API_KEY; mirror analysis.py's key fallback.
+    if "PHOENIX_API_KEY_OBSERVED_WRITE" in os.environ:
+        os.environ.setdefault("PHOENIX_API_KEY", os.environ["PHOENIX_API_KEY_OBSERVED_WRITE"])
     try:
-        resp = httpx.post(
-            url,
-            json={"query": "query($n:String!){ getProjectByName(name:$n){ id } }",
-                  "variables": {"n": project}},
-            headers={"authorization": f"Bearer {key}", "content-type": "application/json"},
-            timeout=timeout,
-        )
-        resp.raise_for_status()
-        return ((resp.json().get("data") or {}).get("getProjectByName") or {}).get("id")
+        from phoenix.client import Client
+        sp = Client().spans
     except Exception:
-        return None
-
-
-def span_deeplink(project_gid: str, trace_id: str, node_id: str | None) -> str | None:
-    """Build the Phoenix UI URL that opens a trace with one span selected —
-    the exact shape the Phoenix spans table builds for a row. node_id is the
-    span's Phoenix node id (`spans.phoenix_node_id`); without it we still
-    open the trace (the span is visible in the tree)."""
-    ui_base = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "").rstrip("/")
-    if not (ui_base and project_gid and trace_id):
-        return None
-    base = f"{ui_base}/projects/{project_gid}/spans/{trace_id}"
-    return f"{base}?selectedSpanNodeId={node_id}" if node_id else base
+        return []
+    labels = {
+        "cache hit": ("cache_hit", "Served a semantic-cache hit; avoided the paid tool call"),
+        "model downgrade": ("model_swap", "Routed to a cheaper model"),
+    }
+    done: list[str] = []
+    for s in spans:
+        label, expl = labels.get(s.get("kind"), (s.get("kind") or "saving", "Wrapper intervention"))
+        saved = float(s.get("savings_usd") or 0)
+        try:
+            sp.add_span_annotation(
+                span_id=s["span_id"], annotation_name="accountant.savings",
+                annotator_kind="CODE", label=label, score=round(saved, 6),
+                explanation=f"{expl} — saved ${saved:.6f}.", sync=False,
+            )
+            done.append(s["span_id"])
+        except Exception:
+            pass
+    return done
 
 
 def fetch_span_costs(

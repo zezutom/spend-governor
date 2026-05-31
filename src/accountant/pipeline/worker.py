@@ -26,7 +26,9 @@ from accountant.pipeline.db import (
     get_meta,
     mark_batch_failed,
     mark_batch_processed,
+    mark_spans_annotated,
     set_meta,
+    unannotated_saving_spans,
     update_phoenix_costs,
     upsert_span,
 )
@@ -212,6 +214,17 @@ def reconcile_from_phoenix(max_spans: int = 4000) -> int:
     rows = phoenix_cost.fetch_span_costs(max_spans=max_spans)
     updated = update_phoenix_costs(rows)
     log.info("reconciled %s/%s spans from Phoenix", updated, len(rows))
+    # Tag governed spans in Phoenix so the intervention is visible in the
+    # trace view (Annotations tab). Once per span via the `annotated` flag.
+    try:
+        pending = unannotated_saving_spans()
+        if pending:
+            done = phoenix_cost.annotate_savings(pending)
+            if done:
+                mark_spans_annotated(done)
+                log.info("annotated %s saving spans in Phoenix", len(done))
+    except Exception:
+        log.exception("Phoenix savings annotation failed")
     return updated
 
 

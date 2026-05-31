@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS spans (
     cost_source TEXT DEFAULT 'local',
     reconciled_at TIMESTAMP,
     phoenix_node_id TEXT,
+    annotated INTEGER NOT NULL DEFAULT 0,
     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_spans_trace ON spans(trace_id);
@@ -109,6 +110,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE spans ADD COLUMN reconciled_at TIMESTAMP")
     if span_cols and "phoenix_node_id" not in span_cols:
         conn.execute("ALTER TABLE spans ADD COLUMN phoenix_node_id TEXT")
+    if span_cols and "annotated" not in span_cols:
+        conn.execute("ALTER TABLE spans ADD COLUMN annotated INTEGER NOT NULL DEFAULT 0")
 
 
 def _initialize(path: str) -> None:
@@ -331,21 +334,17 @@ def savings_summary(conn=None) -> dict:
     return _run(conn)
 
 
-def list_saving_spans(limit: int = 200, conn=None) -> list[dict]:
-    """Saving spans for the realized-savings audit table (refactor #2): each
-    row carries the per-span saving + the ids to deeplink into Phoenix.
-    Ordered by saving desc. cache_hit=1 ⇒ tool cache hit, else model downgrade."""
+def unannotated_saving_spans(limit: int = 500, conn=None) -> list[dict]:
+    """Saving spans not yet tagged in Phoenix — fed to the annotator so each
+    governed span gets an `accountant.savings` annotation exactly once."""
     def _run(c) -> list[dict]:
         rows = c.execute(
-            "SELECT span_id, trace_id, phoenix_node_id, savings_usd, cache_hit "
-            "FROM spans WHERE savings_usd > 0 "
-            "ORDER BY savings_usd DESC, start_time DESC LIMIT ?",
+            "SELECT span_id, savings_usd, cache_hit FROM spans "
+            "WHERE savings_usd > 0 AND annotated = 0 LIMIT ?",
             (limit,),
         ).fetchall()
         return [{
             "span_id": r["span_id"],
-            "trace_id": r["trace_id"],
-            "phoenix_node_id": r["phoenix_node_id"],
             "savings_usd": float(r["savings_usd"] or 0),
             "kind": "cache hit" if r["cache_hit"] else "model downgrade",
         } for r in rows]
@@ -355,22 +354,17 @@ def list_saving_spans(limit: int = 200, conn=None) -> list[dict]:
     return _run(conn)
 
 
-def representative_saving_span(cache_hit: bool, conn=None) -> dict | None:
-    """Most-recent saving span of a mechanism (cache_hit True ⇒ tool cache
-    hit, False ⇒ model downgrade) for the per-policy 'verify in Phoenix'
-    deeplink. Returns {trace_id, phoenix_node_id} or None."""
-    def _run(c):
-        r = c.execute(
-            "SELECT trace_id, phoenix_node_id FROM spans "
-            "WHERE savings_usd > 0 AND cache_hit = ? AND trace_id IS NOT NULL "
-            "ORDER BY reconciled_at DESC, start_time DESC LIMIT 1",
-            (1 if cache_hit else 0,),
-        ).fetchone()
-        return {"trace_id": r["trace_id"], "phoenix_node_id": r["phoenix_node_id"]} if r else None
+def mark_spans_annotated(span_ids: list[str], conn=None) -> None:
+    """Flag spans as annotated so the reconcile loop doesn't re-tag them."""
+    if not span_ids:
+        return
+    placeholders = ",".join("?" * len(span_ids))
+    sql = f"UPDATE spans SET annotated = 1 WHERE span_id IN ({placeholders})"
     if conn is None:
         with connect() as c:
-            return _run(c)
-    return _run(conn)
+            c.execute(sql, span_ids)
+    else:
+        conn.execute(sql, span_ids)
 
 
 def upsert_recommendation(rec: dict, conn=None) -> None:
