@@ -728,7 +728,7 @@ def _render_breakdown(rows, recs) -> None:
         st.markdown(_bar(r["llm"], r["tool"], maxv), unsafe_allow_html=True)
         st.markdown(
             f"<div style='color:#6b7280;font-size:0.82rem;margin:-2px 0 14px'>"
-            f"<b>\\${r['cost']:.4f}/ticket</b> — \\${r['llm']:.4f} tokens + \\${r['tool']:.4f} tools"
+            f"<b>${r['cost']:.4f}/ticket</b> — ${r['llm']:.4f} tokens + ${r['tool']:.4f} tools"
             f"</div>", unsafe_allow_html=True)
     if minor:
         names = ", ".join(m["tc"].replace("_", " ") for m in minor if m["tc"] != "unknown")
@@ -767,8 +767,8 @@ def _render_fixes(recs, default_mt, rates, total_n, gov_store) -> None:
                 st.markdown(reason)
                 tag = "✅ governing live · " if active else ""
                 st.markdown(
-                    f"<span style='color:{_GREEN};font-weight:700'>saves \\${spt:.4f}/ticket</span> "
-                    f"<span style='color:#888'>≈ \\${mo:,.0f}/mo at the observed rate · "
+                    f"<span style='color:{_GREEN};font-weight:700'>saves ${spt:.4f}/ticket</span> "
+                    f"<span style='color:#888'>≈ ${mo:,.0f}/mo at the observed rate · "
                     f"{tag}runtime only, reversible</span>", unsafe_allow_html=True)
             with c[1]:
                 if active:
@@ -784,7 +784,7 @@ def _render_fixes(recs, default_mt, rates, total_n, gov_store) -> None:
         f"<div style='display:flex;justify-content:space-between;align-items:center;"
         f"background:#f3f5ee;padding:10px 16px;border-radius:8px;margin-top:4px'>"
         f"<span style='font-weight:600'>Activate all {len(items)}</span>"
-        f"<span style='color:{_GREEN};font-weight:800;font-size:1.3rem'>\\${total_proj:,.0f}/mo</span>"
+        f"<span style='color:{_GREEN};font-weight:800;font-size:1.3rem'>${total_proj:,.0f}/mo</span>"
         f"</div>", unsafe_allow_html=True)
     st.caption("Per-ticket savings are measured. The $/mo is that × the observed rate "
                "(~{:,}/mo); use the slider up top to project your own volume.".format(default_mt))
