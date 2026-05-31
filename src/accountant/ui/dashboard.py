@@ -467,79 +467,6 @@ def _render_verification(issue: dict, policy_sig: str) -> None:
     )
 
 
-def _render_experiment_proof() -> None:
-    """Refactor #3: prove routing savings in Phoenix via a baseline-vs-
-    governed experiment. The cost delta is Phoenix-computed and shown on a
-    linkable compare page — parity-clean. The run is offline (minutes),
-    operator-triggered; this reads its result from `experiment_proof`."""
-    import json as _json
-    import subprocess
-    import sys as _sys
-    from pathlib import Path
-    from accountant.pipeline.db import get_meta, set_meta
-
-    raw = get_meta("experiment_proof")
-    proof = {}
-    if raw:
-        try:
-            proof = _json.loads(raw)
-        except Exception:
-            proof = {}
-    status = proof.get("status")
-
-    st.markdown("###### Prove it in Phoenix — baseline vs governed")
-    if status == "running":
-        started = proof.get("started_at")
-        elapsed = ""
-        if started:
-            try:
-                import datetime as _dt
-                t0 = _dt.datetime.fromisoformat(started)
-                secs = (_dt.datetime.now(_dt.timezone.utc) - t0).total_seconds()
-                elapsed = f" — {int(secs // 60)}m {int(secs % 60)}s elapsed"
-            except Exception:
-                pass
-        st.info(f"⏳ Running baseline vs governed{elapsed}. ~5 min; this panel "
-                "updates on its own when it finishes.")
-        if st.button("Reset", key="exp_reset", help="Clear a stuck run."):
-            set_meta("experiment_proof", _json.dumps({"status": "idle"}))
-            st.rerun()
-        return
-    if status == "done" and proof.get("savings_usd") is not None:
-        b = (proof.get("baseline") or {}).get("total_cost_usd") or 0.0
-        g = (proof.get("governed") or {}).get("total_cost_usd") or 0.0
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Baseline (Phoenix)", f"${b:,.6f}")
-        c2.metric("Governed (Phoenix)", f"${g:,.6f}")
-        c3.metric("Saved (Phoenix delta)", f"${proof['savings_usd']:,.6f}")
-        url = proof.get("compare_url")
-        if url:
-            # st.link_button takes the URL as a raw arg — st.markdown would
-            # HTML-escape the '&' between the repeated experimentId params and
-            # Phoenix would land on the bare /compare ("No Experiment Selected").
-            st.link_button("🔬 Compare in Phoenix ↗", url)
-            st.caption("Opens both experiments side by side; cost computed by Phoenix.")
-        st.caption(
-            f"{proof.get('tickets','?')} tickets · ran {str(proof.get('ran_at',''))[:19]} UTC "
-            "· LLM-cost (model-routing) only — tool/cache savings aren't Phoenix-priced."
-        )
-    elif status == "error":
-        st.warning(f"Last experiment run failed: {str(proof.get('error',''))[:200]}")
-
-    if st.button("🔬 Run baseline-vs-governed in Phoenix",
-                 help="Runs the agent over a sample dataset twice (policies off vs on) "
-                      "so Phoenix computes the cost delta. Offline, ~5 min."):
-        import datetime as _dt
-        set_meta("experiment_proof", _json.dumps(
-            {"status": "running", "started_at": _dt.datetime.now(_dt.timezone.utc).isoformat()}))
-        repo = Path(__file__).resolve().parents[3]
-        subprocess.Popen(
-            [_sys.executable, "-m", "accountant.cli.run_experiments", "demo", "2"],
-            cwd=str(repo), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        st.rerun()
-
-
 _PROJECT_GID: str | None = None
 
 
@@ -673,7 +600,6 @@ def _render_recommendations(recs: list[dict]) -> None:
 
     st.markdown("#### Realized savings")
     _render_realized_savings()
-    _render_experiment_proof()
     st.divider()
     st.markdown("#### Optimization policies")
 
