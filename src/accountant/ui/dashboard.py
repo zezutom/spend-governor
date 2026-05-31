@@ -617,21 +617,102 @@ def _render_story_card(rec, issue, policy, sig, active, gov_store, saved, gid) -
                 st.caption("No quantified savings for this item yet.")
 
 
+def _render_waste_breakdown(recs: list[dict], gid: str | None) -> None:
+    """Full traceability for the headline 'Avoidable AI waste': a per-pattern
+    table, the exact projection formula (so 'assumed based on what' is answered
+    in the UI), and a paginated, Phoenix-linked list of the actual class traces
+    behind each per-ticket figure (which is an average, not a fixed price)."""
+    import math
+    import pandas as pd
+    from accountant.pipeline.db import class_cost_stats, class_trace_costs
+    from accountant.pipeline.phoenix_cost import span_deeplink
+
+    items = [(r, _issue_of(r)) for r in recs]
+    items = [(r, i) for r, i in items if (i.get("savings_per_ticket_usd", 0) or 0) > 0]
+    if not items:
+        return
+    total_mo = sum((i.get("monthly_savings_usd", 0) or 0) for _, i in items)
+    window = (items[0][1].get("components") or {}).get("window_days", "?")
+
+    st.markdown("#### Avoidable AI waste — how it's calculated")
+    table = pd.DataFrame([{
+        "pattern": r["title"][:38],
+        "tickets seen": i.get("n_traces", 0),
+        "avg now/ticket": round(i.get("current_avg_usd", 0) or 0, 5),
+        "avg after/ticket": round(i.get("projected_avg_usd", 0) or 0, 5),
+        "saving/ticket (measured)": round(i.get("savings_per_ticket_usd", 0) or 0, 5),
+        "tickets/mo (assumed)": i.get("monthly_volume", 0),
+        "waste/mo (projected)": round(i.get("monthly_savings_usd", 0) or 0, 2),
+    } for r, i in items])
+    st.dataframe(table, hide_index=True, use_container_width=True, column_config={
+        "avg now/ticket": st.column_config.NumberColumn(format="$%.5f"),
+        "avg after/ticket": st.column_config.NumberColumn(format="$%.5f"),
+        "saving/ticket (measured)": st.column_config.NumberColumn(format="$%.5f"),
+        "waste/mo (projected)": st.column_config.NumberColumn(format="$%.2f"),
+    })
+    st.markdown(
+        f"**Total projected: \\${total_mo:,.2f}/mo.** Each `waste/mo` = "
+        f"`saving/ticket × tickets/mo`. The first three columns are **measured** "
+        f"from your traces; **`tickets/mo` is assumed** = "
+        f"`tickets seen ÷ window_days × 30`, where "
+        f"`window_days = max(observed trace span, 0.5)`."
+    )
+    st.warning(
+        f"⚠️ Your traces span far less than a day, so `window_days` hit its "
+        f"**0.5-day floor** (currently {window}). So `/mo` assumes this sample ≈ "
+        f"half a day of production traffic — a **hypothesis at an assumed volume, "
+        f"not a measured rate**. (Patterns can also overlap on shared ticket "
+        f"types, so the total is an upper bound.)"
+    )
+
+    for rec, issue in items:
+        classes = _affected_classes(issue)
+        if not classes:
+            continue
+        spt = issue.get("savings_per_ticket_usd", 0) or 0
+        stats = class_cost_stats(classes)
+        label = ", ".join(classes)
+        with st.expander(f"Prove the \\${spt:.5f}/ticket — the {stats['n']} “{label}” tickets behind it"):
+            st.caption(
+                f"It's the **average**, not a fixed price: these tickets cost "
+                f"**\\${stats['min']:.5f}–\\${stats['max']:.5f}** each "
+                f"(avg \\${stats['avg']:.5f}). Open any in Phoenix to see its real "
+                f"cost and the redundant calls."
+            )
+            PAGE = 20
+            npages = max(1, math.ceil(stats["n"] / PAGE))
+            page = int(st.number_input("Page", 1, npages, 1, key=f"wpg_{rec['signature']}"))
+            traces = class_trace_costs(classes, PAGE, (page - 1) * PAGE)
+            df = pd.DataFrame([{
+                "trace": (t.get("trace_id") or "")[:12] + "…",
+                "cost/ticket (USD)": round(t.get("cost", 0) or 0, 6),
+                "web_search calls": t.get("n_ws", 0),
+                "open in Phoenix": (span_deeplink(gid, t.get("trace_id"), None)
+                                    if gid else None),
+            } for t in traces])
+            st.dataframe(df, hide_index=True, use_container_width=True, column_config={
+                "cost/ticket (USD)": st.column_config.NumberColumn(format="$%.6f"),
+                "open in Phoenix": st.column_config.LinkColumn(
+                    "open in Phoenix", display_text="open trace ↗"),
+            })
+            st.caption(f"Page {page}/{npages} · each row opens that trace in Phoenix.")
+
+
 def _render_recommendations(recs: list[dict]) -> None:
     from accountant.wrapper import store as gov_store
+    from accountant.pipeline.db import savings_summary
+    saved = savings_summary()
+    gid = _project_gid()
 
+    _render_waste_breakdown(recs, gid)
+    st.divider()
     st.markdown("#### Realized savings")
     _render_realized_savings()
     st.divider()
     st.markdown("#### Optimization policies")
-
     if not recs:
         st.success("No cost issues detected — the agent is running clean.")
         return
-
-    from accountant.pipeline.db import savings_summary
-    saved = savings_summary()
-    gid = _project_gid()
     for rec in recs:
         issue = _issue_of(rec)
         policy = _policy_for_issue(issue)

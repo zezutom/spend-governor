@@ -356,6 +356,58 @@ def representative_saving_span(cache_hit: bool, conn=None) -> dict | None:
     return _run(conn)
 
 
+def class_cost_stats(task_classes: list[str], conn=None) -> dict:
+    """Per-trace cost spread (n / min / avg / max) for one or more task
+    classes — so the dashboard can show that a per-ticket waste figure is an
+    AVERAGE with a real range, not a uniform number."""
+    if not task_classes:
+        return {"n": 0, "min": 0.0, "avg": 0.0, "max": 0.0}
+    ph = ",".join("?" * len(task_classes))
+    def _run(c) -> dict:
+        row = c.execute(
+            f"WITH tc AS (SELECT DISTINCT trace_id FROM spans "
+            f"            WHERE classifier_task_class IN ({ph})), "
+            f"pt AS (SELECT s.trace_id, SUM(s.llm_cost_usd + s.tool_cost_usd) cost "
+            f"       FROM spans s JOIN tc ON s.trace_id = tc.trace_id "
+            f"       GROUP BY s.trace_id) "
+            f"SELECT COUNT(*) n, COALESCE(MIN(cost),0) mn, "
+            f"COALESCE(AVG(cost),0) av, COALESCE(MAX(cost),0) mx FROM pt",
+            task_classes,
+        ).fetchone()
+        return {"n": int(row["n"] or 0), "min": float(row["mn"] or 0),
+                "avg": float(row["av"] or 0), "max": float(row["mx"] or 0)}
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
+def class_trace_costs(task_classes: list[str], limit: int = 20, offset: int = 0,
+                      conn=None) -> list[dict]:
+    """One page of traces for the given task class(es): trace_id + measured
+    cost + web_search count — each row links to the trace in Phoenix so the
+    per-ticket cost behind the waste figure is verifiable."""
+    if not task_classes:
+        return []
+    ph = ",".join("?" * len(task_classes))
+    def _run(c) -> list[dict]:
+        rows = c.execute(
+            f"WITH tc AS (SELECT DISTINCT trace_id FROM spans "
+            f"            WHERE classifier_task_class IN ({ph})) "
+            f"SELECT s.trace_id, SUM(s.llm_cost_usd + s.tool_cost_usd) cost, "
+            f"SUM(CASE WHEN s.tool_name='web_search' THEN 1 ELSE 0 END) n_ws, "
+            f"MIN(s.start_time) t "
+            f"FROM spans s JOIN tc ON s.trace_id = tc.trace_id "
+            f"GROUP BY s.trace_id ORDER BY t DESC LIMIT ? OFFSET ?",
+            (*task_classes, limit, offset),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    if conn is None:
+        with connect() as c:
+            return _run(c)
+    return _run(conn)
+
+
 def policy_savings_series(cache_hit: bool, conn=None) -> list[dict]:
     """Per-span savings over time for a policy kind (cache_hit True ⇒ tool
     cache hits, False ⇒ model downgrades), oldest-first — feeds the
