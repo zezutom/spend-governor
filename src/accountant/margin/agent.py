@@ -19,9 +19,14 @@ from accountant.margin.prompt import MARGIN_AGENT_INSTRUCTION
 from accountant.margin.schema import MarginOutput
 
 
-# Reasoning model: lever choice + grounding discipline matter more than
-# latency here (one low-token call, run on demand, not per request).
-DEFAULT_MARGIN_MODEL = os.environ.get("ACCOUNTANT_MARGIN_MODEL", "gemini-2.5-pro")
+# The builder does all arithmetic; the agent only selects, orders, and
+# justifies — light, grounded work. So a fast model with a SMALL thinking
+# budget is both quicker and as accurate as a reasoning model here: flash
+# with budget 256 returns in ~7s vs ~48s for pro's default thinking, same
+# answers. (flash-lite is faster still but slips — it mis-triaged an
+# above-target segment.) All env-overridable.
+DEFAULT_MARGIN_MODEL = os.environ.get("ACCOUNTANT_MARGIN_MODEL", "gemini-2.5-flash")
+DEFAULT_THINKING_BUDGET = int(os.environ.get("ACCOUNTANT_MARGIN_THINKING_BUDGET", "256"))
 
 
 _client: genai.Client | None = None
@@ -49,6 +54,7 @@ def run_margin(margin_input: dict, *, model: str = DEFAULT_MARGIN_MODEL) -> Marg
             response_mime_type="application/json",
             response_schema=MarginOutput,
             temperature=0.0,
+            thinking_config=types.ThinkingConfig(thinking_budget=DEFAULT_THINKING_BUDGET),
         ),
     )
     parsed = resp.parsed
