@@ -98,8 +98,17 @@ JOB 2 — MARGIN-DRIFT TRIAGE
     * State the governance delta using values provided: copy
       segment.governance_recovered_pts and the chosen option's lever_recovers_pts.
       Do not compute them.
-    * Record the rejected lever with its figures.
+    * Record the rejected lever with its figures (null if the segment has only
+      one option).
     * rationale: at most 2 sentences, plain declaratives. The numbers carry it.
+- Never block a below-target segment. Every such segment carries at least a
+  reprice option, and reprice always reaches target by raising the bill. When no
+  policy is available or none reaches target — including when every relevant
+  policy is already active — recommend reprice and report the bill impact. A
+  segment that has options is always answered with a recommendation, never
+  "blocked". "blocked" is exclusively for an absent INPUT field or an
+  out-of-scope market-pricing request — repricing to hold the operator's STATED
+  target margin is in scope.
 
 INPUT FIELDS (you receive these as a JSON object; read only what is present)
 - pricing_model, target_margin, monthly_volume, baseline_task, tiering_cost_basis

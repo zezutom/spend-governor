@@ -814,6 +814,122 @@ def _render_math_drawer(recs, gid, rates) -> None:
                 _render_verification(issue, sig)
 
 
+def _render_margin_tiering(ct: dict) -> None:
+    st.subheader("Credit pricing")
+    a, b = st.columns(2)
+    # st.metric values are exempt from Streamlit's $-as-LaTeX.
+    a.metric("1 credit — raw cost basis", f"${ct['credit_value_usd_raw_cost']:.5f}")
+    b.metric("1 credit — governed cost basis", f"${ct['credit_value_usd_governed_cost']:.5f}")
+    st.caption(ct["cost_basis_note"])
+    df = pd.DataFrame([{"credits": t["credits"],
+                        "task types": ", ".join(t["task_types"]),
+                        "note": t["rounding_note"] or ""} for t in ct["tiers"]])
+    st.dataframe(df, hide_index=True, use_container_width=True)
+    fr = ct["flat_credit_risk"]
+    st.markdown(
+        f"<div style='background:#fdecd2;color:{_AMBER};padding:8px 12px;border-radius:6px'>"
+        f"⚠ Flat 1-credit pricing under-prices <b>{fr['task_type']}</b> by "
+        f"<b>{fr['underpriced_factor']:.1f}×</b> — {fr['statement']}</div>",
+        unsafe_allow_html=True)
+    if ct.get("rate_sensitive"):
+        st.caption("⚖ Rate-sensitive: tool-heavy task costs depend on your configured "
+                   "tool rates (Show the math), not a Phoenix measurement.")
+    for cav in ct.get("caveats", []):
+        st.caption("· " + cav)
+
+
+def _render_margin_drift(drift: list, blocked: list, inp: dict, target: float) -> None:
+    st.subheader(f"Margin defense — segments below the {int(target * 100)}% target")
+    drift_ids = {d["segment_id"] for d in drift}
+    for d in drift:
+        reaches = d["projected_margin_after"] >= target - 1e-9 and d["residual_gap"] <= 0
+        accent = _GREEN if reaches else _AMBER
+        lever = (f"Activate policy `{d['policy_id']}`" if d["recommended_lever"] == "policy"
+                 else "Reprice")
+        bill = d["bill_change_pct"]
+        bill_txt = "no bill change" if abs(bill) < 1e-9 else f"bill {bill * 100:+.0f}%"
+        with st.container(border=True):
+            st.markdown(
+                f"**{d['segment_id']}** "
+                f"<span style='color:#888'>governed margin {d['governed_margin'] * 100:.0f}% → "
+                f"<b style='color:{accent}'>{d['projected_margin_after'] * 100:.0f}%</b></span>",
+                unsafe_allow_html=True)
+            line = f"**{lever}** · recovers {d['lever_recovers_pts']:+.0f} pts · {bill_txt}"
+            if d["residual_gap"] > 0:
+                line += f" · still {d['residual_gap'] * 100:.0f} pts short"
+            st.markdown(line)
+            st.caption(d["rationale"])
+            rj = d.get("rejected_lever")
+            if rj:
+                st.caption(f"Rejected — {rj['lever']}: → {rj['projected_margin_after'] * 100:.0f}% "
+                           f"(bill {rj['bill_change_pct'] * 100:+.0f}%)")
+            if d["recommended_lever"] == "policy":
+                st.caption("→ Recommendation only. The Accountant activates it per segment (see The Fixes).")
+    healthy = [s["segment_id"] for s in inp["segments"]
+               if s["segment_id"] not in drift_ids and s["governed_margin"] >= target]
+    if healthy:
+        st.markdown(f"<div style='color:#9ca3af'>Above target — no action: "
+                    f"{', '.join(healthy)}.</div>", unsafe_allow_html=True)
+    if blocked:
+        st.caption("Blocked: " + "; ".join(f"{b['item']} ({b['reason']})" for b in blocked))
+
+
+def _render_margin(live: dict, recs: list, rates: dict, default_mt: int) -> None:
+    """New top-level section: the Margin Agent (separate from the Accountant).
+    Reads the SHARED cost vector, builds the agent INPUT deterministically, and
+    runs the agent only on a button press — caching a timestamped result so the
+    live Gemini call never rides the 2s refresh loop."""
+    from accountant.margin.build_input import from_live_state, DEFAULT_TARGET_MARGIN
+    from accountant.margin.segments import default_provider
+
+    st.header("Margin")
+    st.caption(
+        "The **Margin Agent** turns the measured cost vector + your price into credit "
+        "pricing and per-segment margin defense. Separate agent from the Accountant "
+        "(which owns cost): it reads cost, never Phoenix, and does no arithmetic. "
+        "Customer segments here are **synthetic demo data**.")
+
+    if BASELINE_CLASS not in (live.get("by_task_class") or {}):
+        st.info("Margin analysis needs the baseline task class in the cost data — not present yet.")
+        return
+
+    inp = from_live_state(live, recs, rates, default_provider(),
+                          monthly_volume=default_mt, baseline_task=BASELINE_CLASS,
+                          target_margin=DEFAULT_TARGET_MARGIN)
+
+    c1, c2 = st.columns([1, 3])
+    with c1:
+        run = st.button("Run margin analysis", type="primary", use_container_width=True)
+    with c2:
+        st.caption(f"Target margin {int(DEFAULT_TARGET_MARGIN * 100)}% · {len(inp['segments'])} "
+                   f"segments · credit basis '{inp['tiering_cost_basis']}'. Live Gemini call — runs "
+                   f"on click, not on the refresh loop.")
+
+    if run:
+        from accountant.margin import run_margin
+        with st.spinner("Running the Margin Agent…"):
+            try:
+                out = run_margin(inp)
+                st.session_state["margin_result"] = {
+                    "out": out.model_dump(), "input": inp,
+                    "at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            except Exception as e:
+                st.error(f"Margin Agent failed: {e}")
+
+    res = st.session_state.get("margin_result")
+    if not res:
+        st.info("Click **Run margin analysis** to generate credit tiers and per-segment "
+                "margin levers from the current cost vector.")
+        return
+
+    st.caption(f"Margin Agent output · as of {res['at']}")
+    _render_margin_tiering(res["out"]["credit_tiering"])
+    st.divider()
+    _render_margin_drift(res["out"]["drift_recommendations"], res["out"]["blocked"],
+                         res["input"], DEFAULT_TARGET_MARGIN)
+
+
 @st.fragment(run_every="2s")
 def render_dashboard() -> None:
     # ONE fragment so a slider/rate change reruns the whole report and every
@@ -854,6 +970,8 @@ def render_dashboard() -> None:
     _render_math_drawer(recs, gid, rates)
     st.divider()
     _render_fixes(recs, default_mt, rates, totals["total_n"], gov_store)
+    st.divider()
+    _render_margin(live, recs, rates, default_mt)
 
 
 def main() -> None:
