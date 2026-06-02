@@ -36,7 +36,7 @@ data/traces/
 data/accountant.db
 data/accountant.db-wal
 data/accountant.db-shm
-data/ingest_server.log
+data/*.log
 
 # Observed agent's runtime instruction overrides (baseline lives in
 # code as DEFAULT_INSTRUCTION; this file holds applied optimizations)
