@@ -1,0 +1,37 @@
+{
+  "pricing_model": "credit",
+  "target_margin": 0.80,
+  "monthly_volume": 69000,
+  "baseline_task": "password_reset",
+  "tiering_cost_basis": "raw",
+  "credit_value_usd_raw_cost": 0.0095,
+  "credit_value_usd_governed_cost": 0.0042,
+  "task_types": [
+    { "task_type": "refund_handling",  "raw_cost_usd": 0.0194, "governed_cost_usd": 0.0026,
+      "cost_ratio_raw": 9.9, "cost_ratio_governed": 1.4,
+      "measured_token_usd": 0.0040, "estimated_tool_usd": 0.0154, "tool_share": 0.79 },
+    { "task_type": "account_question", "raw_cost_usd": 0.0051, "governed_cost_usd": 0.0040,
+      "cost_ratio_raw": 2.6, "cost_ratio_governed": 2.1,
+      "measured_token_usd": 0.0036, "estimated_tool_usd": 0.0015, "tool_share": 0.29 },
+    { "task_type": "password_reset",   "raw_cost_usd": 0.0020, "governed_cost_usd": 0.0020,
+      "cost_ratio_raw": 1.0, "cost_ratio_governed": 1.0,
+      "measured_token_usd": 0.0018, "estimated_tool_usd": 0.0002, "tool_share": 0.10 }
+  ],
+  "available_policies": [
+    { "policy_id": "cache_refund_web_search", "affects_task_types": ["refund_handling"],
+      "projected_saving_per_ticket_usd": 0.01682 }
+  ],
+  "segments": [
+    { "segment_id": "acme",
+      "price_per_ticket_usd": 0.024,
+      "usage_mix": { "refund_handling": 0.62, "account_question": 0.20, "password_reset": 0.18 },
+      "raw_margin": -0.12,
+      "governed_margin": 0.41,
+      "governance_recovered_pts": 53,
+      "near_renewal": true,
+      "options": [
+        { "lever": "reprice",                                       "projected_margin_after": 0.80, "bill_change_pct": 0.41, "lever_recovers_pts": 39 },
+        { "lever": "policy", "policy_id": "cache_refund_web_search", "projected_margin_after": 0.79, "bill_change_pct": 0.00, "lever_recovers_pts": 38 }
+      ] }
+  ]
+}
