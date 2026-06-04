@@ -98,11 +98,21 @@ _NODE_TITLE = {"tools": "Cache / tool gateway", "gateway": "Tool gateway",
                "model": "Model routing", "router": "Router", "requests": "Incoming requests"}
 
 
+_KNOWN_CLASSES = {"refund_handling", "account_question", "password_reset", "plan_change"}
+_CLASS_TITLE = {"refund_handling": "Refund tickets", "account_question": "Account questions",
+                "password_reset": "Password resets", "plan_change": "Plan changes"}
+
+
 def _node_insight(node: str) -> dict:
-    classes = _NODE_CLASSES.get(node, _NODE_CLASSES["requests"])
-    # The captured before/after pair is a CACHING proof — show it on the tool/
-    # cache nodes only. Other nodes show their real per-class traces.
-    pair = service.captured_trace_pair() if node in ("tools", "gateway") else None
+    if node in _KNOWN_CLASSES:  # a workload lane → that conversation type's traces
+        classes = [node]
+        title = _CLASS_TITLE[node]
+        pair = service.captured_trace_pair() if node == "refund_handling" else None
+    else:
+        classes = _NODE_CLASSES.get(node, _NODE_CLASSES["requests"])
+        title = _NODE_TITLE.get(node, node)
+        # The captured before/after pair is a CACHING proof — tool/cache nodes only.
+        pair = service.captured_trace_pair() if node in ("tools", "gateway") else None
     gid = service.project_gid()
     rows = service.class_trace_costs(classes, 8, 0)
     traces = [{
@@ -112,7 +122,7 @@ def _node_insight(node: str) -> dict:
         "total": (r.get("llm_cost", 0) or 0) + (r.get("tool_cost", 0) or 0),
         "phoenix_url": service.span_deeplink(gid, r["trace_id"], None),
     } for r in rows]
-    return {"node": node, "title": _NODE_TITLE.get(node, node), "classes": classes,
+    return {"node": node, "title": title, "classes": classes,
             "pair": pair, "stats": service.class_cost_stats(classes), "traces": traces}
 
 

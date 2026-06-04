@@ -22,6 +22,15 @@ _MIN_PER_MONTH = 30 * 24 * 60
 TICK_SECONDS = 5.0
 _NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
              "route_model:simple": "model"}
+# Which levers govern each task class (so the class boxes light up when governed).
+_CLASS_LEVERS = {
+    "refund_handling": ["cache_tool:web_search"],
+    "account_question": ["cache_tool:kb_lookup", "route_model:simple"],
+    "password_reset": ["route_model:simple"],
+    "plan_change": [],
+}
+_CLASS_LABEL = {"refund_handling": "Refund tickets", "account_question": "Account questions",
+                "password_reset": "Password resets", "plan_change": "Plan changes"}
 # A correction worth pushing back on: vetoing a lever that's giving up this much
 # measured monthly saving. Grounded, not nagging.
 _PUSHBACK_MIN_USD = 1000.0
@@ -62,8 +71,13 @@ class Governor:
         return service.policy_monthly_saving(lever["issue"], rates, self.volume, totals["total_n"])
 
     def snapshot(self) -> dict:
-        rates, totals = self._ctx()
+        rates = service.default_tool_rates()
+        live = service.live_state()
+        recs = service.recommendations()
+        rows, totals = service.cost_breakdown(live, recs, rates)
         gross = totals["cost_per_ticket"] * self.volume
+        active_sigs = {p["signature"] for p in service.active_policies()}
+
         levers, saved = [], 0.0
         for l in service.levers():
             if not l["enactable"]:
@@ -78,6 +92,36 @@ class Governor:
                 "escalated": l["signature"] in self.escalated,
                 "monthly": round(m, 2),
             })
+
+        # The workload lanes: each conversation type with its real cost + the
+        # operations it runs (which tools, how often, and the lever on each).
+        by = live.get("by_task_class") or {}
+        _TOOL_LEVER = {"web_search": "cache_tool:web_search", "kb_lookup": "cache_tool:kb_lookup"}
+        _SIMPLE = {"password_reset", "account_question"}
+        classes = []
+        for r in rows:
+            tc = r["tc"]
+            if tc == "unknown":
+                continue
+            counts = (by.get(tc) or {}).get("avg_tool_counts") or {}
+            ops = []
+            for tool, cnt in sorted(counts.items(), key=lambda kv: -kv[1]):
+                if tool in ("task_classifier", "(merged tools)") or cnt < 0.5:
+                    continue
+                lever = _TOOL_LEVER.get(tool)
+                ops.append({"op": tool, "count": round(cnt, 1), "kind": "tool",
+                            "lever": lever, "governed": bool(lever and lever in active_sigs)})
+            model_lever = "route_model:simple" if tc in _SIMPLE else None
+            ops.append({"op": "model", "count": None, "kind": "model", "lever": model_lever,
+                        "governed": bool(model_lever and model_lever in active_sigs)})
+            govs = _CLASS_LEVERS.get(tc, [])
+            classes.append({
+                "tc": tc, "label": _CLASS_LABEL.get(tc, tc), "cost_per_ticket": round(r["cost"], 5),
+                "share": round(r["share"], 3), "mult": round(r["mult"], 1), "baseline": r["is_base"],
+                "governed": (any(s in active_sigs for s in govs) if govs else None), "ops": ops,
+            })
+        classes.sort(key=lambda c: -c["share"])
+
         return {
             "burn_rate": round(max(gross - saved, 0.0) / _MIN_PER_MONTH, 5),
             "gross_burn": round(gross / _MIN_PER_MONTH, 5),
@@ -85,6 +129,7 @@ class Governor:
             "active_count": service.policies_active_count(),
             "realized_savings": round(service.realized_savings().get("total_savings_usd", 0) or 0, 4),
             "levers": levers,
+            "classes": classes,
             "roadmap": service.roadmap_capabilities(),
             "pushback": self.pushback,
             "holding": self._holding(),

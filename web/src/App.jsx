@@ -18,14 +18,17 @@ const _STF = { green: '#e6f5ef', amber: '#fbf0db', escalate: '#fbf0db', vetoed: 
 
 function CtrlNode({ data }) {
   const c = _STC[data.state] || '#b7b6ae', fill = _STF[data.state] || '#fff'
+  const isClass = data.kind === 'class', isOp = data.kind === 'op'
   return (
-    <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: 12, padding: '10px 13px',
-      minWidth: 172, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
+    <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: isOp ? 9 : 12,
+      padding: isOp ? '7px 10px' : '10px 13px', minWidth: isClass ? 188 : isOp ? 124 : 150,
+      cursor: 'pointer', boxShadow: isClass ? '0 1px 6px rgba(0,0,0,.08)' : '0 1px 3px rgba(0,0,0,.05)' }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
-      <div style={{ fontWeight: 700, fontSize: 13.5, color: INK }}>{data.label}</div>
-      <div style={{ fontSize: 11.5, color: c, marginTop: 1 }}>{data.sub}</div>
+      <div style={{ fontWeight: isClass ? 800 : 600, fontSize: isClass ? 14.5 : 12.5,
+        color: INK, fontFamily: isOp ? 'monospace' : 'inherit' }}>{data.label}</div>
+      <div style={{ fontSize: isClass ? 12 : 10.5, color: c, marginTop: 1 }}>{data.sub}</div>
       {data.kind === 'lever' && (
-        <div style={{ marginTop: 7, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 6, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {data.escalated && <>
             <Btn onClick={() => data.act('accept', data.sig)} label="accept" color={AMBER} primary />
             <Btn onClick={() => data.act('reject', data.sig)} label="reject" color={AMBER} />
@@ -260,35 +263,48 @@ function ProofPanel({ proof, onClose }) {
   )
 }
 
-// ---- derive the React Flow graph: one granular box PER lever --------------
-const LEVER_LABEL = (sig) => sig === 'cache_tool:web_search' ? 'Cache · web_search'
-  : sig === 'cache_tool:kb_lookup' ? 'Cache · kb_lookup'
-  : sig === 'route_model:simple' ? 'Route → economy model' : sig
-function leverSub(l) {
-  if (l.active) return `governed · saving $${Math.round(l.monthly).toLocaleString()}/mo`
-  if (l.escalated) return 'answer-affecting · your call'
-  if (l.vetoed) return 'off — you vetoed this'
-  return 'paying — full cost'
-}
+// ---- derive the React Flow graph: a LANE per workload (conversation type),
+//      each showing the operations it runs and the lever governing them -------
 const leverState = (l) => l.active ? 'green' : l.escalated ? 'escalate' : l.vetoed ? 'vetoed' : 'amber'
 
+function opLabel(op) {
+  if (op.kind === 'model') return 'model'
+  return op.count ? `${op.op} ×${Math.round(op.count)}` : op.op
+}
+function opSub(op, lever) {
+  if (op.governed) return op.kind === 'model' ? 'routed → economy' : 'cached · $0'
+  if (lever?.escalated) return 'answer-affecting · your call'
+  if (lever?.vetoed) return 'off — you vetoed this'
+  if (op.kind === 'model') return lever ? 'premium · routable' : 'premium model'
+  return lever ? 'paying — the agent will cache' : 'paying'
+}
+
 function buildGraph(state, act) {
-  if (!state) return { nodes: [], edges: [] }
-  const lv = state.levers
-  const nodes = [
-    nd('requests', 20, 160, { kind: 'struct', state: 'struct', label: 'Requests', sub: 'live traffic' }),
-    nd('router', 220, 160, { kind: 'struct', state: 'struct', label: 'Router', sub: 'classify · dispatch' }),
-  ]
-  const edges = [ed('e_rr', 'requests', 'router', '#c8c7c0')]
-  const gap = lv.length > 2 ? 92 : 112
-  lv.forEach((l, i) => {
-    const id = 'lev_' + l.sig
-    nodes.push(nd(id, 470, 50 + i * gap, {
-      kind: 'lever', state: leverState(l), label: LEVER_LABEL(l.sig), sub: leverSub(l),
-      sig: l.sig, active: l.active, vetoed: l.vetoed, escalated: l.escalated, act,
-      proofNode: l.type === 'route_model' ? 'model' : 'tools',
+  if (!state || !state.classes) return { nodes: [], edges: [] }
+  const leverBySig = Object.fromEntries((state.levers || []).map((l) => [l.sig, l]))
+  const nodes = [], edges = []
+  const laneH = 92
+  state.classes.forEach((cls, i) => {
+    const y = 22 + i * laneH
+    const cid = 'cls_' + cls.tc
+    nodes.push(nd(cid, 12, y, {
+      kind: 'class', label: cls.label, proofNode: cls.tc,
+      sub: `$${cls.cost_per_ticket.toFixed(4)}/ticket · ${Math.round(cls.share * 100)}% of spend`,
+      state: cls.governed === true ? 'green' : cls.governed === false ? 'amber' : 'struct',
     }))
-    edges.push(ed('e_' + l.sig, 'router', id, l.active ? GREEN : AMBER))
+    let prev = cid
+    cls.ops.forEach((op, j) => {
+      const oid = cid + '_' + op.op
+      const lever = op.lever ? leverBySig[op.lever] : null
+      nodes.push(nd(oid, 250 + j * 168, y, {
+        kind: lever ? 'lever' : 'op', label: opLabel(op), sub: opSub(op, lever),
+        state: op.governed ? 'green' : lever ? leverState(lever) : (op.kind === 'model' ? 'struct' : 'amber'),
+        sig: op.lever, active: lever?.active, vetoed: lever?.vetoed, escalated: lever?.escalated,
+        act, proofNode: cls.tc,
+      }))
+      edges.push(ed(oid + '_e', prev, oid, op.governed ? GREEN : '#c8c7c0'))
+      prev = oid
+    })
   })
   return { nodes, edges }
 }
