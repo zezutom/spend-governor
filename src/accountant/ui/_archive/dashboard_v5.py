@@ -953,4 +953,9 @@ def main() -> None:
     render_dashboard()
 
 
-main()
+# ARCHIVED v5 (control-plane migration, Phase 1). Frozen reference for parity
+# diffing. The only change from the live file is this __main__ guard, so the
+# view-model functions can be imported for the Phase 2 parity check without
+# launching the app. To run v5 visually, check out a pre-archive commit.
+if __name__ == "__main__":
+    main()
