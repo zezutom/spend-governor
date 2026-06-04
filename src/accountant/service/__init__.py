@@ -1,0 +1,113 @@
+"""Service layer — the one interface the control-plane UI consumes.
+
+The cockpit reaches the backend ONLY through this module: state, economics,
+governance levers, savings/before-after, and the Phoenix proof drill-down.
+Every function either re-exports an existing backend entry point or aliases a
+view-model function lifted VERBATIM from the v5 dashboard (`_viewmodel.py`), so
+no number changes value and nothing is reimplemented. Rendering lives entirely
+in the UI; this layer returns data only.
+
+Grouped by the brief's surfaces:
+- system state  — what's live right now
+- economics     — per-class cost, projection, tool-rate config
+- governance    — the enactable levers + their measured effect + live toggles
+- savings       — realized savings, interventions, measured before/after
+- proof         — trace race, per-trace tables, Phoenix deeplinks
+"""
+
+from accountant.service import _viewmodel as _vm
+
+# --- backend pass-throughs (reused, not reimplemented) ---------------------
+from accountant.analytics.verification import measured_before_after as before_after
+from accountant.pipeline.db import (
+    savings_summary as realized_savings,
+    class_cost_stats,
+    class_trace_costs,
+    policy_savings_series,
+    policy_saving_spans,
+    representative_saving_span,
+)
+from accountant.pipeline.phoenix_cost import span_deeplink
+from accountant.pricing.tools import TOOL_PRICES
+from accountant.trace_race.fixture import load_fixture as trace_race_fixture
+from accountant.wrapper import store as _store
+
+# --- system state ----------------------------------------------------------
+live_state = _vm._load_live_state                 # the single live_state blob
+cache_span_count = _vm._cache_span_count          # ingested span count
+recommendations = _vm._load_recommendations       # active recommendation rows
+BASELINE_CLASS = _vm.BASELINE_CLASS
+
+# --- economics (per-class cost, projection, tool rates) --------------------
+cost_breakdown = _vm._issue_rows                  # (live, recs, rates) -> (rows, totals)
+default_tool_rates = _vm._default_tool_rates      # operator-set per-call rates
+tool_cost = _vm._tool_cost                        # Σ(calls × rate) for one ticket
+default_monthly_volume = _vm._default_monthly_tickets  # observed-rate projection base
+observed_hours = _vm._observed_hours              # window the sample spans
+class_reasons = _vm._class_reasons                # diagnosis text per task class
+
+# --- governance (levers the optimizer enacts + their measured effect) ------
+issue_of = _vm._issue_of                          # decode a recommendation's issue
+policy_for_issue = _vm._policy_for_issue          # issue -> (sig, type, params) | None
+affected_classes = _vm._affected_classes          # task classes a policy governs
+policy_cause = _vm._story_cause                   # plain-English cause + fix
+policy_per_ticket_saving = _vm._policy_per_ticket  # measured $/ticket a lever saves
+policy_monthly_saving = _vm._policy_mo            # $/mo at a given volume
+lever_text = _vm._fix_text                        # (title, one-line) for a lever
+
+# live toggle state — the real enactable levers
+active_policies = _store.active_policies
+is_active = _store.is_active
+activate_policy = _store.activate_policy
+deactivate_policy = _store.deactivate_policy
+policy_activated_at = _store.policy_activated_at
+
+# --- proof (Phoenix-backed verification) -----------------------------------
+project_gid = _vm._project_gid                    # for building span deeplinks
+
+
+def policies_active_count() -> int:
+    """How many levers are governing live right now."""
+    return len(active_policies())
+
+
+def levers() -> list[dict]:
+    """The enactable levers, each with its measured effect and live state —
+    derived from recommendations through the same view-model the dashboard used.
+    Returns one dict per actionable recommendation."""
+    out = []
+    for rec in recommendations():
+        issue = issue_of(rec)
+        policy = policy_for_issue(issue)
+        if not policy or (issue.get("savings_per_ticket_usd", 0) or 0) <= 0:
+            continue
+        sig = policy[0]
+        title, blurb = lever_text(issue)
+        out.append({
+            "signature": sig,
+            "policy_type": policy[1],
+            "params": policy[2],
+            "title": title,
+            "blurb": blurb,
+            "cause": policy_cause(issue),
+            "classes": affected_classes(issue),
+            "active": is_active(sig),
+            "issue": issue,
+            "rec": rec,
+        })
+    return out
+
+
+__all__ = [
+    "live_state", "cache_span_count", "recommendations", "BASELINE_CLASS",
+    "cost_breakdown", "default_tool_rates", "tool_cost", "default_monthly_volume",
+    "observed_hours", "class_reasons",
+    "issue_of", "policy_for_issue", "affected_classes", "policy_cause",
+    "policy_per_ticket_saving", "policy_monthly_saving", "lever_text", "levers",
+    "active_policies", "is_active", "activate_policy", "deactivate_policy",
+    "policy_activated_at", "policies_active_count",
+    "realized_savings", "before_after", "policy_savings_series", "policy_saving_spans",
+    "representative_saving_span",
+    "trace_race_fixture", "class_cost_stats", "class_trace_costs", "project_gid",
+    "span_deeplink", "TOOL_PRICES",
+]
