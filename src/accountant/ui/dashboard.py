@@ -1,15 +1,17 @@
-"""AI Cost Governance — the control-plane cockpit (Agent Inbox + Live Canvas).
+"""AI Cost Governance — the control plane (autonomous agent + live canvas).
 
-An ambient agent reasons over live traffic and ranks proposals in an inbox; the
-canvas shows the consequence as motion (continuous traffic, a moving burn rate);
-you approve; the canvas reroutes, the burn bends down, and the inbox recomputes
-and re-ranks from REAL figures, jumping the highlight to the next leak's node.
+The Agent Inbox is a live activity stream the AGENT drives — its own reasoning
+(pure LLM, no pre-canned text) and the levers it enacts ITSELF, on its own clock.
+No approval gate: the agent detects each leak and calls activate_policy on its
+own; the feed posts, the canvas reroutes, and the burn rate steps down while the
+human does nothing. The human only SUPERVISES — every action is reversible
+(one-click undo, which the agent treats as a correction and re-reasons over) and
+"show me it's real" is optional inspection, never required to advance.
 
-Everything is read through the `accountant.service` interface only — no number
-is invented in the UI, only real (enactable) levers are approvable, roadmap
-items are recommend-only, and any governing item drills to the real Phoenix
-spans. The canvas animates client-side (its own JS clock), so it is alive
-before and between actions — not a static dashboard relabeled "live".
+Bounds: only enactable levers are auto-enacted; roadmap items are surfaced
+recommend-only and never enacted; the forward proposal tiers down to a
+quality-floor guard. Every figure is the real measured delta from the service
+layer; the agent's prose carries no numbers.
 
     uv run streamlit run src/accountant/ui/dashboard.py
 """
@@ -30,7 +32,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from accountant import service
-from accountant.optimizer import intents
+from accountant.optimizer import agent
 
 INGEST_HOST = "127.0.0.1"
 INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
@@ -39,7 +41,7 @@ LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
 _GREEN, _AMBER, _DIM, _INK, _BG = "#0f6e56", "#85540b", "#9ca3af", "#141413", "#f5f4ed"
 _MIN_PER_MONTH = 30 * 24 * 60
-# Which canvas node each lever targets (the on-node link to the inbox).
+_TICK_SECONDS = 5.0
 _NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
              "route_model:simple": "model"}
 
@@ -83,15 +85,14 @@ def _post_backfill_start() -> None:
         pass
 
 
-def _md(text: str) -> None:
-    st.markdown(text.replace("$", "\\$"))
+def _esc(text: str) -> str:
+    return text.replace("$", "\\$")
 
 
 @st.fragment(run_every="1.5s")
 def _render_onboarding() -> None:
     live = service.live_state()
     ingest = live.get("ingest") or {}
-    summary = live.get("summary") or {}
     if service.cache_span_count() > 0 and ingest.get("status") == "complete":
         st.rerun()
     _post_backfill_start()
@@ -102,242 +103,240 @@ def _render_onboarding() -> None:
                     text=ingest.get("message") or "Connecting…")
 
 
-# --- the agent's state: proposals, ranking, burn (all from service) --------
+# --- autonomous agent loop -------------------------------------------------
 
 def _volume() -> int:
-    live = service.live_state()
     return int(st.session_state.setdefault("volume", 4_000_000))
 
 
-def _proposals():
-    """Build the ranked inbox + burn from real figures. The queue is enactable
-    levers not yet active, ranked by recomputed $/mo; the top is active. Approved
-    levers settle to governing. Then labeled roadmap, then a quality-floor guard
-    — the forward proposal always exists but never implies infinite savings."""
-    live = service.live_state()
-    recs = service.recommendations()
+def _session_reset_if_new() -> None:
+    """Each fresh browser session restarts the demo ungoverned, so it runs
+    hands-off from zero. (DB lever state persists; this clears it for the demo.)"""
+    if st.session_state.get("session_init"):
+        return
+    for p in service.active_policies():
+        service.deactivate_policy(p["signature"])
+    st.session_state.update(session_init=True, feed=[], vetoed=[], agent_error=None)
+    st.session_state.pop("plan", None)
+    st.session_state.pop("last_enact", None)  # clock starts after the agent reasons
+
+
+def _ensure_plan() -> None:
+    """One LLM reasoning cycle → the agent's observations + ordered plan. Called
+    on first load and after a correction (a veto), never every tick — the timer
+    enacts the existing plan; it does not re-call the model each step."""
+    if "plan" in st.session_state:
+        return
+    try:
+        dec = agent.decide(st.session_state.get("vetoed", []))
+        st.session_state["plan"] = [{"lever": s.lever, "reason": s.reason} for s in dec.plan]
+        st.session_state["observations"] = list(dec.observations)
+        st.session_state["holding"] = dec.holding
+        st.session_state["agent_error"] = None
+    except Exception as e:  # quota/transient — degrade, don't crash the loop
+        st.session_state.setdefault("plan", [])
+        st.session_state.setdefault("observations", [])
+        st.session_state["agent_error"] = str(e)[:160]
+
+
+def _advance() -> None:
+    """The autonomous beat: the agent enacts the next planned lever ITSELF and
+    posts a card. One lever per tick. Roadmap is never enacted. Returns nothing;
+    side effects are real (activate_policy) and the feed/canvas reflect them."""
     rates = service.default_tool_rates()
-    rows, totals = service.cost_breakdown(live, recs, rates)
+    live = service.live_state(); recs = service.recommendations()
+    _, totals = service.cost_breakdown(live, recs, rates)
     mt = _volume()
-    total_n = totals["total_n"]
+    vetoed = set(st.session_state.get("vetoed", []))
+    active = {p["signature"] for p in service.active_policies()}
+    feed = st.session_state.setdefault("feed", [])
+    by_sig = {l["signature"]: l for l in service.levers()}
+    for step in st.session_state.get("plan", []):
+        sig = step["lever"]
+        lv = by_sig.get(sig)
+        if sig in active or sig in vetoed or not lv or not lv["enactable"]:
+            continue
+        service.activate_policy(sig, lv["policy_type"], lv["params"])  # the agent pulls the trigger
+        feed.insert(0, {
+            "sig": sig, "title": lv["title"], "reason": step["reason"],
+            "monthly": service.policy_monthly_saving(lv["issue"], rates, mt, totals["total_n"]),
+            "node": _NODE_FOR.get(sig), "classes": lv["classes"],
+        })
+        return  # one enactment per tick
 
-    def monthly(l):
-        return service.policy_monthly_saving(l["issue"], rates, mt, total_n)
 
-    enactable = [l for l in service.levers() if l["enactable"]]
-    governing = sorted([l for l in enactable if l["active"]], key=monthly, reverse=True)
-    queue = sorted([l for l in enactable if not l["active"]], key=monthly, reverse=True)
+def _undo(sig: str) -> None:
+    """A correction. Reverse the action AND veto it, so the autonomous agent
+    respects the operator and re-reasons (re-plans) around the constraint."""
+    service.deactivate_policy(sig)
+    vetoed = st.session_state.setdefault("vetoed", [])
+    if sig not in vetoed:
+        vetoed.append(sig)
+    st.session_state["feed"] = [c for c in st.session_state.get("feed", []) if c["sig"] != sig]
+    st.session_state.pop("plan", None)  # force the agent to re-reason over the correction
 
-    def prop(l, state):
-        return {"key": l["signature"], "title": l["title"], "cause": l["cause"],
-                "per_ticket": service.policy_per_ticket_saving(l["issue"], rates),
-                "monthly": monthly(l), "node": _NODE_FOR.get(l["signature"]),
-                "state": state, "policy_type": l["policy_type"], "params": l["params"],
-                "classes": l["classes"], "lever": l}
 
-    active = prop(queue[0], "active") if queue else None
-    queued = [prop(l, "queued") for l in queue[1:]]
-    gov = [prop(l, "governing") for l in governing]
-
-    gross = totals["cost_per_ticket"] * mt
-    saved = sum(monthly(l) for l in governing)
-    burn_to = max(gross - saved, 0.0) / _MIN_PER_MONTH
-
-    return {"active": active, "queued": queued, "governing": gov,
-            "roadmap": service.roadmap_capabilities(),
-            "burn_to": burn_to, "gross_burn": gross / _MIN_PER_MONTH,
-            "mt": mt, "totals": totals}
+def _next_focus() -> str | None:
+    """The node the agent is about to act on — its current focus on the canvas."""
+    vetoed = set(st.session_state.get("vetoed", []))
+    active = {p["signature"] for p in service.active_policies()}
+    for step in st.session_state.get("plan", []):
+        if step["lever"] not in active and step["lever"] not in vetoed:
+            return _NODE_FOR.get(step["lever"])
+    return None
 
 
 # --- the live canvas (self-animating SVG island) ---------------------------
 
-def _canvas(state: dict, just_changed: bool) -> None:
+def _burn() -> tuple[float, float]:
+    rates = service.default_tool_rates()
+    live = service.live_state(); recs = service.recommendations()
+    _, totals = service.cost_breakdown(live, recs, rates)
+    mt = _volume()
+    gross = totals["cost_per_ticket"] * mt
+    saved = sum(service.policy_monthly_saving(l["issue"], rates, mt, totals["total_n"])
+                for l in service.levers() if l["active"] and l["enactable"])
+    return max(gross - saved, 0.0) / _MIN_PER_MONTH, gross / _MIN_PER_MONTH
+
+
+def _canvas(focus: str | None) -> None:
     ws = service.is_active("cache_tool:web_search")
     kb = service.is_active("cache_tool:kb_lookup")
     rt = service.is_active("route_model:simple")
     tools_gov = ws or kb
-    burn_to = state["burn_to"]
-    burn_from = float(st.session_state.get("burn_prev", state["gross_burn"]))
+    burn_to, gross = _burn()
+    burn_from = float(st.session_state.get("burn_prev", gross))
     st.session_state["burn_prev"] = burn_to
-    highlight = (state["active"] or {}).get("node")
 
-    # nodes: id -> (x,y,w,h,label,sub,governed)
     nodes = {
         "requests": (24, 122, 92, 40, "Requests", "live traffic", None),
         "router": (150, 122, 78, 40, "Router", "classify", None),
+        "gateway": (256, 70, 96, 30, "Tool gateway", "", None),
         "tools": (372, 64, 118, 40, "Cache" if tools_gov else "External tools",
                   "semantic · $0" if tools_gov else "paid per call", tools_gov),
         "model": (256, 188, 132, 42, "Economy model" if rt else "Premium model",
                   "flash-lite" if rt else "full-price", rt),
-        "gateway": (256, 70, 96, 30, "Tool gateway", "", None),
     }
     rects = ""
     for nid, (x, y, w, h, label, sub, gov) in nodes.items():
-        if gov is True:
-            stroke, fill, fg = _GREEN, "#e1f5ee", _GREEN
-        elif gov is False:
-            stroke, fill, fg = _AMBER, "#faeeda", _AMBER
-        else:
-            stroke, fill, fg = "rgba(31,30,29,.3)", _BG, "#3d3d3a"
-        rects += (
-            f"<rect id='node-{nid}' x='{x}' y='{y}' width='{w}' height='{h}' rx='8' "
-            f"fill='{fill}' stroke='{stroke}' stroke-width='1'/>"
-            f"<text x='{x + 10}' y='{y + (15 if sub else h/2)}' font-size='12' font-weight='600' "
-            f"fill='{fg}'>{label}</text>"
-            + (f"<text x='{x + 10}' y='{y + 30}' font-size='10.5' fill='{fg}'>{sub}</text>" if sub else ""))
-
-    # edges: polyline [from-center -> to-center], hot = ungoverned paid path
+        stroke, fill, fg = (
+            (_GREEN, "#e1f5ee", _GREEN) if gov is True else
+            (_AMBER, "#faeeda", _AMBER) if gov is False else
+            ("rgba(31,30,29,.3)", _BG, "#3d3d3a"))
+        rects += (f"<rect x='{x}' y='{y}' width='{w}' height='{h}' rx='8' fill='{fill}' "
+                  f"stroke='{stroke}' stroke-width='1'/>"
+                  f"<text x='{x+10}' y='{y+(15 if sub else h/2)}' font-size='12' font-weight='600' "
+                  f"fill='{fg}'>{label}</text>"
+                  + (f"<text x='{x+10}' y='{y+30}' font-size='10.5' fill='{fg}'>{sub}</text>" if sub else ""))
     edges = [
-        {"p": [[116, 142], [150, 142]], "hot": False, "on": True},          # requests→router
-        {"p": [[228, 142], [256, 85]], "hot": False, "on": True},           # router→gateway
-        {"p": [[352, 85], [372, 84]], "hot": not tools_gov, "on": True},    # gateway→tools
-        {"p": [[228, 142], [256, 209]], "hot": not rt, "on": True},         # router→model
+        {"p": [[116, 142], [150, 142]], "hot": False},
+        {"p": [[228, 142], [256, 85]], "hot": False},
+        {"p": [[352, 85], [372, 84]], "hot": not tools_gov},
+        {"p": [[228, 142], [256, 209]], "hot": not rt},
     ]
-    lines = "".join(
-        f"<line x1='{e['p'][0][0]}' y1='{e['p'][0][1]}' x2='{e['p'][1][0]}' y2='{e['p'][1][1]}' "
-        f"stroke='{_AMBER if e['hot'] else '#c8c7c0'}' stroke-width='1.2'/>" for e in edges)
-
+    lines = "".join(f"<line x1='{e['p'][0][0]}' y1='{e['p'][0][1]}' x2='{e['p'][1][0]}' "
+                    f"y2='{e['p'][1][1]}' stroke='{_AMBER if e['hot'] else '#c8c7c0'}' "
+                    f"stroke-width='1.2'/>" for e in edges)
     ring = ""
-    if highlight and highlight in nodes:
-        x, y, w, h, *_ = nodes[highlight]
-        ring = (f"<rect id='ring' x='{x-5}' y='{y-5}' width='{w+10}' height='{h+10}' rx='11' "
-                f"fill='none' stroke='{_AMBER}' stroke-width='1.6'>"
-                f"<animate attributeName='opacity' values='0.25;0.9;0.25' dur='1.6s' "
-                f"repeatCount='indefinite'/></rect>")
+    if focus in nodes:
+        x, y, w, h, *_ = nodes[focus]
+        ring = (f"<rect x='{x-5}' y='{y-5}' width='{w+10}' height='{h+10}' rx='11' fill='none' "
+                f"stroke='{_AMBER}' stroke-width='1.6'><animate attributeName='opacity' "
+                f"values='0.25;0.9;0.25' dur='1.4s' repeatCount='indefinite'/></rect>")
 
     cfg = json.dumps({"edges": edges, "burnFrom": burn_from, "burnTo": burn_to,
-                      "down": burn_to < burn_from - 1e-9, "changed": just_changed,
-                      "green": _GREEN, "amber": _AMBER})
+                      "down": burn_to < burn_from - 1e-9, "green": _GREEN, "amber": _AMBER})
     html = f"""
 <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;position:relative">
-  <svg id="cv" viewBox="0 0 520 240" width="100%" style="max-height:240px">
-    {lines}{rects}{ring}
-  </svg>
+  <svg id="cv" viewBox="0 0 520 240" width="100%" style="max-height:240px">{lines}{rects}{ring}</svg>
   <div style="position:absolute;top:2px;right:6px;text-align:right">
     <div style="font-size:11px;color:#6b6b66">burn rate</div>
     <div id="burn" style="font-size:18px;font-weight:700;color:{_INK}">$–/min</div>
-    <div style="font-size:10px;color:{_DIM}">projected at {state['mt']:,}/mo</div>
+    <div style="font-size:10px;color:{_DIM}">projected at {_volume():,}/mo</div>
   </div>
 </div>
 <script>
-const C = {cfg};
-const NS = "http://www.w3.org/2000/svg";
-const svg = document.getElementById("cv");
-const dots = [];
-function mkDot(hot) {{
-  const c = document.createElementNS(NS, "circle");
-  c.setAttribute("r", hot ? 3 : 2.4);
-  c.setAttribute("fill", hot ? C.amber : C.green);
-  svg.appendChild(c); return c;
-}}
-C.edges.forEach(e => {{
-  if (!e.on) return;
-  const n = e.hot ? 4 : 2, spd = e.hot ? 0.011 : 0.007;
-  for (let k = 0; k < n; k++) dots.push({{e, t: k / n, spd, el: mkDot(e.hot)}});
-}});
-function frame() {{
-  dots.forEach(d => {{
-    d.t += d.spd; if (d.t > 1) d.t -= 1;
-    const a = d.e.p[0], b = d.e.p[1];
-    d.el.setAttribute("cx", a[0] + (b[0] - a[0]) * d.t);
-    d.el.setAttribute("cy", a[1] + (b[1] - a[1]) * d.t);
-  }});
-  requestAnimationFrame(frame);
-}}
+const C = {cfg}, NS = "http://www.w3.org/2000/svg", svg = document.getElementById("cv"), dots = [];
+function mkDot(hot){{const c=document.createElementNS(NS,"circle");c.setAttribute("r",hot?3:2.4);
+  c.setAttribute("fill",hot?C.amber:C.green);svg.appendChild(c);return c;}}
+C.edges.forEach(e=>{{const n=e.hot?4:2,spd=e.hot?0.011:0.007;
+  for(let k=0;k<n;k++)dots.push({{e,t:k/n,spd,el:mkDot(e.hot)}});}});
+function frame(){{dots.forEach(d=>{{d.t+=d.spd;if(d.t>1)d.t-=1;const a=d.e.p[0],b=d.e.p[1];
+  d.el.setAttribute("cx",a[0]+(b[0]-a[0])*d.t);d.el.setAttribute("cy",a[1]+(b[1]-a[1])*d.t);}});
+  requestAnimationFrame(frame);}}
 frame();
-const burnEl = document.getElementById("burn");
-const dur = C.changed ? 1500 : 600; let t0 = null;
-function fmt(v) {{ return "$" + (v < 0.1 ? v.toFixed(4) : v.toFixed(2)) + "/min " + (C.down ? "▼" : ""); }}
-function burnFrame(ts) {{
-  if (!t0) t0 = ts; const k = Math.min((ts - t0) / dur, 1);
-  burnEl.textContent = fmt(C.burnFrom + (C.burnTo - C.burnFrom) * k);
-  if (C.down) burnEl.style.color = C.green;
-  if (k < 1) requestAnimationFrame(burnFrame);
-}}
-requestAnimationFrame(burnFrame);
+const burnEl=document.getElementById("burn");let t0=null;const dur=1500;
+function fmt(v){{return "$"+(v<0.1?v.toFixed(4):v.toFixed(2))+"/min "+(C.down?"▼":"");}}
+function bf(ts){{if(!t0)t0=ts;const k=Math.min((ts-t0)/dur,1);
+  burnEl.textContent=fmt(C.burnFrom+(C.burnTo-C.burnFrom)*k);
+  if(C.down)burnEl.style.color=C.green;if(k<1)requestAnimationFrame(bf);}}
+requestAnimationFrame(bf);
 </script>"""
     components.html(html, height=250)
 
 
-# --- the agent inbox -------------------------------------------------------
+# --- the agent inbox (activity stream the agent drives) --------------------
 
-def _approve(p: dict) -> None:
-    service.activate_policy(p["key"], p["policy_type"], p["params"])  # hard-guarded
-    st.session_state["just_changed"] = True
-
-
-def _inbox_card(p: dict, *, approvable: bool) -> None:
-    if p["state"] == "governing":
-        bd, fg, fill = _GREEN, _GREEN, "#e1f5ee"
-    elif p["state"] == "active":
-        bd, fg, fill = _AMBER, _AMBER, "#faeeda"
-    else:
-        bd, fg, fill = "rgba(31,30,29,.3)", "#3d3d3a", _BG
-    with st.container(border=True):
-        if p["state"] == "governing":
-            st.markdown(f"<span style='color:{_GREEN};font-weight:600'>✓ {p['title']}</span><br>"
-                        f"<span style='color:{_GREEN};font-size:0.8rem'>governing live · "
-                        f"−${p['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
-            if st.button("show me it's real", key=f"proof_{p['key']}", use_container_width=True):
-                st.session_state["proof_open"] = True
-                st.rerun()
-        elif p["state"] == "active":
-            st.markdown(f"<span style='color:{_AMBER};font-weight:700'>● {p['title']}</span><br>"
-                        f"<span style='color:{_AMBER};font-size:0.8rem'>now top leak · "
-                        f"saves ${p['per_ticket']:.4f}/ticket (~${p['monthly']:,.0f}/mo)</span>",
-                        unsafe_allow_html=True)
-            st.caption(p["cause"])
-            if st.button("Approve →", key=f"appr_{p['key']}", type="primary",
-                         use_container_width=True):
-                _approve(p); st.rerun()
-        else:  # queued
-            st.markdown(f"**{p['title']}** <span style='color:{_DIM};font-size:0.8rem'>queued · "
-                        f"~${p['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
-
-
-def _render_inbox(state: dict) -> None:
+def _render_inbox() -> None:
     st.markdown("##### Agent inbox")
-    st.markdown(f"<span style='color:{_GREEN};font-size:0.8rem'>● reasoning over live traffic"
-                + ("  ·  ↻ recomputed after approve" if st.session_state.get("just_changed") else "")
+    st.markdown(f"<span style='color:{_GREEN};font-size:0.82rem'>● reasoning over live traffic"
+                + ("  ·  ↻ recomputed after your correction" if st.session_state.get("vetoed") else "")
                 + "</span>", unsafe_allow_html=True)
-    for p in state["governing"]:
-        _inbox_card(p, approvable=False)
-    if state["active"]:
-        _inbox_card(state["active"], approvable=True)
-    for p in state["queued"]:
-        _inbox_card(p, approvable=False)
-    # roadmap — recommend-only, not approvable
-    for i, c in enumerate(state["roadmap"][:1]):
+    if st.session_state.get("agent_error"):
+        st.caption(f"agent paused (model): {st.session_state['agent_error']}")
+    for o in st.session_state.get("observations", []):
+        st.markdown(f"<span style='color:#3d3d3a;font-size:0.86rem'>· {o}</span>",
+                    unsafe_allow_html=True)
+
+    # actions the agent enacted itself — newest first
+    for c in st.session_state.get("feed", []):
         with st.container(border=True):
-            st.markdown(f"<span style='color:{_DIM}'>{c['title']} · "
-                        f"<b>roadmap</b></span><br><span style='color:{_DIM};font-size:0.78rem'>"
-                        f"{c['blurb']} — recommend-only, not enforced</span>", unsafe_allow_html=True)
-    # quality-floor guard — the forward proposal never invents another cut
-    if not state["active"]:
+            st.markdown(f"<span style='color:{_GREEN};font-weight:600'>✓ {c['title']}</span> "
+                        f"<span style='color:{_GREEN};font-size:0.8rem'>· governing live · "
+                        f"−${c['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
+            st.markdown(f"<span style='color:#3d3d3a;font-size:0.82rem'>{c['reason']}</span>",
+                        unsafe_allow_html=True)
+            cols = st.columns(2)
+            if cols[0].button("undo", key=f"undo_{c['sig']}", use_container_width=True):
+                _undo(c["sig"]); st.rerun()
+            if cols[1].button("show me it's real", key=f"insp_{c['sig']}", use_container_width=True):
+                st.session_state["proof_open"] = True; st.rerun()
+
+    # tiering down, honestly: once the agent has enacted what it can, it surfaces
+    # the roadmap item recommend-only (never enacts it), then holds at the floor.
+    active = {p["signature"] for p in service.active_policies()}
+    vetoed = set(st.session_state.get("vetoed", []))
+    remaining = [s for s in st.session_state.get("plan", [])
+                 if s["lever"] not in active and s["lever"] not in vetoed]
+    if not remaining and st.session_state.get("plan") is not None:
+        for c in service.roadmap_capabilities()[:1]:
+            with st.container(border=True):
+                st.markdown(f"<span style='color:{_DIM}'>{c['title']} · <b>roadmap</b></span><br>"
+                            f"<span style='color:{_DIM};font-size:0.78rem'>{c['blurb']} — "
+                            f"recommend-only; the agent does not enact this.</span>",
+                            unsafe_allow_html=True)
         with st.container(border=True):
-            st.markdown(f"<span style='color:{_DIM}'>Quality floor reached</span><br>"
+            st.markdown(f"<span style='color:{_DIM}'>Quality floor</span><br>"
                         f"<span style='color:{_DIM};font-size:0.78rem'>No further safe cut without "
                         f"risking answer quality. The agent holds here.</span>", unsafe_allow_html=True)
 
 
-# --- proof drill-down (system behaviour only) ------------------------------
+# --- proof drill-down (optional inspection, system behaviour only) ---------
 
 def _render_proof() -> None:
     fx = service.captured_trace_pair()
     if not fx:
-        st.info("No captured trace pair yet.")
-        return
+        st.info("No captured trace pair yet."); return
     b, g = fx["baseline"], fx["governed"]
-    st.markdown(f"**Proof — same ticket, two ways.** baseline ${b['total_usd']:.4f} → governed "
-                f"${g['total_usd']:.4f}, {fx['skipped_calls']} paid calls skipped, saved "
-                f"${fx['saved_usd']:.4f}.".replace("$", "\\$"))
+    st.markdown(_esc(f"**Proof — same ticket, two ways.** baseline ${b['total_usd']:.4f} → "
+                     f"governed ${g['total_usd']:.4f}, {fx['skipped_calls']} paid calls skipped, "
+                     f"saved ${fx['saved_usd']:.4f}."))
     rows = ""
     for r in fx["rows"]:
         cached = r["status"] == "cached"
         gov = (f"<span style='color:{_GREEN}'>cached · $0</span>" if cached
                else f"<span style='color:#666'>${r['governed']['cost']:.4f}</span>")
-        base = (f"<span style='color:{_AMBER}'>${r['baseline']['cost']:.4f}</span>" if cached
-                else f"<span style='color:#666'>${r['baseline']['cost']:.4f}</span>")
+        base = f"<span style='color:{_AMBER if cached else '#666'}'>${r['baseline']['cost']:.4f}</span>"
         rows += (f"<tr style='background:{'#faeeda' if cached else 'transparent'}'>"
                  f"<td style='padding:2px 8px;font-family:monospace;font-size:0.78rem'>{r['op']}</td>"
                  f"<td style='padding:2px 8px;text-align:right'>{base}</td>"
@@ -346,51 +345,29 @@ def _render_proof() -> None:
                 f"<tr style='color:{_DIM};font-size:0.74rem;text-align:left'><th style='padding:2px 8px'>call</th>"
                 f"<th style='padding:2px 8px;text-align:right'>baseline</th><th style='padding:2px 8px'>governed</th>"
                 f"</tr></thead><tbody>{rows}</tbody></table>", unsafe_allow_html=True)
-    c = st.columns(2)
+    cc = st.columns(2)
     if b.get("phoenix_url"):
-        c[0].link_button("Baseline in Phoenix ↗", b["phoenix_url"], use_container_width=True)
+        cc[0].link_button("Baseline in Phoenix ↗", b["phoenix_url"], use_container_width=True)
     if g.get("phoenix_url"):
-        c[1].link_button("Governed in Phoenix ↗", g["phoenix_url"], use_container_width=True)
+        cc[1].link_button("Governed in Phoenix ↗", g["phoenix_url"], use_container_width=True)
     st.caption("System behaviour only — span names, counts, cost. No prompt text or PII.")
+    if st.button("close"):
+        st.session_state["proof_open"] = False; st.rerun()
 
 
-# --- secondary intent surface (supporting, not the hero) -------------------
+# --- the cockpit (runs hands-off on its own clock) -------------------------
 
-def _render_intent_bar(state: dict) -> None:
-    with st.expander("Or state intent in plain language (supporting surface)"):
-        cols = st.columns(3)
-        if cols[0].button("Cut spend 30%", use_container_width=True):
-            r = intents.cut_spend(0.30, enact=True); st.session_state["just_changed"] = True
-            st.session_state["last_intent"] = r["say"]; st.rerun()
-        if cols[1].button("Prevent this again", use_container_width=True):
-            if state["active"]:
-                _approve(state["active"]); st.rerun()
-        if cols[2].button("Show me it's real", use_container_width=True):
-            st.session_state["proof_open"] = True; st.rerun()
-        if st.session_state.get("last_intent"):
-            _md(st.session_state["last_intent"])
-        if prompt := st.chat_input("Ask the optimizer… (Q&A flourish)"):
-            st.session_state["last_intent"] = _freeform_answer(prompt)
-            st.rerun()
-
-
-def _freeform_answer(text: str) -> str:
-    t = text.lower()
-    if any(w in t for w in ("why", "spike", "expensive", "high")):
-        return intents.diagnose()["say"]
-    if any(w in t for w in ("prove", "real", "verify")):
-        st.session_state["proof_open"] = True
-        return intents.prove()["say"]
-    if any(w in t for w in ("forecast", "month", "budget")):
-        return intents.forecast(_volume())["say"]
-    return "Try: why costs spiked · prevent this · show me it's real · forecast."
-
-
-# --- the cockpit -----------------------------------------------------------
-
+@st.fragment(run_every="5s")
 def render_cockpit() -> None:
-    state = _proposals()
-    just_changed = bool(st.session_state.pop("just_changed", False))
+    _session_reset_if_new()
+    _ensure_plan()
+    # Start the autonomous clock only AFTER the agent has reasoned, so the first
+    # paint shows the ungoverned system; the agent then enacts a lever per tick.
+    now = time.time()
+    st.session_state.setdefault("last_enact", now)
+    if now - st.session_state["last_enact"] >= _TICK_SECONDS - 0.5:
+        _advance()
+        st.session_state["last_enact"] = now
 
     n = service.policies_active_count()
     realized = service.realized_savings().get("total_savings_usd", 0) or 0
@@ -400,30 +377,26 @@ def render_cockpit() -> None:
                     f"**{'Governing live' if n else 'Standing by'}** · {n} lever"
                     f"{'s' if n != 1 else ''}", unsafe_allow_html=True)
     top[1].markdown(f"<span style='color:{_DIM}'>historical measured: "
-                    f"${realized:.4f} saved → see proof</span>", unsafe_allow_html=True)
-    top[2].markdown(f"<span style='color:{_DIM};text-align:right;display:block'>"
-                    f"agent governing another agent at runtime · reading "
-                    f"{os.environ.get('PHOENIX_PROJECT_NAME','Phoenix')}</span>",
+                    f"${realized:.4f} saved → inspect</span>", unsafe_allow_html=True)
+    top[2].markdown(f"<div style='color:{_DIM};text-align:right'>autonomous · an agent governing "
+                    f"another agent · reading {os.environ.get('PHOENIX_PROJECT_NAME','Phoenix')}</div>",
                     unsafe_allow_html=True)
     st.divider()
 
-    left, right = st.columns([0.34, 0.66], gap="large")
+    left, right = st.columns([0.36, 0.64], gap="large")
     with left:
-        _render_inbox(state)
+        _render_inbox()
     with right:
-        st.markdown("##### Live system — real traffic, governed in place")
-        _canvas(state, just_changed)
-        _render_intent_bar(state)
+        st.markdown("##### Live system — the agent reroutes it in real time")
+        _canvas(_next_focus())
         if st.session_state.get("proof_open"):
             st.divider()
             _render_proof()
-            if st.button("close proof"):
-                st.session_state["proof_open"] = False; st.rerun()
 
 
 def main() -> None:
     st.title("AI Cost Governance — Control Plane")
-    st.caption("Phoenix tells you what happened. This controls what happens next.")
+    st.caption("An agent that governs another agent's cost — autonomously. You supervise; you don't operate.")
     _ensure_ingest_server()
     if service.cache_span_count() == 0:
         _render_onboarding()
