@@ -167,7 +167,27 @@ class Governor:
             if self._task:  # stop the clock once there's nothing left to do
                 self._task.cancel()
 
-    # --- human turns (canvas actions) — instant state, re-reason follows ----
+    # --- human turns (canvas actions) -------------------------------------
+    # DECOUPLED: the facts of the reaction (recomputed burn, lever, $ cost) emit
+    # INSTANTLY from the service layer; the LLM wording lands as a second beat on
+    # an already-updated inbox. The reaction never waits on the model.
+    def _burn_now(self) -> float:
+        rates, totals = self._ctx()
+        gross = totals["cost_per_ticket"] * self.volume
+        saved = sum(self._monthly(l, rates, totals) for l in service.levers()
+                    if l["active"] and l["enactable"])
+        return max(gross - saved, 0.0) / _MIN_PER_MONTH
+
+    @staticmethod
+    def _fmt(burn: float) -> str:
+        return f"${burn:.2f}/min" if burn >= 0.1 else f"${burn:.4f}/min"
+
+    async def _reason_async(self) -> None:
+        """Second beat: the agent's voice, after the facts already rendered."""
+        async with self._lock:
+            if await self._decide() and self.observations:
+                await self._emit("reasoned", self.observations[0])
+
     async def veto(self, sig: str) -> None:
         async with self._lock:
             rates, totals = self._ctx()
@@ -176,13 +196,13 @@ class Governor:
             monthly = self._monthly(lv, rates, totals) if lv else 0.0
             await asyncio.to_thread(service.deactivate_policy, sig)
             self.vetoed.add(sig); self.escalated.discard(sig)
-            # grounded pushback only when the correction has a real measured cost
             if was_active and monthly >= _PUSHBACK_MIN_USD and lv:
                 self.pushback = {"sig": sig, "title": lv["title"], "monthly": round(monthly, 0)}
-            await self._emit(None)  # instant state (burn jumps back) before the prose
-            await self._decide()
-            await self._emit("reasoned", self.observations[0] if self.observations
-                             else f"Okay, I've turned {lv['title'].lower() if lv else 'that'} back off.")
+            facts = f"{lv['title']} off — burn back to {self._fmt(self._burn_now())}" if lv else "lever off"
+            if monthly:
+                facts += f"; ~${monthly:,.0f}/mo of waste returns"
+            await self._emit("reaction", facts + ".")  # INSTANT — facts + recomputed state
+        asyncio.create_task(self._reason_async())
 
     async def enable(self, sig: str) -> None:
         async with self._lock:
@@ -192,10 +212,9 @@ class Governor:
             lv = next((l for l in service.levers() if l["signature"] == sig), None)
             if lv and lv["safe"]:
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
-            await self._emit(None)
-            await self._decide()
-            await self._emit("reasoned", f"Back on — {lv['title'].lower() if lv else 'that lever'} "
-                             f"is governing again.")
+            tail = f"{lv['title']} back on — burn down to {self._fmt(self._burn_now())}." if lv else "back on."
+            await self._emit("reaction", tail)
+        asyncio.create_task(self._reason_async())
 
     async def accept(self, sig: str) -> None:
         async with self._lock:
@@ -203,13 +222,15 @@ class Governor:
             if lv:
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
             self.escalated.discard(sig)
-            await self._emit("applied", f"You okayed it — {lv['title'].lower() if lv else 'that'} "
-                             f"is governing now.")
+            await self._emit("reaction", f"Okayed — routing live, burn down to {self._fmt(self._burn_now())}.")
+        asyncio.create_task(self._reason_async())
 
     async def reject(self, sig: str) -> None:
         async with self._lock:
             self.escalated.discard(sig); self.vetoed.add(sig)
-            await self._emit("reasoned", "Understood — I'll leave that one alone.")
+            lv = next((l for l in service.levers() if l["signature"] == sig), None)
+            await self._emit("reaction", f"Leaving {lv['title'].lower() if lv else 'that'} off.")
+        asyncio.create_task(self._reason_async())
 
 
 governor = Governor()
