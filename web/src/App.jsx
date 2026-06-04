@@ -78,6 +78,10 @@ export default function App() {
       if (ev.state) setState(ev.state)
       if (ev.narration) setFeed((f) => [{ ...ev.narration, seq: ev.seq }, ...f].slice(0, 120))
     }
+    es.onerror = () => {}  // EventSource auto-reconnects
+    // Restart the demo from ungoverned on load, so each visit watches the full
+    // hands-off arc (agent reasons → auto-applies safe levers → escalates risky).
+    fetch(`${API}/api/reset`, { method: 'POST' }).catch(() => {})
     return () => es.close()
   }, [])
 
@@ -98,9 +102,13 @@ export default function App() {
       <Header burn={burn} down={down} state={state} latest={feed[0]} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <Inbox feed={feed} q={q} setQ={setQ} state={state} act={act} />
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          {nodes.length === 0 && (
+            <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
+          )}
           {nodes.length > 0 && (
             <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+              style={{ width: '100%', height: '100%' }}
               proOptions={{ hideAttribution: true }} nodesDraggable={false}
               nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
               zoomOnScroll={false} zoomOnDoubleClick={false}>

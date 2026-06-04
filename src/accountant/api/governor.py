@@ -39,6 +39,7 @@ class Governor:
         self._seq = 0
         self._task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
+        self._held = False  # gates the one-time "holding" line; loop never dies
 
     # --- subscriptions -----------------------------------------------------
     def subscribe(self) -> asyncio.Queue:
@@ -130,6 +131,7 @@ class Governor:
                 await asyncio.to_thread(service.deactivate_policy, p["signature"])
             self.vetoed.clear(); self.escalated.clear(); self.pushback = None
             self.plan, self.observations = [], []
+            self._held = False
             await self._emit("thinking", "Reading the live traffic to see where the money's going…")
             await self._decide()
             for o in self.observations:
@@ -154,18 +156,21 @@ class Governor:
                 continue
             if lv["safe"]:
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
+                self._held = False
                 await self._emit("applied", step["reason"])
                 return
             if sig not in self.escalated:
                 self.escalated.add(sig)
+                self._held = False
                 await self._emit("escalate", step["reason"]
                                  + " This one can change the answer, so I'll leave the call to you.")
                 return
-        if self._holding():
+        # Nothing left to auto-apply. Say so ONCE, then idle — the loop keeps
+        # running so it resumes the moment the human reopens work (veto/re-enable).
+        if not self._held:
+            self._held = True
             await self._emit("holding", "That's the safe limit — cutting further would start to "
                              "risk answer quality, so I'm holding here.")
-            if self._task:  # stop the clock once there's nothing left to do
-                self._task.cancel()
 
     # --- human turns (canvas actions) -------------------------------------
     # DECOUPLED: the facts of the reaction (recomputed burn, lever, $ cost) emit
