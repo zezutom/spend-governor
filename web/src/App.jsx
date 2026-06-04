@@ -12,9 +12,8 @@ function CtrlNode({ data }) {
   const fill = data.state === 'green' ? '#e6f5ef' : data.state === 'amber' ? '#fbf0db'
     : data.state === 'escalate' ? '#fbf0db' : '#fff'
   return (
-    <div onClick={data.onInspect}
-      style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: 12, padding: '10px 14px',
-        minWidth: 150, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
+    <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: 12, padding: '10px 14px',
+      minWidth: 150, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,.05)' }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       <div style={{ fontWeight: 700, fontSize: 14, color: INK }}>{data.label}</div>
       <div style={{ fontSize: 11.5, color: c }}>{data.sub}</div>
@@ -28,7 +27,8 @@ function CtrlNode({ data }) {
         </div>
       )}
       {data.vetoable && (
-        <button onClick={(e) => { e.stopPropagation(); data.act('veto', data.vetoable) }}
+        <button className="nodrag nopan"
+          onClick={(e) => { e.stopPropagation(); data.act('veto', data.vetoable) }}
           style={{ marginTop: 6, fontSize: 11, border: `1px solid ${GREEN}`, color: GREEN,
             background: '#fff', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}>
           veto
@@ -39,8 +39,8 @@ function CtrlNode({ data }) {
   )
 }
 function Act({ onClick, label, primary }) {
-  return <button onClick={onClick} style={{ fontSize: 11, borderRadius: 6, padding: '2px 8px',
-    cursor: 'pointer', border: `1px solid ${AMBER}`, color: primary ? '#fff' : AMBER,
+  return <button className="nodrag nopan" onClick={onClick} style={{ fontSize: 11, borderRadius: 6,
+    padding: '2px 8px', cursor: 'pointer', border: `1px solid ${AMBER}`, color: primary ? '#fff' : AMBER,
     background: primary ? AMBER : '#fff' }}>{label}</button>
 }
 const nodeTypes = { ctrl: CtrlNode }
@@ -108,7 +108,7 @@ export default function App() {
           )}
           {nodes.length > 0 && (
             <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: '100%', height: '100%' }} onNodeClick={() => openProof()}
               proOptions={{ hideAttribution: true }} nodesDraggable={false}
               nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
               zoomOnScroll={false} zoomOnDoubleClick={false}>
@@ -148,7 +148,7 @@ function Inbox({ feed, q, setQ, state, act }) {
   const filtered = feed.filter((c) => !q || c.text.toLowerCase().includes(q.toLowerCase()))
   return (
     <div style={{ width: 380, borderRight: '1px solid #eceae0', padding: '14px 16px',
-      display: 'flex', flexDirection: 'column', background: '#fff' }}>
+      display: 'flex', flexDirection: 'column', background: '#fff', minHeight: 0 }}>
       <div style={{ fontWeight: 700 }}>Agent inbox</div>
       <div style={{ color: GREEN, fontSize: 13, marginBottom: 8 }}>● reasoning over live traffic</div>
       {state?.pushback && (
