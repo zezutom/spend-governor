@@ -133,6 +133,7 @@ def _ensure_plan() -> None:
         st.session_state["observations"] = list(dec.observations)
         st.session_state["holding"] = dec.holding
         st.session_state["agent_error"] = None
+        st.session_state["last_enact"] = time.time()  # clock starts now the agent has reasoned
     except Exception as e:  # quota/transient — degrade, don't crash the loop
         st.session_state.setdefault("plan", [])
         st.session_state.setdefault("observations", [])
@@ -278,59 +279,62 @@ requestAnimationFrame(bf);
 # --- the agent inbox (activity stream the agent drives) --------------------
 
 def _render_inbox() -> None:
+    """Left = the agent NARRATING what it's doing. No buttons — narration only
+    (controls live on the canvas nodes). Fixed height + own scroll + search, so
+    it never grows down the page, and readable type."""
     st.markdown("##### Agent inbox")
-    st.markdown(f"<span style='color:{_GREEN};font-size:0.82rem'>● reasoning over live traffic"
-                + ("  ·  ↻ recomputed after your correction" if st.session_state.get("vetoed") else "")
-                + "</span>", unsafe_allow_html=True)
+    sub = "● reasoning over live traffic"
+    if st.session_state.get("vetoed"):
+        sub += "  ·  ↻ rethinking after your correction"
+    st.markdown(f"<span style='color:{_GREEN};font-size:0.92rem'>{sub}</span>", unsafe_allow_html=True)
     if st.session_state.get("agent_error"):
-        st.caption(f"agent paused (model): {st.session_state['agent_error']}")
-    for o in st.session_state.get("observations", []):
-        st.markdown(f"<span style='color:#3d3d3a;font-size:0.86rem'>· {o}</span>",
-                    unsafe_allow_html=True)
+        st.caption(f"agent waking up (model): {st.session_state['agent_error']}")
+    q = st.text_input("filter", key="inbox_q", placeholder="search what the agent did…",
+                      label_visibility="collapsed").strip().lower()
 
-    # actions the agent enacted itself — newest first
-    for c in st.session_state.get("feed", []):
-        with st.container(border=True):
-            st.markdown(f"<span style='color:{_GREEN};font-weight:600'>✓ {c['title']}</span> "
-                        f"<span style='color:{_GREEN};font-size:0.8rem'>· governing live · "
-                        f"−${c['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
-            st.markdown(f"<span style='color:#3d3d3a;font-size:0.82rem'>{c['reason']}</span>",
+    with st.container(height=440):
+        if "plan" not in st.session_state:
+            st.markdown("<div style='color:#6b6b66;font-size:0.98rem'>· reading the live traffic…</div>",
                         unsafe_allow_html=True)
-            cols = st.columns(2)
-            if cols[0].button("undo", key=f"undo_{c['sig']}", use_container_width=True):
-                _undo(c["sig"]); st.rerun()
-            if cols[1].button("show me it's real", key=f"insp_{c['sig']}", use_container_width=True):
-                st.session_state["proof_open"] = True; st.rerun()
-
-    # tiering down, honestly: once the agent has enacted what it can, it surfaces
-    # the roadmap item recommend-only (never enacts it), then holds at the floor.
-    active = {p["signature"] for p in service.active_policies()}
-    vetoed = set(st.session_state.get("vetoed", []))
-    remaining = [s for s in st.session_state.get("plan", [])
-                 if s["lever"] not in active and s["lever"] not in vetoed]
-    if not remaining and st.session_state.get("plan") is not None:
-        for c in service.roadmap_capabilities()[:1]:
-            with st.container(border=True):
-                st.markdown(f"<span style='color:{_DIM}'>{c['title']} · <b>roadmap</b></span><br>"
-                            f"<span style='color:{_DIM};font-size:0.78rem'>{c['blurb']} — "
-                            f"recommend-only; the agent does not enact this.</span>",
+        for o in st.session_state.get("observations", []):
+            if q and q not in o.lower():
+                continue
+            st.markdown(f"<div style='font-size:1.0rem;color:#2b2b28;margin:3px 0'>· {o}</div>",
+                        unsafe_allow_html=True)
+        for c in st.session_state.get("feed", []):
+            if q and q not in f"{c['title']} {c['reason']}".lower():
+                continue
+            st.markdown(
+                f"<div style='border-left:3px solid {_GREEN};background:#f3faf6;padding:8px 12px;"
+                f"border-radius:4px;margin:7px 0'>"
+                f"<div style='color:{_GREEN};font-weight:600;font-size:1.0rem'>✓ {c['title']} "
+                f"<span style='font-weight:400'>· −${c['monthly']:,.0f}/mo · governing live</span></div>"
+                f"<div style='color:#2b2b28;font-size:0.95rem;margin-top:3px'>{c['reason']}</div></div>",
+                unsafe_allow_html=True)
+        active = {p["signature"] for p in service.active_policies()}
+        vetoed = set(st.session_state.get("vetoed", []))
+        remaining = [s for s in st.session_state.get("plan", [])
+                     if s["lever"] not in active and s["lever"] not in vetoed]
+        if st.session_state.get("plan") is not None and not remaining and not q:
+            for c in service.roadmap_capabilities()[:1]:
+                st.markdown(f"<div style='color:{_DIM};font-size:0.95rem;margin:7px 0'>{c['title']} — "
+                            f"on the roadmap. I can recommend it, but I can't turn it on yet.</div>",
                             unsafe_allow_html=True)
-        with st.container(border=True):
-            st.markdown(f"<span style='color:{_DIM}'>Quality floor</span><br>"
-                        f"<span style='color:{_DIM};font-size:0.78rem'>No further safe cut without "
-                        f"risking answer quality. The agent holds here.</span>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:{_DIM};font-size:0.95rem'>That's the safe limit — cutting "
+                        f"further would start to risk answer quality, so I'm holding here.</div>",
+                        unsafe_allow_html=True)
 
 
-# --- proof drill-down (optional inspection, system behaviour only) ---------
+# --- proof + per-node inspection (dismissable dialog tied to the node) ------
 
-def _render_proof() -> None:
+def _proof_table() -> None:
     fx = service.captured_trace_pair()
     if not fx:
         st.info("No captured trace pair yet."); return
     b, g = fx["baseline"], fx["governed"]
-    st.markdown(_esc(f"**Proof — same ticket, two ways.** baseline ${b['total_usd']:.4f} → "
-                     f"governed ${g['total_usd']:.4f}, {fx['skipped_calls']} paid calls skipped, "
-                     f"saved ${fx['saved_usd']:.4f}."))
+    st.markdown(_esc(f"**Same ticket, two ways.** baseline ${b['total_usd']:.4f} → governed "
+                     f"${g['total_usd']:.4f} — {fx['skipped_calls']} paid calls skipped, saved "
+                     f"${fx['saved_usd']:.4f}."))
     rows = ""
     for r in fx["rows"]:
         cached = r["status"] == "cached"
@@ -351,8 +355,43 @@ def _render_proof() -> None:
     if g.get("phoenix_url"):
         cc[1].link_button("Governed in Phoenix ↗", g["phoenix_url"], use_container_width=True)
     st.caption("System behaviour only — span names, counts, cost. No prompt text or PII.")
-    if st.button("close"):
-        st.session_state["proof_open"] = False; st.rerun()
+
+
+@st.dialog("Trace insight — system behaviour only", width="large")
+def _node_dialog(label: str, sigs: list[str]) -> None:
+    levers = {l["signature"]: l for l in service.levers()}
+    st.markdown(f"#### {label}")
+    for s in sigs:
+        lv = levers.get(s)
+        if not lv:
+            continue
+        gov = lv["active"]
+        st.markdown(f"<b>{lv['title']}</b> · "
+                    f"<span style='color:{_GREEN if gov else _AMBER}'>"
+                    f"{'governing live' if gov else 'paying — the agent will cache this'}</span>",
+                    unsafe_allow_html=True)
+        st.caption(lv["cause"])
+        if gov and st.button(f"undo — keep {lv['title'].lower()} off",
+                             key=f"undo_{s}", use_container_width=True):
+            _undo(s)
+            st.rerun()
+    st.divider()
+    _proof_table()
+
+
+def _node_controls() -> None:
+    """The controls live on the canvas nodes, not the inbox. Click a node to
+    inspect its real spans/cost (Phoenix deep-link) and correct the agent
+    (undo). A dialog opens — dismissable (x / click-away)."""
+    st.caption("Inspect or correct a node — click it.")
+    nodes = [("Tool gateway · cache", ["cache_tool:web_search", "cache_tool:kb_lookup"]),
+             ("Model routing", ["route_model:simple"])]
+    cols = st.columns(len(nodes))
+    for col, (label, sigs) in zip(cols, nodes):
+        governed = any(service.is_active(s) for s in sigs)
+        icon = "🟢" if governed else "🟠"
+        if col.button(f"{icon} {label}", key=f"node_{label}", use_container_width=True):
+            _node_dialog(label, sigs)
 
 
 # --- the cockpit (runs hands-off on its own clock) -------------------------
@@ -360,14 +399,13 @@ def _render_proof() -> None:
 @st.fragment(run_every="5s")
 def render_cockpit() -> None:
     _session_reset_if_new()
-    _ensure_plan()
-    # Start the autonomous clock only AFTER the agent has reasoned, so the first
-    # paint shows the ungoverned system; the agent then enacts a lever per tick.
-    now = time.time()
-    st.session_state.setdefault("last_enact", now)
-    if now - st.session_state["last_enact"] >= _TICK_SECONDS - 0.5:
-        _advance()
-        st.session_state["last_enact"] = now
+    # Autonomous tick — fast, runs only once a plan exists. Done BEFORE the
+    # canvas so the canvas reflects the lever the agent just enacted.
+    if "plan" in st.session_state:
+        now = time.time()
+        if now - st.session_state.get("last_enact", now) >= _TICK_SECONDS - 0.5:
+            _advance()
+            st.session_state["last_enact"] = now
 
     n = service.policies_active_count()
     realized = service.realized_savings().get("total_savings_usd", 0) or 0
@@ -377,21 +415,25 @@ def render_cockpit() -> None:
                     f"**{'Governing live' if n else 'Standing by'}** · {n} lever"
                     f"{'s' if n != 1 else ''}", unsafe_allow_html=True)
     top[1].markdown(f"<span style='color:{_DIM}'>historical measured: "
-                    f"${realized:.4f} saved → inspect</span>", unsafe_allow_html=True)
+                    f"${realized:.4f} saved → inspect a node</span>", unsafe_allow_html=True)
     top[2].markdown(f"<div style='color:{_DIM};text-align:right'>autonomous · an agent governing "
                     f"another agent · reading {os.environ.get('PHOENIX_PROJECT_NAME','Phoenix')}</div>",
                     unsafe_allow_html=True)
     st.divider()
 
-    left, right = st.columns([0.36, 0.64], gap="large")
-    with left:
-        _render_inbox()
+    left, right = st.columns([0.38, 0.62], gap="large")
+    # CRITICAL: paint the canvas FIRST (no LLM gating it) so the first paint is
+    # immediate, traffic already flowing. The agent's reasoning streams into the
+    # inbox a beat later, under a spinner — it never blocks the screen.
     with right:
         st.markdown("##### Live system — the agent reroutes it in real time")
         _canvas(_next_focus())
-        if st.session_state.get("proof_open"):
-            st.divider()
-            _render_proof()
+        _node_controls()
+    with left:
+        if "plan" not in st.session_state:
+            with st.spinner("the agent is reading the live traffic…"):
+                _ensure_plan()
+        _render_inbox()
 
 
 def main() -> None:
