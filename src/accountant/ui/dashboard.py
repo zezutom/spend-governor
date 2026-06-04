@@ -1,15 +1,20 @@
-"""AI Cost Governance — the control-plane cockpit.
+"""AI Cost Governance — the control-plane cockpit (Agent Inbox + Live Canvas).
 
-You don't read this page; you govern by talking to it. The optimizer reasons
-over real Phoenix-reconciled cost (through the `accountant.service` interface —
-the ONLY backend surface the UI touches), enacts real levers, and the system
-map shows the consequence. Every figure is service-computed; nothing here is
-fabricated, no roadmap lever is faked, and any claim is one click from the real
-Phoenix spans.
+An ambient agent reasons over live traffic and ranks proposals in an inbox; the
+canvas shows the consequence as motion (continuous traffic, a moving burn rate);
+you approve; the canvas reroutes, the burn bends down, and the inbox recomputes
+and re-ranks from REAL figures, jumping the highlight to the next leak's node.
+
+Everything is read through the `accountant.service` interface only — no number
+is invented in the UI, only real (enactable) levers are approvable, roadmap
+items are recommend-only, and any governing item drills to the real Phoenix
+spans. The canvas animates client-side (its own JS clock), so it is alive
+before and between actions — not a static dashboard relabeled "live".
 
     uv run streamlit run src/accountant/ui/dashboard.py
 """
 
+import json
 import os
 import socket
 import subprocess
@@ -19,6 +24,7 @@ from pathlib import Path
 
 import httpx
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,12 +37,16 @@ INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
 INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}"
 LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
-_GREEN, _BLUE, _AMBER, _DIM, _INK = "#15803d", "#2563eb", "#b45309", "#9ca3af", "#111827"
+_GREEN, _AMBER, _DIM, _INK, _BG = "#0f6e56", "#85540b", "#9ca3af", "#141413", "#f5f4ed"
+_MIN_PER_MONTH = 30 * 24 * 60
+# Which canvas node each lever targets (the on-node link to the inbox).
+_NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
+             "route_model:simple": "model"}
 
 st.set_page_config(page_title="Agent Accountant — Control Plane", layout="wide")
 
 
-# --- ingest bootstrap (unchanged infra) ------------------------------------
+# --- ingest bootstrap ------------------------------------------------------
 
 def _port_open(host: str, port: int, timeout: float = 0.4) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -74,11 +84,8 @@ def _post_backfill_start() -> None:
 
 
 def _md(text: str) -> None:
-    """Render markdown but neutralize Streamlit's $-as-LaTeX (cost strings)."""
     st.markdown(text.replace("$", "\\$"))
 
-
-# --- onboarding (empty cache → live Phoenix import) ------------------------
 
 @st.fragment(run_every="1.5s")
 def _render_onboarding() -> None:
@@ -91,255 +98,327 @@ def _render_onboarding() -> None:
     with st.container(border=True):
         st.markdown("### Connecting to Phoenix")
         st.caption("Importing trace history. The control plane comes online once cost data lands.")
-        c1, c2 = st.columns(2)
-        c1.metric("Traces imported", f"{int(summary.get('total_traces') or 0):,}")
-        c2.metric("Spans", f"{int(summary.get('total_spans') or 0):,}")
         st.progress(min(max(float(ingest.get("progress") or 0.05), 0.0), 1.0),
                     text=ingest.get("message") or "Connecting…")
 
 
-# --- the live system-behavior map ------------------------------------------
+# --- the agent's state: proposals, ranking, burn (all from service) --------
 
-def _node(label: str, sub: str, on: bool, roadmap: bool = False) -> str:
-    if roadmap:
-        bd, fg, tag = "#d1d5db", _DIM, "roadmap"
-    elif on:
-        bd, fg, tag = _GREEN, _GREEN, "governed"
-    else:
-        bd, fg, tag = _AMBER, _AMBER, "paying"
-    return (f"<div style='border:1.5px solid {bd};border-radius:8px;padding:8px 12px;"
-            f"min-width:120px;background:#fff'>"
-            f"<div style='font-weight:700;font-size:0.86rem;color:{_INK}'>{label}</div>"
-            f"<div style='font-size:0.74rem;color:{fg}'>{sub}</div>"
-            f"<div style='font-size:0.64rem;color:{fg};text-transform:uppercase;"
-            f"letter-spacing:.04em'>{tag}</div></div>")
+def _volume() -> int:
+    live = service.live_state()
+    return int(st.session_state.setdefault("volume", 4_000_000))
 
 
-def _arrow(on: bool) -> str:
-    c = _GREEN if on else _DIM
-    return f"<div style='align-self:center;color:{c};font-size:1.1rem'>→</div>"
+def _proposals():
+    """Build the ranked inbox + burn from real figures. The queue is enactable
+    levers not yet active, ranked by recomputed $/mo; the top is active. Approved
+    levers settle to governing. Then labeled roadmap, then a quality-floor guard
+    — the forward proposal always exists but never implies infinite savings."""
+    live = service.live_state()
+    recs = service.recommendations()
+    rates = service.default_tool_rates()
+    rows, totals = service.cost_breakdown(live, recs, rates)
+    mt = _volume()
+    total_n = totals["total_n"]
+
+    def monthly(l):
+        return service.policy_monthly_saving(l["issue"], rates, mt, total_n)
+
+    enactable = [l for l in service.levers() if l["enactable"]]
+    governing = sorted([l for l in enactable if l["active"]], key=monthly, reverse=True)
+    queue = sorted([l for l in enactable if not l["active"]], key=monthly, reverse=True)
+
+    def prop(l, state):
+        return {"key": l["signature"], "title": l["title"], "cause": l["cause"],
+                "per_ticket": service.policy_per_ticket_saving(l["issue"], rates),
+                "monthly": monthly(l), "node": _NODE_FOR.get(l["signature"]),
+                "state": state, "policy_type": l["policy_type"], "params": l["params"],
+                "classes": l["classes"], "lever": l}
+
+    active = prop(queue[0], "active") if queue else None
+    queued = [prop(l, "queued") for l in queue[1:]]
+    gov = [prop(l, "governing") for l in governing]
+
+    gross = totals["cost_per_ticket"] * mt
+    saved = sum(monthly(l) for l in governing)
+    burn_to = max(gross - saved, 0.0) / _MIN_PER_MONTH
+
+    return {"active": active, "queued": queued, "governing": gov,
+            "roadmap": service.roadmap_capabilities(),
+            "burn_to": burn_to, "gross_burn": gross / _MIN_PER_MONTH,
+            "mt": mt, "totals": totals}
 
 
-def _system_map() -> None:
+# --- the live canvas (self-animating SVG island) ---------------------------
+
+def _canvas(state: dict, just_changed: bool) -> None:
     ws = service.is_active("cache_tool:web_search")
     kb = service.is_active("cache_tool:kb_lookup")
     rt = service.is_active("route_model:simple")
-    nodes = "".join([
-        _node("Incoming tickets", "request path", True),
-        _arrow(True),
-        _node("Router", "classify + dispatch", True),
-        _arrow(True),
-        _node("Tool gateway", "web_search · kb_lookup", ws or kb),
-        _arrow(ws or kb),
-        _node("Cache" if (ws or kb) else "External tool APIs",
-              "semantic cache · $0" if (ws or kb) else "paid per call", ws or kb),
-    ])
-    models = "".join([
-        _node("LLM router", "per task class", rt),
-        _arrow(rt),
-        _node("Economy model" if rt else "Premium model",
-              "gemini-2.5-flash-lite" if rt else "full-price", rt),
-        _arrow(False),
-        _node("Budget controller", "spend caps · allocation", False, roadmap=True),
-    ])
-    html = (f"<div style='font-family:-apple-system,Segoe UI,Roboto,sans-serif'>"
-            f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px'>{nodes}</div>"
-            f"<div style='display:flex;gap:8px;flex-wrap:wrap'>{models}</div></div>")
-    st.html(html)
+    tools_gov = ws or kb
+    burn_to = state["burn_to"]
+    burn_from = float(st.session_state.get("burn_prev", state["gross_burn"]))
+    st.session_state["burn_prev"] = burn_to
+    highlight = (state["active"] or {}).get("node")
+
+    # nodes: id -> (x,y,w,h,label,sub,governed)
+    nodes = {
+        "requests": (24, 122, 92, 40, "Requests", "live traffic", None),
+        "router": (150, 122, 78, 40, "Router", "classify", None),
+        "tools": (372, 64, 118, 40, "Cache" if tools_gov else "External tools",
+                  "semantic · $0" if tools_gov else "paid per call", tools_gov),
+        "model": (256, 188, 132, 42, "Economy model" if rt else "Premium model",
+                  "flash-lite" if rt else "full-price", rt),
+        "gateway": (256, 70, 96, 30, "Tool gateway", "", None),
+    }
+    rects = ""
+    for nid, (x, y, w, h, label, sub, gov) in nodes.items():
+        if gov is True:
+            stroke, fill, fg = _GREEN, "#e1f5ee", _GREEN
+        elif gov is False:
+            stroke, fill, fg = _AMBER, "#faeeda", _AMBER
+        else:
+            stroke, fill, fg = "rgba(31,30,29,.3)", _BG, "#3d3d3a"
+        rects += (
+            f"<rect id='node-{nid}' x='{x}' y='{y}' width='{w}' height='{h}' rx='8' "
+            f"fill='{fill}' stroke='{stroke}' stroke-width='1'/>"
+            f"<text x='{x + 10}' y='{y + (15 if sub else h/2)}' font-size='12' font-weight='600' "
+            f"fill='{fg}'>{label}</text>"
+            + (f"<text x='{x + 10}' y='{y + 30}' font-size='10.5' fill='{fg}'>{sub}</text>" if sub else ""))
+
+    # edges: polyline [from-center -> to-center], hot = ungoverned paid path
+    edges = [
+        {"p": [[116, 142], [150, 142]], "hot": False, "on": True},          # requests→router
+        {"p": [[228, 142], [256, 85]], "hot": False, "on": True},           # router→gateway
+        {"p": [[352, 85], [372, 84]], "hot": not tools_gov, "on": True},    # gateway→tools
+        {"p": [[228, 142], [256, 209]], "hot": not rt, "on": True},         # router→model
+    ]
+    lines = "".join(
+        f"<line x1='{e['p'][0][0]}' y1='{e['p'][0][1]}' x2='{e['p'][1][0]}' y2='{e['p'][1][1]}' "
+        f"stroke='{_AMBER if e['hot'] else '#c8c7c0'}' stroke-width='1.2'/>" for e in edges)
+
+    ring = ""
+    if highlight and highlight in nodes:
+        x, y, w, h, *_ = nodes[highlight]
+        ring = (f"<rect id='ring' x='{x-5}' y='{y-5}' width='{w+10}' height='{h+10}' rx='11' "
+                f"fill='none' stroke='{_AMBER}' stroke-width='1.6'>"
+                f"<animate attributeName='opacity' values='0.25;0.9;0.25' dur='1.6s' "
+                f"repeatCount='indefinite'/></rect>")
+
+    cfg = json.dumps({"edges": edges, "burnFrom": burn_from, "burnTo": burn_to,
+                      "down": burn_to < burn_from - 1e-9, "changed": just_changed,
+                      "green": _GREEN, "amber": _AMBER})
+    html = f"""
+<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;position:relative">
+  <svg id="cv" viewBox="0 0 520 240" width="100%" style="max-height:240px">
+    {lines}{rects}{ring}
+  </svg>
+  <div style="position:absolute;top:2px;right:6px;text-align:right">
+    <div style="font-size:11px;color:#6b6b66">burn rate</div>
+    <div id="burn" style="font-size:18px;font-weight:700;color:{_INK}">$–/min</div>
+    <div style="font-size:10px;color:{_DIM}">projected at {state['mt']:,}/mo</div>
+  </div>
+</div>
+<script>
+const C = {cfg};
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("cv");
+const dots = [];
+function mkDot(hot) {{
+  const c = document.createElementNS(NS, "circle");
+  c.setAttribute("r", hot ? 3 : 2.4);
+  c.setAttribute("fill", hot ? C.amber : C.green);
+  svg.appendChild(c); return c;
+}}
+C.edges.forEach(e => {{
+  if (!e.on) return;
+  const n = e.hot ? 4 : 2, spd = e.hot ? 0.011 : 0.007;
+  for (let k = 0; k < n; k++) dots.push({{e, t: k / n, spd, el: mkDot(e.hot)}});
+}});
+function frame() {{
+  dots.forEach(d => {{
+    d.t += d.spd; if (d.t > 1) d.t -= 1;
+    const a = d.e.p[0], b = d.e.p[1];
+    d.el.setAttribute("cx", a[0] + (b[0] - a[0]) * d.t);
+    d.el.setAttribute("cy", a[1] + (b[1] - a[1]) * d.t);
+  }});
+  requestAnimationFrame(frame);
+}}
+frame();
+const burnEl = document.getElementById("burn");
+const dur = C.changed ? 1500 : 600; let t0 = null;
+function fmt(v) {{ return "$" + (v < 0.1 ? v.toFixed(4) : v.toFixed(2)) + "/min " + (C.down ? "▼" : ""); }}
+function burnFrame(ts) {{
+  if (!t0) t0 = ts; const k = Math.min((ts - t0) / dur, 1);
+  burnEl.textContent = fmt(C.burnFrom + (C.burnTo - C.burnFrom) * k);
+  if (C.down) burnEl.style.color = C.green;
+  if (k < 1) requestAnimationFrame(burnFrame);
+}}
+requestAnimationFrame(burnFrame);
+</script>"""
+    components.html(html, height=250)
 
 
-# --- conversation ----------------------------------------------------------
+# --- the agent inbox -------------------------------------------------------
 
-def _convo() -> list:
-    return st.session_state.setdefault("convo", [])
-
-
-def _run(handler, *, enact: bool = False, prompt: str | None = None) -> None:
-    if prompt:
-        _convo().append({"role": "user", "say": prompt})
-    res = handler(enact=enact) if enact else handler()
-    res["_at"] = time.strftime("%H:%M:%S")
-    _convo().append(res)
+def _approve(p: dict) -> None:
+    service.activate_policy(p["key"], p["policy_type"], p["params"])  # hard-guarded
+    st.session_state["just_changed"] = True
 
 
-def _freeform(text: str) -> None:
-    """Q&A flourish: map a free question onto a curated intent by keyword. The
-    reliable spine is the buttons; this never invents numbers (it routes to a
-    deterministic handler)."""
-    _convo().append({"role": "user", "say": text})
-    t = text.lower()
-    if any(w in t for w in ("why", "spike", "jump", "expensive", "high")):
-        _run(intents.diagnose)
-    elif any(w in t for w in ("cut", "reduce", "save", "lower")):
-        _run(lambda enact=True: intents.cut_spend(0.30, enact=enact), enact=True)
-    elif any(w in t for w in ("prevent", "stop", "fix", "again")):
-        _run(lambda enact=True: intents.prevent(enact=enact), enact=True)
-    elif any(w in t for w in ("prove", "real", "verify", "show")):
-        _run(intents.prove)
-    elif any(w in t for w in ("forecast", "month", "budget", "project")):
-        _run(intents.forecast)
+def _inbox_card(p: dict, *, approvable: bool) -> None:
+    if p["state"] == "governing":
+        bd, fg, fill = _GREEN, _GREEN, "#e1f5ee"
+    elif p["state"] == "active":
+        bd, fg, fill = _AMBER, _AMBER, "#faeeda"
     else:
-        _convo().append({"intent": "unknown", "_at": time.strftime("%H:%M:%S"),
-                         "say": "Try: why costs spiked · cut spend · prevent recurrence · "
-                                "prove it · forecast. (Curated intents are the reliable path.)"})
+        bd, fg, fill = "rgba(31,30,29,.3)", "#3d3d3a", _BG
+    with st.container(border=True):
+        if p["state"] == "governing":
+            st.markdown(f"<span style='color:{_GREEN};font-weight:600'>✓ {p['title']}</span><br>"
+                        f"<span style='color:{_GREEN};font-size:0.8rem'>governing live · "
+                        f"−${p['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
+            if st.button("show me it's real", key=f"proof_{p['key']}", use_container_width=True):
+                st.session_state["proof_open"] = True
+                st.rerun()
+        elif p["state"] == "active":
+            st.markdown(f"<span style='color:{_AMBER};font-weight:700'>● {p['title']}</span><br>"
+                        f"<span style='color:{_AMBER};font-size:0.8rem'>now top leak · "
+                        f"saves ${p['per_ticket']:.4f}/ticket (~${p['monthly']:,.0f}/mo)</span>",
+                        unsafe_allow_html=True)
+            st.caption(p["cause"])
+            if st.button("Approve →", key=f"appr_{p['key']}", type="primary",
+                         use_container_width=True):
+                _approve(p); st.rerun()
+        else:  # queued
+            st.markdown(f"**{p['title']}** <span style='color:{_DIM};font-size:0.8rem'>queued · "
+                        f"~${p['monthly']:,.0f}/mo</span>", unsafe_allow_html=True)
 
 
-def _render_result(res: dict) -> None:
-    if res.get("role") == "user":
-        with st.chat_message("user"):
-            st.markdown(res.get("say", ""))
-        return
-    with st.chat_message("assistant", avatar="🛰️"):
-        if res.get("title"):
-            st.markdown(f"**{res['title']}**")
-        _md(res.get("say", ""))
-        for card in res.get("cards", []):
-            badge = (f"<span style='color:{_GREEN}'>● live</span>" if card.get("active")
-                     else f"<span style='color:{_AMBER}'>○ proposed</span>")
-            st.markdown(
-                f"<div style='border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;"
-                f"margin:3px 0'><b>{card['title']}</b> {badge}<br>"
-                f"<span style='color:{_DIM};font-size:0.82rem'>saves "
-                f"${card['per_ticket_usd']:.4f}/ticket · ~${card['monthly_usd']:,.0f}/mo "
-                f"projected</span></div>", unsafe_allow_html=True)
-        if res.get("proof"):
-            _render_proof(res["proof"], res.get("deeplinks", {}))
+def _render_inbox(state: dict) -> None:
+    st.markdown("##### Agent inbox")
+    st.markdown(f"<span style='color:{_GREEN};font-size:0.8rem'>● reasoning over live traffic"
+                + ("  ·  ↻ recomputed after approve" if st.session_state.get("just_changed") else "")
+                + "</span>", unsafe_allow_html=True)
+    for p in state["governing"]:
+        _inbox_card(p, approvable=False)
+    if state["active"]:
+        _inbox_card(state["active"], approvable=True)
+    for p in state["queued"]:
+        _inbox_card(p, approvable=False)
+    # roadmap — recommend-only, not approvable
+    for i, c in enumerate(state["roadmap"][:1]):
+        with st.container(border=True):
+            st.markdown(f"<span style='color:{_DIM}'>{c['title']} · "
+                        f"<b>roadmap</b></span><br><span style='color:{_DIM};font-size:0.78rem'>"
+                        f"{c['blurb']} — recommend-only, not enforced</span>", unsafe_allow_html=True)
+    # quality-floor guard — the forward proposal never invents another cut
+    if not state["active"]:
+        with st.container(border=True):
+            st.markdown(f"<span style='color:{_DIM}'>Quality floor reached</span><br>"
+                        f"<span style='color:{_DIM};font-size:0.78rem'>No further safe cut without "
+                        f"risking answer quality. The agent holds here.</span>", unsafe_allow_html=True)
 
 
 # --- proof drill-down (system behaviour only) ------------------------------
 
-def _render_proof(fx: dict, deeplinks: dict) -> None:
+def _render_proof() -> None:
+    fx = service.captured_trace_pair()
+    if not fx:
+        st.info("No captured trace pair yet.")
+        return
+    b, g = fx["baseline"], fx["governed"]
+    st.markdown(f"**Proof — same ticket, two ways.** baseline ${b['total_usd']:.4f} → governed "
+                f"${g['total_usd']:.4f}, {fx['skipped_calls']} paid calls skipped, saved "
+                f"${fx['saved_usd']:.4f}.".replace("$", "\\$"))
     rows = ""
     for r in fx["rows"]:
-        if r["status"] == "cached":
-            gov = f"<span style='color:{_GREEN}'>cached · $0</span>"
-            base = f"<span style='color:{_AMBER}'>${r['baseline']['cost']:.4f}</span>"
-            bg = "#fbf6ee"
-        else:
-            gov = f"<span style='color:#666'>${r['governed']['cost']:.4f}</span>"
-            base = f"<span style='color:#666'>${r['baseline']['cost']:.4f}</span>"
-            bg = "transparent"
-        rows += (f"<tr style='background:{bg}'>"
+        cached = r["status"] == "cached"
+        gov = (f"<span style='color:{_GREEN}'>cached · $0</span>" if cached
+               else f"<span style='color:#666'>${r['governed']['cost']:.4f}</span>")
+        base = (f"<span style='color:{_AMBER}'>${r['baseline']['cost']:.4f}</span>" if cached
+                else f"<span style='color:#666'>${r['baseline']['cost']:.4f}</span>")
+        rows += (f"<tr style='background:{'#faeeda' if cached else 'transparent'}'>"
                  f"<td style='padding:2px 8px;font-family:monospace;font-size:0.78rem'>{r['op']}</td>"
                  f"<td style='padding:2px 8px;text-align:right'>{base}</td>"
                  f"<td style='padding:2px 8px'>{gov}</td></tr>")
-    st.markdown(
-        f"<table style='width:100%;border-collapse:collapse;font-size:0.85rem'>"
-        f"<thead><tr style='color:{_DIM};font-size:0.74rem;text-align:left'>"
-        f"<th style='padding:2px 8px'>call</th><th style='padding:2px 8px;text-align:right'>baseline</th>"
-        f"<th style='padding:2px 8px'>governed</th></tr></thead><tbody>{rows}</tbody></table>",
-        unsafe_allow_html=True)
-    bcol, gcol = st.columns(2)
-    if deeplinks.get("baseline"):
-        bcol.link_button("Baseline in Phoenix ↗", deeplinks["baseline"], use_container_width=True)
-    if deeplinks.get("governed"):
-        gcol.link_button("Governed in Phoenix ↗", deeplinks["governed"], use_container_width=True)
-    st.caption("System behaviour only — span names, call counts, cost. No prompt text or PII.")
+    st.markdown(f"<table style='width:100%;border-collapse:collapse;font-size:0.85rem'><thead>"
+                f"<tr style='color:{_DIM};font-size:0.74rem;text-align:left'><th style='padding:2px 8px'>call</th>"
+                f"<th style='padding:2px 8px;text-align:right'>baseline</th><th style='padding:2px 8px'>governed</th>"
+                f"</tr></thead><tbody>{rows}</tbody></table>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if b.get("phoenix_url"):
+        c[0].link_button("Baseline in Phoenix ↗", b["phoenix_url"], use_container_width=True)
+    if g.get("phoenix_url"):
+        c[1].link_button("Governed in Phoenix ↗", g["phoenix_url"], use_container_width=True)
+    st.caption("System behaviour only — span names, counts, cost. No prompt text or PII.")
 
 
-# --- right rail: feed + forecast -------------------------------------------
+# --- secondary intent surface (supporting, not the hero) -------------------
 
-def _render_feed() -> None:
-    st.markdown("##### Intervention feed")
-    saved = service.realized_savings()
-    st.caption(f"Measured savings so far: ${saved.get('total_savings_usd', 0) or 0:.4f} · "
-               f"{saved.get('spans_with_savings', 0)} interventions "
-               f"({saved.get('cache_hits', 0)} cache hits · {saved.get('model_swaps', 0)} model swaps)")
-    levers = service.levers()
-    if not any(l["active"] for l in levers):
-        st.info("No levers governing yet. Ask the optimizer to cut spend or prevent recurrence.")
-    for l in levers:
-        with st.container(border=True):
-            c = st.columns([4, 1])
-            with c[0]:
-                state = (f"<span style='color:{_GREEN}'>● governing live</span>" if l["active"]
-                         else f"<span style='color:{_DIM}'>○ available</span>")
-                st.markdown(f"**{l['title']}** {state}", unsafe_allow_html=True)
-                st.caption("Intercepts at the gateway · never changes prompts or code · reversible.")
-            with c[1]:
-                if l["active"]:
-                    if st.button("Off", key=f"off_{l['signature']}", use_container_width=True):
-                        service.deactivate_policy(l["signature"]); st.rerun()
-                else:
-                    if st.button("On", key=f"on_{l['signature']}", type="primary",
-                                 use_container_width=True):
-                        service.activate_policy(l["signature"], l["policy_type"], l["params"])
-                        st.rerun()
-    with st.expander("Roadmap — recommend-only, not enforced"):
-        for c in service.roadmap_capabilities():
-            st.markdown(f"**{c['title']}** — {c['blurb']}")
+def _render_intent_bar(state: dict) -> None:
+    with st.expander("Or state intent in plain language (supporting surface)"):
+        cols = st.columns(3)
+        if cols[0].button("Cut spend 30%", use_container_width=True):
+            r = intents.cut_spend(0.30, enact=True); st.session_state["just_changed"] = True
+            st.session_state["last_intent"] = r["say"]; st.rerun()
+        if cols[1].button("Prevent this again", use_container_width=True):
+            if state["active"]:
+                _approve(state["active"]); st.rerun()
+        if cols[2].button("Show me it's real", use_container_width=True):
+            st.session_state["proof_open"] = True; st.rerun()
+        if st.session_state.get("last_intent"):
+            _md(st.session_state["last_intent"])
+        if prompt := st.chat_input("Ask the optimizer… (Q&A flourish)"):
+            st.session_state["last_intent"] = _freeform_answer(prompt)
+            st.rerun()
 
 
-def _render_forecast() -> None:
-    st.markdown("##### Forecast")
-    default_vol = service.default_monthly_volume(service.live_state(), service.recommendations())
-    vol = st.slider("Monthly tickets (your number)", 1000, max(100000, default_vol * 3),
-                    default_vol, 1000, key="forecast_vol")
-    f = intents.forecast(vol)["projection"]
-    a, b = st.columns(2)
-    a.metric("Projected spend", f"${f['monthly_spend_usd']:,.0f}/mo")
-    b.metric("Avoidable", f"${f['monthly_recoverable_usd']:,.0f}/mo")
-    st.caption("Per-ticket cost is measured from Phoenix; monthly figures are projections "
-               "at the volume you set.")
+def _freeform_answer(text: str) -> str:
+    t = text.lower()
+    if any(w in t for w in ("why", "spike", "expensive", "high")):
+        return intents.diagnose()["say"]
+    if any(w in t for w in ("prove", "real", "verify")):
+        st.session_state["proof_open"] = True
+        return intents.prove()["say"]
+    if any(w in t for w in ("forecast", "month", "budget")):
+        return intents.forecast(_volume())["say"]
+    return "Try: why costs spiked · prevent this · show me it's real · forecast."
 
 
 # --- the cockpit -----------------------------------------------------------
 
-def _status_bar() -> None:
-    n = service.policies_active_count()
-    live = service.live_state()
-    total_n = int((live.get("summary") or {}).get("total_traces") or 0)
-    proj = os.environ.get("PHOENIX_PROJECT_NAME") or "Phoenix"
-    dot = _GREEN if n > 0 else _DIM
-    state = "Governing live" if n > 0 else "Standing by"
-    saved = service.realized_savings().get("total_savings_usd", 0) or 0
-    cols = st.columns([2, 1, 1, 2])
-    cols[0].markdown(f"<span style='color:{dot};font-size:1.3rem'>●</span> "
-                     f"**{state}**", unsafe_allow_html=True)
-    cols[1].markdown(f"**{n}** lever{'s' if n != 1 else ''} live")
-    cols[2].markdown(f"**${saved:.4f}** saved")
-    cols[3].markdown(f"<span style='color:{_DIM}'>reading {proj} · "
-                     f"{total_n:,} traces</span>", unsafe_allow_html=True)
-
-
 def render_cockpit() -> None:
-    _status_bar()
+    state = _proposals()
+    just_changed = bool(st.session_state.pop("just_changed", False))
+
+    n = service.policies_active_count()
+    realized = service.realized_savings().get("total_savings_usd", 0) or 0
+    top = st.columns([2, 2, 3])
+    dot = _GREEN if n > 0 else _DIM
+    top[0].markdown(f"<span style='color:{dot};font-size:1.2rem'>●</span> "
+                    f"**{'Governing live' if n else 'Standing by'}** · {n} lever"
+                    f"{'s' if n != 1 else ''}", unsafe_allow_html=True)
+    top[1].markdown(f"<span style='color:{_DIM}'>historical measured: "
+                    f"${realized:.4f} saved → see proof</span>", unsafe_allow_html=True)
+    top[2].markdown(f"<span style='color:{_DIM};text-align:right;display:block'>"
+                    f"agent governing another agent at runtime · reading "
+                    f"{os.environ.get('PHOENIX_PROJECT_NAME','Phoenix')}</span>",
+                    unsafe_allow_html=True)
     st.divider()
-    left, right = st.columns([0.56, 0.44], gap="large")
 
+    left, right = st.columns([0.34, 0.66], gap="large")
     with left:
-        st.markdown("#### Talk to the optimizer")
-        st.caption("State intent in plain language. It reasons over real cost, enacts real "
-                   "levers, and proves it. Curated intents are the reliable path.")
-        cset = intents.CURATED
-        bcols = st.columns(len(cset))
-        for i, item in enumerate(cset):
-            if bcols[i].button(item["label"], key=f"intent_{item['id']}", use_container_width=True):
-                if item["id"] == "cut_spend":
-                    _run(lambda enact=True: intents.cut_spend(0.30, enact=enact),
-                         enact=True, prompt=item["label"])
-                elif item["id"] == "prevent":
-                    _run(lambda enact=True: intents.prevent(enact=enact),
-                         enact=True, prompt=item["label"])
-                else:
-                    _run(item["handler"], prompt=item["label"])
-                st.rerun()
-        for res in _convo():
-            _render_result(res)
-
+        _render_inbox(state)
     with right:
-        st.markdown("##### Live system behaviour")
-        _system_map()
-        st.divider()
-        _render_feed()
-        st.divider()
-        _render_forecast()
-
-    # Chat input lives at the top level (Streamlit pins it to the bottom and
-    # rejects it nested inside columns).
-    if prompt := st.chat_input("Ask the optimizer…  e.g. why did costs spike?"):
-        _freeform(prompt)
-        st.rerun()
+        st.markdown("##### Live system — real traffic, governed in place")
+        _canvas(state, just_changed)
+        _render_intent_bar(state)
+        if st.session_state.get("proof_open"):
+            st.divider()
+            _render_proof()
+            if st.button("close proof"):
+                st.session_state["proof_open"] = False; st.rerun()
 
 
 def main() -> None:
