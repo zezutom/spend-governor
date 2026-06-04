@@ -83,6 +83,19 @@ def is_enactable(policy_type: str | None) -> bool:
     return policy_type in ENACTABLE_POLICY_TYPES
 
 
+# Answer-affecting policy types: routing a ticket to a different model can change
+# the output, so the agent ESCALATES these for a human accept/reject instead of
+# auto-applying. Caching serves a semantically-equivalent result, so it's safe to
+# auto-apply. This is a real property of the lever, not a cosmetic flag.
+ANSWER_AFFECTING_POLICY_TYPES = frozenset({"route_model"})
+
+
+def is_safe(policy_type: str | None) -> bool:
+    """Safe = the agent may auto-apply it (output unaffected). Risky =
+    answer-affecting → the agent escalates it for a human decision."""
+    return is_enactable(policy_type) and policy_type not in ANSWER_AFFECTING_POLICY_TYPES
+
+
 def roadmap_capabilities() -> list[dict]:
     """Labeled not-yet-enforced capabilities — recommend-only, never live."""
     return [dict(c) for c in ROADMAP_CAPABILITIES]
@@ -136,6 +149,7 @@ def levers() -> list[dict]:
             "classes": affected_classes(issue),
             "active": is_active(sig),
             "enactable": is_enactable(policy[1]),  # honesty contract, at the seam
+            "safe": is_safe(policy[1]),            # safe → auto-apply; risky → escalate
             "issue": issue,
             "rec": rec,
         })
@@ -150,7 +164,7 @@ __all__ = [
     "policy_per_ticket_saving", "policy_monthly_saving", "lever_text", "levers",
     "active_policies", "is_active", "activate_policy", "deactivate_policy",
     "policy_activated_at", "policies_active_count",
-    "ENACTABLE_POLICY_TYPES", "is_enactable", "roadmap_capabilities",
+    "ENACTABLE_POLICY_TYPES", "is_enactable", "is_safe", "roadmap_capabilities",
     "realized_savings", "before_after", "policy_savings_series", "policy_saving_spans",
     "representative_saving_span",
     "captured_trace_pair", "class_cost_stats", "class_trace_costs", "project_gid",
