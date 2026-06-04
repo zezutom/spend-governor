@@ -29,7 +29,10 @@ from accountant.pipeline.db import (
 )
 from accountant.pipeline.phoenix_cost import span_deeplink
 from accountant.pricing.tools import TOOL_PRICES
-from accountant.trace_race.fixture import load_fixture as trace_race_fixture
+# "pair", not "fixture": it is a REAL captured baseline+governed trace pair.
+# The word "fixture" invites swapping in fabricated data later; the honesty
+# contract forbids that, and the name holds the line.
+from accountant.trace_race.fixture import load_fixture as captured_trace_pair
 from accountant.wrapper import store as _store
 
 # --- system state ----------------------------------------------------------
@@ -55,12 +58,52 @@ policy_per_ticket_saving = _vm._policy_per_ticket  # measured $/ticket a lever s
 policy_monthly_saving = _vm._policy_mo            # $/mo at a given volume
 lever_text = _vm._fix_text                        # (title, one-line) for a lever
 
+# --- enactable vs roadmap (the honesty contract, enforced at the seam) ------
+# The ONLY policy types that physically exist and can be enforced today. The
+# optimizer may *recommend* anything; it may only *enact* these.
+ENACTABLE_POLICY_TYPES = frozenset({"cache_tool", "route_model"})
+
+# Capabilities the agent may recommend but must label not-yet-enforced. Surfaced
+# explicitly here so the seam — not UI discipline — owns the real/roadmap split.
+ROADMAP_CAPABILITIES = (
+    {"id": "budget_strategy", "title": "Budget-strategy automation",
+     "blurb": "Spend caps and budget-driven routing beyond the current levers.",
+     "enactable": False},
+    {"id": "autonomy", "title": "Higher autonomy (autopilot)",
+     "blurb": "Auto-optimize beyond low-risk caching/routing without approval.",
+     "enactable": False},
+    {"id": "org_wide", "title": "Cross-agent / org-wide budgeting",
+     "blurb": "Allocation and executive reporting across many agents.",
+     "enactable": False},
+)
+
+
+def is_enactable(policy_type: str | None) -> bool:
+    """True only for levers that really exist and can be enforced today."""
+    return policy_type in ENACTABLE_POLICY_TYPES
+
+
+def roadmap_capabilities() -> list[dict]:
+    """Labeled not-yet-enforced capabilities — recommend-only, never live."""
+    return [dict(c) for c in ROADMAP_CAPABILITIES]
+
+
 # live toggle state — the real enactable levers
 active_policies = _store.active_policies
 is_active = _store.is_active
-activate_policy = _store.activate_policy
 deactivate_policy = _store.deactivate_policy
 policy_activated_at = _store.policy_activated_at
+
+
+def activate_policy(signature: str, policy_type: str, params: dict):
+    """Enact a lever. HARD GUARD: refuses anything not enactable, so the agent
+    physically cannot enforce a roadmap capability it only recommended."""
+    if not is_enactable(policy_type):
+        raise ValueError(
+            f"refusing to enact non-enactable policy type {policy_type!r} — "
+            f"roadmap capabilities can be recommended, not enforced "
+            f"(enactable: {sorted(ENACTABLE_POLICY_TYPES)})")
+    return _store.activate_policy(signature, policy_type, params)
 
 # --- proof (Phoenix-backed verification) -----------------------------------
 project_gid = _vm._project_gid                    # for building span deeplinks
@@ -92,6 +135,7 @@ def levers() -> list[dict]:
             "cause": policy_cause(issue),
             "classes": affected_classes(issue),
             "active": is_active(sig),
+            "enactable": is_enactable(policy[1]),  # honesty contract, at the seam
             "issue": issue,
             "rec": rec,
         })
@@ -106,8 +150,9 @@ __all__ = [
     "policy_per_ticket_saving", "policy_monthly_saving", "lever_text", "levers",
     "active_policies", "is_active", "activate_policy", "deactivate_policy",
     "policy_activated_at", "policies_active_count",
+    "ENACTABLE_POLICY_TYPES", "is_enactable", "roadmap_capabilities",
     "realized_savings", "before_after", "policy_savings_series", "policy_saving_spans",
     "representative_saving_span",
-    "trace_race_fixture", "class_cost_stats", "class_trace_costs", "project_gid",
+    "captured_trace_pair", "class_cost_stats", "class_trace_costs", "project_gid",
     "span_deeplink", "TOOL_PRICES",
 ]
