@@ -85,13 +85,45 @@ async def reset() -> dict:
     return {"ok": True, "state": governor.snapshot()}
 
 
+# Each canvas node maps to the task classes that flow through it — so its proof
+# is scoped to THAT node, not one global pair.
+_NODE_CLASSES = {
+    "tools": ["refund_handling", "account_question"],
+    "gateway": ["refund_handling", "account_question"],
+    "model": ["password_reset", "account_question"],
+    "router": ["refund_handling", "account_question", "password_reset", "plan_change"],
+    "requests": ["refund_handling", "account_question", "password_reset", "plan_change"],
+}
+_NODE_TITLE = {"tools": "Cache / tool gateway", "gateway": "Tool gateway",
+               "model": "Model routing", "router": "Router", "requests": "Incoming requests"}
+
+
+def _node_insight(node: str) -> dict:
+    classes = _NODE_CLASSES.get(node, _NODE_CLASSES["requests"])
+    # The captured before/after pair is a CACHING proof — show it on the tool/
+    # cache nodes only. Other nodes show their real per-class traces.
+    pair = service.captured_trace_pair() if node in ("tools", "gateway") else None
+    gid = service.project_gid()
+    rows = service.class_trace_costs(classes, 8, 0)
+    traces = [{
+        "trace_id": r["trace_id"],
+        "llm_cost": r.get("llm_cost", 0) or 0,
+        "tool_cost": r.get("tool_cost", 0) or 0,
+        "total": (r.get("llm_cost", 0) or 0) + (r.get("tool_cost", 0) or 0),
+        "phoenix_url": service.span_deeplink(gid, r["trace_id"], None),
+    } for r in rows]
+    return {"node": node, "title": _NODE_TITLE.get(node, node), "classes": classes,
+            "pair": pair, "stats": service.class_cost_stats(classes), "traces": traces}
+
+
 @app.get("/api/proof")
 def proof() -> dict:
-    fx = service.captured_trace_pair()
-    if not fx:
-        raise HTTPException(404, "no captured trace pair")
-    # system behaviour only — already PII-free; pass through
-    return fx
+    return _node_insight("tools")
+
+
+@app.get("/api/proof/{node}")
+def proof_node(node: str) -> dict:
+    return _node_insight(node)
 
 
 @app.get("/health")

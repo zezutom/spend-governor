@@ -165,12 +165,24 @@ class Governor:
                 await self._emit("escalate", step["reason"]
                                  + " This one can change the answer, so I'll leave the call to you.")
                 return
-        # Nothing left to auto-apply. Say so ONCE, then idle — the loop keeps
-        # running so it resumes the moment the human reopens work (veto/re-enable).
+        # Nothing left to auto-apply. Say so ONCE (with context — what's done and
+        # what's left), then idle; the loop keeps running and resumes the moment
+        # the human reopens work (veto / re-enable).
         if not self._held:
             self._held = True
-            await self._emit("holding", "That's the safe limit — cutting further would start to "
-                             "risk answer quality, so I'm holding here.")
+            done = [l["title"].lower() for l in service.levers() if l["active"] and l["enactable"]]
+            esc = [l["title"].lower() for l in service.levers()
+                   if l["signature"] in self.escalated and not l["active"]]
+            done_txt = (" and ".join(done) if len(done) <= 2 else
+                        ", ".join(done[:-1]) + f", and {done[-1]}") if done else "nothing yet"
+            if esc:
+                msg = (f"I've handled the safe wins ({done_txt}). The one thing left — "
+                       f"{' and '.join(esc)} — can change the answer, so I've flagged it on the "
+                       f"canvas for your call. Holding otherwise.")
+            else:
+                msg = (f"I've cached {done_txt}. That's the safe limit — going further would start "
+                       f"to risk answer quality, so I'm holding here.")
+            await self._emit("holding", msg)
 
     # --- human turns (canvas actions) -------------------------------------
     # DECOUPLED: the facts of the reaction (recomputed burn, lever, $ cost) emit
@@ -197,17 +209,19 @@ class Governor:
         async with self._lock:
             rates, totals = self._ctx()
             lv = next((l for l in service.levers() if l["signature"] == sig), None)
+            title = lv["title"] if lv else "that lever"
             was_active = lv and lv["active"]
             monthly = self._monthly(lv, rates, totals) if lv else 0.0
             await asyncio.to_thread(service.deactivate_policy, sig)
             self.vetoed.add(sig); self.escalated.discard(sig)
             if was_active and monthly >= _PUSHBACK_MIN_USD and lv:
-                self.pushback = {"sig": sig, "title": lv["title"], "monthly": round(monthly, 0)}
-            facts = f"{lv['title']} off — burn back to {self._fmt(self._burn_now())}" if lv else "lever off"
+                self.pushback = {"sig": sig, "title": title, "monthly": round(monthly, 0)}
+            await self._emit("user", f"You vetoed {title}.")          # your turn
+            facts = f"Burn back to {self._fmt(self._burn_now())}"
             if monthly:
-                facts += f"; ~${monthly:,.0f}/mo of waste returns"
-            await self._emit("reaction", facts + ".")  # INSTANT — facts + recomputed state
-        asyncio.create_task(self._reason_async())
+                facts += f" — that's ~${monthly:,.0f}/mo of waste again"
+            await self._emit("reaction", facts + ".")                 # instant facts
+        asyncio.create_task(self._reason_async())                     # next-step reasoning
 
     async def enable(self, sig: str) -> None:
         async with self._lock:
@@ -215,26 +229,31 @@ class Governor:
             if self.pushback and self.pushback.get("sig") == sig:
                 self.pushback = None
             lv = next((l for l in service.levers() if l["signature"] == sig), None)
+            title = lv["title"] if lv else "that lever"
             if lv and lv["safe"]:
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
-            tail = f"{lv['title']} back on — burn down to {self._fmt(self._burn_now())}." if lv else "back on."
-            await self._emit("reaction", tail)
+            await self._emit("user", f"You re-enabled {title}.")
+            await self._emit("reaction", f"Back on — burn down to {self._fmt(self._burn_now())}.")
         asyncio.create_task(self._reason_async())
 
     async def accept(self, sig: str) -> None:
         async with self._lock:
             lv = next((l for l in service.levers() if l["signature"] == sig), None)
+            title = lv["title"] if lv else "that lever"
             if lv:
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
             self.escalated.discard(sig)
-            await self._emit("reaction", f"Okayed — routing live, burn down to {self._fmt(self._burn_now())}.")
+            await self._emit("user", f"You accepted {title}.")
+            await self._emit("reaction", f"Routing live — burn down to {self._fmt(self._burn_now())}.")
         asyncio.create_task(self._reason_async())
 
     async def reject(self, sig: str) -> None:
         async with self._lock:
             self.escalated.discard(sig); self.vetoed.add(sig)
             lv = next((l for l in service.levers() if l["signature"] == sig), None)
-            await self._emit("reaction", f"Leaving {lv['title'].lower() if lv else 'that'} off.")
+            title = lv["title"] if lv else "that lever"
+            await self._emit("user", f"You rejected {title}.")
+            await self._emit("reaction", "Leaving that one off, then.")
         asyncio.create_task(self._reason_async())
 
 
