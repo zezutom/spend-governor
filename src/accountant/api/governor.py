@@ -169,6 +169,15 @@ class Governor:
     async def start(self) -> None:
         await self.reset()
         self._task = asyncio.create_task(self._loop())
+        self._hb = asyncio.create_task(self._heartbeat())
+
+    async def _heartbeat(self) -> None:
+        """Push the live snapshot on a steady beat so the cockpit reflects the
+        underlying data continuously — burn rate, class costs, savings — even
+        between agent actions and as new traffic streams in."""
+        while True:
+            await asyncio.sleep(3.0)
+            await self._emit(None)  # state only, no narration
 
     async def reset(self) -> None:
         async with self._lock:

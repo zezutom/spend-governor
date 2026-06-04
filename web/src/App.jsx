@@ -130,6 +130,12 @@ function Header({ burn, down, state, latest }) {
         <div style={{ fontSize: 15, fontWeight: 600 }}>An agent governing another agent — autonomously</div>
       </div>
       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+        <div style={{ fontSize: 12, color: DIM }}>measured saved (live)</div>
+        <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: GREEN }}>
+          ${state ? state.realized_savings.toFixed(4) : '—'}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 12, color: DIM }}>burn rate</div>
         <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, color: down ? GREEN : INK }}>
           ${burn < 0.1 ? burn.toFixed(4) : burn.toFixed(2)}<span style={{ fontSize: 18 }}>/min {down ? '▼' : ''}</span>
