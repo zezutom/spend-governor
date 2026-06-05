@@ -19,6 +19,7 @@ from accountant import service
 from accountant.optimizer import agent
 
 _MIN_PER_MONTH = 30 * 24 * 60
+_SEC_PER_MONTH = 30 * 24 * 60 * 60
 TICK_SECONDS = 5.0
 _NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
              "route_model:simple": "model"}
@@ -122,8 +123,23 @@ class Governor:
             })
         classes.sort(key=lambda c: -c["share"])
 
+        # FOCAL PAIR — throughput (messages/sec) + $/message. $/message is what
+        # governance actually moves: measured baseline cost per ticket, minus the
+        # per-ticket saving from the levers governing now. Throughput is the
+        # operator's volume as a rate (the same projection basis as burn; becomes
+        # the real live rate once traffic streams). Burn is demoted to a small
+        # confirming readout.
+        msgs_per_sec = self.volume / _SEC_PER_MONTH
+        baseline_dpm = totals["cost_per_ticket"]
+        saved_per_msg = (saved / self.volume) if self.volume else 0.0
+        governed_dpm = max(baseline_dpm - saved_per_msg, 0.0)
+
         return {
-            "burn_rate": round(max(gross - saved, 0.0) / _MIN_PER_MONTH, 5),
+            "throughput_per_sec": round(msgs_per_sec, 3),
+            "dollars_per_message": round(governed_dpm, 6),
+            "baseline_dollars_per_message": round(baseline_dpm, 6),
+            "burn_per_min": round(max(gross - saved, 0.0) / _MIN_PER_MONTH, 4),  # small confirming readout
+            "burn_rate": round(max(gross - saved, 0.0) / _MIN_PER_MONTH, 5),     # kept for compat
             "gross_burn": round(gross / _MIN_PER_MONTH, 5),
             "volume": self.volume,
             "active_count": service.policies_active_count(),
