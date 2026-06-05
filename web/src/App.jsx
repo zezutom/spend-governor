@@ -43,13 +43,13 @@ function CtrlNode({ data }) {
 }
 const nodeTypes = { ctrl: CtrlNode }
 
-// ---- burn-rate counter that eases to its new value (semantic motion) ------
-function useTween(target) {
+// ---- a number that eases to its new value (semantic motion) ----------------
+function useTween(target, dur = 1100) {
   const [v, setV] = useState(target ?? 0)
   const ref = useRef(target ?? 0)
   useEffect(() => {
     if (target == null) return
-    const from = ref.current, t0 = performance.now(), dur = 1100
+    const from = ref.current, t0 = performance.now()
     let raf
     const step = (t) => {
       const k = Math.min((t - t0) / dur, 1)
@@ -90,60 +90,120 @@ export default function App() {
     fetch(`${API}/api/proof/${node || 'requests'}`).then((r) => r.json()).then(setProof).catch(() => {})
   }, [])
 
-  const burn = useTween(state?.burn_rate)
-  const down = state && state.burn_rate < state.gross_burn - 1e-9
-
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header burn={burn} down={down} state={state} latest={feed[0]} />
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
+      <Header state={state} latest={feed[0]} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {/* ZONE 1 — the agent's mind: its cognitive loop + the stream it drives */}
         <Inbox feed={feed} q={q} setQ={setQ} state={state} act={act} />
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          {nodes.length === 0 && (
-            <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
-          )}
-          {nodes.length > 0 && (
-            <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
-              style={{ width: '100%', height: '100%' }}
-              onNodeClick={(e, node) => openProof(node.data.proofNode || node.id)}
-              proOptions={{ hideAttribution: true }} nodesDraggable={false}
-              nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
-              zoomOnScroll={false} zoomOnDoubleClick={false}>
-              <Background color="#e7e7e0" gap={22} />
-            </ReactFlow>
-          )}
+        {/* ZONE 2 — the governed agent: focal metrics + the live system map */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Focal state={state} />
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+            {nodes.length === 0 && (
+              <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
+            )}
+            {nodes.length > 0 && (
+              <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+                style={{ width: '100%', height: '100%' }}
+                onNodeClick={(e, node) => openProof(node.data.proofNode || node.id)}
+                proOptions={{ hideAttribution: true }} nodesDraggable={false}
+                nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
+                zoomOnScroll={false} zoomOnDoubleClick={false}>
+                <Background color="#e7e7e0" gap={22} />
+              </ReactFlow>
+            )}
+          </div>
         </div>
+        {/* ZONE 3 — Phoenix: the senses that feed the agent + the courtroom it proves in */}
+        <PhoenixPanel state={state} />
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
     </div>
   )
 }
 
-function Header({ burn, down, state, latest }) {
+// ---- the cognitive loop, current step lit (the visible mind) ---------------
+const _STEP_LABEL = { OBSERVE: 'observe', DIAGNOSE: 'diagnose', DECIDE: 'decide', ACT: 'act', VERIFY: 'verify' }
+function MindLoop({ step, steps }) {
+  const seq = steps || ['OBSERVE', 'DIAGNOSE', 'DECIDE', 'ACT', 'VERIFY']
   return (
-    <div style={{ padding: '14px 22px', borderBottom: '1px solid #eceae0', display: 'flex',
-      alignItems: 'center', gap: 28, background: PAPER }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {seq.map((s, i) => {
+        const on = s === step
+        return (
+          <React.Fragment key={s}>
+            <div style={{ fontSize: 11, fontWeight: on ? 800 : 500, letterSpacing: '.04em',
+              padding: '3px 9px', borderRadius: 999, textTransform: 'uppercase',
+              color: on ? '#fff' : DIM, background: on ? GREEN : '#f0efe9',
+              border: `1px solid ${on ? GREEN : '#e6e4da'}`, transition: 'all .25s' }}>
+              {_STEP_LABEL[s] || s.toLowerCase()}
+            </div>
+            {i < seq.length - 1 && <span style={{ color: '#cfcdc2', fontSize: 12 }}>→</span>}
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+function Header({ state, latest }) {
+  return (
+    <div style={{ padding: '12px 22px', borderBottom: '1px solid #eceae0', display: 'flex',
+      alignItems: 'center', gap: 24, background: '#fff' }}>
       <div>
-        <div style={{ fontSize: 12, color: DIM }}>AI Cost Governance · control plane</div>
-        <div style={{ fontSize: 15, fontWeight: 600 }}>An agent governing another agent — autonomously</div>
+        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>AI COST GOVERNANCE · CONTROL PLANE</div>
+        <div style={{ fontSize: 15.5, fontWeight: 700 }}>An agent governing another agent — live, on Phoenix</div>
+      </div>
+      <div style={{ marginLeft: 'auto' }}>
+        <div style={{ fontSize: 11, color: DIM, marginBottom: 4, textAlign: 'center' }}>the agent's loop</div>
+        <MindLoop step={state?.step} steps={state?.steps} />
       </div>
       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-        <div style={{ fontSize: 12, color: DIM }}>measured saved (live)</div>
-        <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, color: GREEN }}>
+        <div style={{ fontSize: 12, color: DIM }}>measured saved · live</div>
+        <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.05, color: GREEN }}>
           ${state ? state.realized_savings.toFixed(4) : '—'}
         </div>
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 12, color: DIM }}>burn rate</div>
-        <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, color: down ? GREEN : INK }}>
-          ${burn < 0.1 ? burn.toFixed(4) : burn.toFixed(2)}<span style={{ fontSize: 18 }}>/min {down ? '▼' : ''}</span>
+    </div>
+  )
+}
+
+// ---- the focal pair: messages/sec + $/message (co-equal), burn demoted -----
+function Focal({ state }) {
+  const dpm = useTween(state?.dollars_per_message)
+  const base = state?.baseline_dollars_per_message
+  const down = state && state.dollars_per_message < base - 1e-9
+  const pct = down ? Math.round((1 - state.dollars_per_message / base) * 100) : 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 40, padding: '12px 24px 10px',
+      borderBottom: '1px solid #eceae0', background: PAPER }}>
+      <div>
+        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>THROUGHPUT</div>
+        <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, color: INK }}>
+          {state ? state.throughput_per_sec.toFixed(2) : '—'}
+          <span style={{ fontSize: 15, fontWeight: 500, color: DIM }}> msgs/sec</span>
         </div>
       </div>
-      <div style={{ minWidth: 280, maxWidth: 360 }}>
-        <div style={{ fontSize: 12, color: DIM }}>latest</div>
-        <div style={{ fontSize: 14, color: INK }}>{latest ? latest.text : 'reading the live traffic…'}</div>
+      <div style={{ width: 1, alignSelf: 'stretch', background: '#eceae0' }} />
+      <div>
+        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>$ / MESSAGE — what governance moves</div>
+        <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, color: down ? GREEN : INK }}>
+          ${dpm.toFixed(4)}
+          {down && <span style={{ fontSize: 15, fontWeight: 600, color: GREEN }}> ▼{pct}%</span>}
+        </div>
+        {down && <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
+          baseline <span style={{ textDecoration: 'line-through' }}>${base.toFixed(4)}</span>
+        </div>}
+      </div>
+      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+        <div style={{ fontSize: 11, color: DIM }}>burn rate</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: down ? GREEN : INK }}>
+          ${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(4) : state.burn_per_min.toFixed(2)) : '—'}/min
+        </div>
+        <div style={{ fontSize: 11, color: DIM }}>{state ? state.active_count : 0} policies live</div>
       </div>
     </div>
   )
@@ -152,6 +212,7 @@ function Header({ burn, down, state, latest }) {
 function entryStyle(kind) {
   if (kind === 'user') return { accent: '#3b3b37', bg: '#efece2', icon: '' }
   if (kind === 'applied') return { accent: GREEN, bg: '#eaf6f0', icon: '✓ ' }
+  if (kind === 'verified') return { accent: GREEN, bg: '#eef7f1', icon: '✦ ' }
   if (kind === 'escalate') return { accent: AMBER, bg: '#fbf0db', icon: '⚑ ' }
   if (kind === 'holding') return { accent: DIM, bg: '#f7f7f3', icon: '' }
   return { accent: GREEN, bg: '#f3faf6', icon: '' } // thinking / reaction / reasoned
@@ -175,11 +236,11 @@ function Inbox({ feed, q, setQ, state, act }) {
   const latest = feed[0]
   const rest = feed.slice(1).filter((c) => !q || c.text.toLowerCase().includes(q.toLowerCase()))
   return (
-    <div style={{ width: 460, borderRight: '1px solid #eceae0', padding: '16px 18px',
+    <div style={{ width: 440, borderRight: '1px solid #eceae0', padding: '16px 18px',
       display: 'flex', flexDirection: 'column', background: '#fff', minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-        <div style={{ fontWeight: 800, fontSize: 18 }}>Agent inbox</div>
-        <div style={{ color: GREEN, fontSize: 13 }}>● reasoning over live traffic</div>
+        <div style={{ fontWeight: 800, fontSize: 18 }}>The agent's mind</div>
+        <div style={{ color: GREEN, fontSize: 13 }}>● reasoning live</div>
       </div>
       {state?.pushback && (
         <div style={{ border: `1px solid ${AMBER}`, background: '#fbf0db', borderRadius: 10,
@@ -213,6 +274,94 @@ function Inbox({ feed, q, setQ, state, act }) {
       </div>
     </div>
   )
+}
+
+// ---- ZONE 3 — Phoenix: the senses that feed the agent + the courtroom -------
+function PhoenixPanel({ state }) {
+  const v = state?.verify
+  const projUrl = 'https://app.phoenix.arize.com/s/tomas'
+  return (
+    <div style={{ width: 360, borderLeft: '1px solid #eceae0', background: '#fff',
+      display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ padding: '16px 18px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Phoenix</div>
+          <div style={{ color: '#b5791a', fontSize: 12 }}>senses &amp; courtroom</div>
+        </div>
+        {/* senses: the live traces the agent reads */}
+        <div style={{ marginTop: 10, fontSize: 13.5, color: '#3b3b37', display: 'flex',
+          alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 9, background: GREEN,
+            display: 'inline-block' }} />
+          Live OTEL traces feeding <b>&nbsp;observe</b>
+        </div>
+        <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>
+          The agent senses every governed message here — then it proves the delta here too.
+        </div>
+      </div>
+
+      {/* courtroom: the VERIFY result, re-measured from the same traffic */}
+      <div style={{ padding: '6px 18px 18px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+        <div style={{ fontSize: 11, letterSpacing: '.08em', color: DIM, textTransform: 'uppercase',
+          fontWeight: 800, margin: '8px 0 8px' }}>Verified in Phoenix</div>
+        {!v && (
+          <div style={{ color: DIM, fontSize: 14, padding: '8px 0' }}>
+            The agent hasn't enacted yet — the first VERIFY appears the moment it does.
+          </div>
+        )}
+        {v && (
+          <div style={{ border: `1.5px solid ${v.same_answer ? GREEN : '#e6e4da'}`,
+            background: v.same_answer ? '#eef7f1' : PAPER, borderRadius: 12, padding: '14px 15px' }}>
+            <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{v.title}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
+              <span style={{ fontSize: 13, color: DIM, textDecoration: 'line-through' }}>
+                ${v.baseline_dollars_per_message.toFixed(4)}
+              </span>
+              <span style={{ color: DIM }}>→</span>
+              <span style={{ fontSize: 24, fontWeight: 800, color: GREEN }}>
+                ${v.dollars_per_message.toFixed(4)}
+              </span>
+              <span style={{ fontSize: 12.5, color: DIM }}>/ message</span>
+            </div>
+            <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 6 }}>
+              ≈ <b>${Number(v.monthly_saving).toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo</b> saved at current volume.
+            </div>
+            {/* quality verdict — asserted only when the captured pair proves it */}
+            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600,
+              color: v.same_answer ? GREEN : AMBER }}>
+              {v.same_answer ? '✦ Answer identical — quality held.'
+                : '◷ Watching the next traces to confirm quality holds.'}
+            </div>
+            {v.pair && (
+              <div style={{ marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
+                <div style={{ fontSize: 12, color: DIM, marginBottom: 6 }}>
+                  Same ticket, two ways · {v.pair.skipped_calls} paid calls skipped
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <a href={v.pair.baseline.phoenix_url} target="_blank" rel="noreferrer"
+                    style={ptag(false)}>baseline ${v.pair.baseline.total_usd.toFixed(4)} ↗</a>
+                  <a href={v.pair.governed.phoenix_url} target="_blank" rel="noreferrer"
+                    style={ptag(true)}>governed ${v.pair.governed.total_usd.toFixed(4)} ↗</a>
+                </div>
+              </div>
+            )}
+            <a href={projUrl} target="_blank" rel="noreferrer"
+              style={{ display: 'inline-block', marginTop: 12, fontSize: 13, color: GREEN, fontWeight: 600 }}>
+              open in Phoenix Cloud ↗
+            </a>
+          </div>
+        )}
+        <div style={{ fontSize: 11.5, color: DIM, marginTop: 14 }}>
+          System behaviour only — span names, counts, cost. No prompt text or PII.
+        </div>
+      </div>
+    </div>
+  )
+}
+function ptag(gov) {
+  return { fontSize: 12, padding: '4px 9px', borderRadius: 7, textDecoration: 'none',
+    border: `1px solid ${gov ? GREEN : '#d8d6cc'}`, color: gov ? GREEN : '#5a5852',
+    background: gov ? '#eef7f1' : '#fff' }
 }
 
 function ProofPanel({ proof, onClose }) {
