@@ -68,6 +68,7 @@ export default function App() {
   const [feed, setFeed] = useState([])
   const [q, setQ] = useState('')
   const [proof, setProof] = useState(null)
+  const [evalView, setEvalView] = useState(null)  // the consequence popup on ARM
 
   useEffect(() => {
     const es = new EventSource(`${API}/api/stream`)
@@ -85,6 +86,10 @@ export default function App() {
 
   const act = useCallback((kind, sig) => {
     fetch(`${API}/api/action/${kind}/${encodeURIComponent(sig)}`, { method: 'POST' })
+    // ARM: deciding the deferred model-routing lever takes it live immediately
+    // AND opens the consequence popup that instruments your choice — the
+    // accelerated quality eval (HOLD case for the simple-routing decision).
+    if (kind === 'accept' && sig && sig.startsWith('route_model')) setEvalView({ key: 'hold' })
   }, [])
   const openProof = useCallback((node) => {
     fetch(`${API}/api/proof/${node || 'requests'}`).then((r) => r.json()).then(setProof).catch(() => {})
@@ -121,6 +126,7 @@ export default function App() {
         <PhoenixPanel state={state} />
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
+      {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
     </div>
   )
 }
@@ -362,6 +368,134 @@ function ptag(gov) {
   return { fontSize: 12, padding: '4px 9px', borderRadius: 7, textDecoration: 'none',
     border: `1px solid ${gov ? GREEN : '#d8d6cc'}`, color: gov ? GREEN : '#5a5852',
     background: gov ? '#eef7f1' : '#fff' }
+}
+
+// ---- the consequence popup: the accelerated quality eval (HOLD case) -------
+// Your decision (route simple tickets to the cheaper model) goes live, and this
+// instruments it: the REAL pre-run eval is revealed row-by-row on a disclosed
+// compressed clock. The scoring is real; only the wall-clock is compressed. The
+// verdict is the agent's judgment over the signals and carries NO Phoenix link;
+// each replayed row links to its real trace (evidence).
+function qColor(b, e) { return e >= b ? GREEN : AMBER }
+
+function EvalPopup({ view, onClose }) {
+  const [data, setData] = useState(null)
+  const [err, setErr] = useState(null)
+  const [revealed, setRevealed] = useState(0)
+
+  useEffect(() => {
+    fetch(`${API}/api/eval/${view.key}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then(setData).catch(setErr)
+  }, [view.key])
+
+  useEffect(() => {
+    if (!data) return
+    const n = data.rows.length
+    setRevealed(0)
+    const per = Math.max(900, Math.round(10000 / n))  // ~10s total reveal
+    let i = 0
+    const id = setInterval(() => { i += 1; setRevealed(i); if (i >= n) clearInterval(id) }, per)
+    return () => clearInterval(id)
+  }, [data])
+
+  const shown = data ? data.rows.slice(0, revealed) : []
+  const done = data && revealed >= data.rows.length
+  const k = shown.length || 1
+  const mBase = shown.reduce((s, r) => s + r.baseline_quality, 0) / k
+  const mEcon = shown.reduce((s, r) => s + r.economy_quality, 0) / k
+  const equiv = shown.filter((r) => r.equivalent).length
+  const clar = shown.filter((r) => r.clarified).length
+  const refused = shown.filter((r) => r.refused_escalated).length
+  const hold = data && data.verdict === 'hold'
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: 24,
+        width: 660, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '.09em', color: AMBER, fontWeight: 800 }}>YOUR DECISION · ARMED &amp; LIVE</div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>Route simple tickets → economy model</div>
+            <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>
+              Accelerated eval · real replays through both models, scored by an LLM-judge · clock compressed to ~10s
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+        </div>
+
+        {err && <div style={{ color: AMBER, padding: '16px 0' }}>No cached eval yet — pre-run it off-stage.</div>}
+        {!data && !err && <div style={{ color: DIM, padding: '16px 0' }}>Loading the eval…</div>}
+
+        {data && (
+          <>
+            {/* progress on the disclosed clock */}
+            <div style={{ height: 4, background: '#eee', borderRadius: 3, margin: '16px 0 14px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(revealed / data.rows.length) * 100}%`,
+                background: hold ? GREEN : AMBER, transition: 'width .4s' }} />
+            </div>
+
+            {/* the signals, forming as rows reveal */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <Tile label="answer quality" main={`${mBase.toFixed(1)} → ${mEcon.toFixed(1)}`}
+                color={qColor(mBase, mEcon)} sub="baseline → economy" />
+              <Tile label="same resolution" main={`${equiv}/${shown.length || 0}`}
+                color={equiv === shown.length ? GREEN : AMBER} sub="judged equivalent" />
+              <Tile label="new clarifications" main={`${clar}`}
+                color={clar ? AMBER : GREEN} sub="economy asked back" />
+              <Tile label="refused / escalated" main={`${refused}`}
+                color={refused ? AMBER : GREEN} sub="instead of resolving" />
+            </div>
+
+            {/* the replayed rows — each links to its real Phoenix trace (evidence) */}
+            <div style={{ border: '1px solid #eceae0', borderRadius: 10, overflow: 'hidden' }}>
+              {shown.map((r, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                  borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 13 }}>
+                  <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 58)}</span>
+                  <span style={{ fontWeight: 700, color: qColor(r.baseline_quality, r.economy_quality) }}>
+                    {r.baseline_quality} → {r.economy_quality}
+                  </span>
+                  {r.equivalent
+                    ? <span style={{ fontSize: 11, color: GREEN }}>● equivalent</span>
+                    : <span style={{ fontSize: 11, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
+                  {r.phoenix_url && <a href={r.phoenix_url} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 12, color: GREEN, textDecoration: 'none' }}>trace ↗</a>}
+                </div>
+              ))}
+            </div>
+
+            {/* the agent's verdict — judgment, no Phoenix link */}
+            {done && (
+              <div style={{ marginTop: 16, border: `1.5px solid ${hold ? GREEN : AMBER}`,
+                background: hold ? '#eef7f1' : '#fbf0db', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800,
+                  color: hold ? GREEN : AMBER }}>THE AGENT'S VERDICT</div>
+                <div style={{ fontSize: 16, color: INK, marginTop: 4 }}>
+                  {hold
+                    ? '✦ Quality held — the economy model resolves these as well as the baseline. Routing stays live, and I keep watching.'
+                    : '⚑ Quality dropped — the economy model is degrading these answers. I recommend reverting.'}
+                </div>
+                <div style={{ fontSize: 11.5, color: DIM, marginTop: 7 }}>
+                  My judgment over the signals above — Phoenix surfaces the evidence, I render the verdict.
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+function Tile({ label, main, sub, color }) {
+  return (
+    <div style={{ flex: 1, border: '1px solid #eceae0', borderRadius: 10, padding: '9px 11px' }}>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 19, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
+      <div style={{ fontSize: 10.5, color: DIM }}>{sub}</div>
+    </div>
+  )
 }
 
 function ProofPanel({ proof, onClose }) {

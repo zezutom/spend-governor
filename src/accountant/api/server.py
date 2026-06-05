@@ -142,6 +142,19 @@ def verify() -> dict:
     }
 
 
+@app.get("/api/eval/{key}")
+def eval_result(key: str) -> dict:
+    """The accelerated quality eval, pre-run and cached. The model-eval popup
+    reveals these REAL rows on the disclosed accelerated clock. Real replays
+    through both models, real LLM-judge scores, real Phoenix trace links per
+    row; the verdict is the agent's, and carries no Phoenix link."""
+    from accountant.analytics import quality_eval
+    r = quality_eval.load_eval(key)
+    if r is None:
+        raise HTTPException(404, f"no cached eval '{key}' — pre-run it first")
+    return r
+
+
 @app.get("/api/proof")
 def proof() -> dict:
     return _node_insight("tools")
