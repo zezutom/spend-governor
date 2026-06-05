@@ -238,19 +238,30 @@ class Governor:
         Roadmap is never enacted; then it holds."""
         active = {p["signature"] for p in service.active_policies()}
         by = {l["signature"]: l for l in service.levers()}
+
+        def _ready(step):
+            lv = by.get(step["lever"])
+            if not lv or not lv["enactable"] or step["lever"] in active or step["lever"] in self.vetoed:
+                return None
+            return lv
+
+        # SAFE-FIRST: apply every safe (output-preserving) lever before deferring
+        # any answer-affecting one — so the arc plays cache, cache, then the single
+        # pivot, never interleaved.
         for step in self.plan:
-            sig = step["lever"]; lv = by.get(sig)
-            if not lv or not lv["enactable"] or sig in active or sig in self.vetoed:
-                continue
-            if lv["safe"]:
+            lv = _ready(step)
+            if lv and lv["safe"]:
                 await self._emit("thinking", None, step="DECIDE")  # judged safe → enact
-                await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
+                await asyncio.to_thread(service.activate_policy, step["lever"], lv["policy_type"], lv["params"])
                 self._held = False
                 await self._emit("applied", step["reason"], step="ACT")
-                await self._verify(sig, lv)                        # re-measure from Phoenix
+                await self._verify(step["lever"], lv)              # re-measure from Phoenix
                 return
-            if sig not in self.escalated:
-                self.escalated.add(sig)
+        # then the pivot: escalate the first answer-affecting lever for a human call
+        for step in self.plan:
+            lv = _ready(step)
+            if lv and not lv["safe"] and step["lever"] not in self.escalated:
+                self.escalated.add(step["lever"])
                 self._held = False
                 await self._emit("escalate", step["reason"]
                                  + " This one can change the answer, so I'll leave the call to you.",

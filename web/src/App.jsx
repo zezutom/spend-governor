@@ -3,16 +3,25 @@ import ReactFlow, { Background, Handle, Position } from 'reactflow'
 import 'reactflow/dist/style.css'
 
 const API = 'http://localhost:8800'
-const GREEN = '#0f6e56', AMBER = '#b5791a', DIM = '#9ca3af', INK = '#141413', PAPER = '#fbfbf9'
+const GREEN = '#0f6e56', AMBER = '#b5791a', RED = '#a3402f', DIM = '#9ca3af', INK = '#141413', PAPER = '#fbfbf9'
 
-// ---- a control-point node: state + the inline affordances to act on it ----
-function Btn({ onClick, label, color, primary }) {
+// ===========================================================================
+//  The cockpit is a SEQUENCED experience, not a dashboard. The system map is
+//  the stage; the agent's attention raises ONE focal card at a time over it
+//  (diagnose → act → verify → defer → hold → trip). The mind is a dimmed rail;
+//  the metrics are a slim top bar. It opens mid-crisis (ungoverned, bleeding)
+//  and plays the arc the agent drives.
+// ===========================================================================
+
+function Btn({ onClick, label, color, primary, big }) {
   return <button className="nodrag nopan" onClick={(e) => { e.stopPropagation(); onClick() }}
-    style={{ fontSize: 11.5, borderRadius: 6, padding: '3px 10px', cursor: 'pointer',
+    style={{ fontSize: big ? 14 : 11.5, borderRadius: 7, padding: big ? '8px 18px' : '3px 10px',
+      cursor: 'pointer', fontWeight: primary ? 700 : 500,
       border: `1px solid ${color}`, color: primary ? '#fff' : color,
       background: primary ? color : '#fff' }}>{label}</button>
 }
 
+// ---- system-map control node ----------------------------------------------
 const _STC = { green: GREEN, amber: AMBER, escalate: AMBER, vetoed: '#8f8f86', struct: '#b7b6ae' }
 const _STF = { green: '#e6f5ef', amber: '#fbf0db', escalate: '#fbf0db', vetoed: '#efeee8', struct: '#fff' }
 
@@ -30,8 +39,8 @@ function CtrlNode({ data }) {
       {data.kind === 'lever' && (
         <div style={{ marginTop: 6, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {data.escalated && <>
-            <Btn onClick={() => data.act('accept', data.sig)} label="accept" color={AMBER} primary />
-            <Btn onClick={() => data.act('reject', data.sig)} label="reject" color={AMBER} />
+            <Btn onClick={() => data.act('accept', data.sig)} label="arm it" color={AMBER} primary />
+            <Btn onClick={() => data.act('reject', data.sig)} label="not now" color={AMBER} />
           </>}
           {data.active && <Btn onClick={() => data.act('veto', data.sig)} label="veto" color={GREEN} />}
           {data.vetoed && <Btn onClick={() => data.act('enable', data.sig)} label="re-enable" color={AMBER} primary />}
@@ -63,12 +72,15 @@ function useTween(target, dur = 1100) {
   return v
 }
 
+// ===========================================================================
+//  App — the sequenced stage
+// ===========================================================================
 export default function App() {
   const [state, setState] = useState(null)
   const [feed, setFeed] = useState([])
-  const [q, setQ] = useState('')
   const [proof, setProof] = useState(null)
-  const [evalView, setEvalView] = useState(null)  // the consequence popup on ARM
+  const [evalView, setEvalView] = useState(null)   // consequence popup (arm / trip)
+  const [pushed, setPushed] = useState(false)      // presenter armed the riskier call (Ending B)
 
   useEffect(() => {
     const es = new EventSource(`${API}/api/stream`)
@@ -77,53 +89,53 @@ export default function App() {
       if (ev.state) setState(ev.state)
       if (ev.narration) setFeed((f) => [{ ...ev.narration, seq: ev.seq }, ...f].slice(0, 120))
     }
-    es.onerror = () => {}  // EventSource auto-reconnects
-    // Restart the demo from ungoverned on load, so each visit watches the full
-    // hands-off arc (agent reasons → auto-applies safe levers → escalates risky).
+    es.onerror = () => {}
+    // Open mid-crisis: restart ungoverned so each visit plays the full arc.
     fetch(`${API}/api/reset`, { method: 'POST' }).catch(() => {})
+    setPushed(false)
     return () => es.close()
   }, [])
 
   const act = useCallback((kind, sig) => {
     fetch(`${API}/api/action/${kind}/${encodeURIComponent(sig)}`, { method: 'POST' })
-    // ARM: deciding the deferred model-routing lever takes it live immediately
-    // AND opens the consequence popup that instruments your choice — the
-    // accelerated quality eval (HOLD case for the simple-routing decision).
-    if (kind === 'accept' && sig && sig.startsWith('route_model')) setEvalView({ key: 'hold' })
+    if (kind === 'accept' && sig && sig.startsWith('route_model')) setEvalView({ key: 'hold', mode: 'arm' })
   }, [])
   const openProof = useCallback((node) => {
     fetch(`${API}/api/proof/${node || 'requests'}`).then((r) => r.json()).then(setProof).catch(() => {})
   }, [])
 
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
+  const scene = useMemo(() => sceneFor(state, feed), [state, feed])
+  // the map dims whenever a focal card commands attention
+  const dimMap = scene && scene.kind !== 'idle'
+  const route = state?.levers?.find((l) => l.sig && l.sig.startsWith('route_model'))
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <Header state={state} latest={feed[0]} />
+      <TopBar state={state} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ZONE 1 — the agent's mind: its cognitive loop + the stream it drives */}
-        <Inbox feed={feed} q={q} setQ={setQ} state={state} act={act} />
-        {/* ZONE 2 — the governed agent: focal metrics + the live system map */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <Focal state={state} />
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            {nodes.length === 0 && (
-              <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
-            )}
-            {nodes.length > 0 && (
-              <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
-                style={{ width: '100%', height: '100%' }}
-                onNodeClick={(e, node) => openProof(node.data.proofNode || node.id)}
-                proOptions={{ hideAttribution: true }} nodesDraggable={false}
-                nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
-                zoomOnScroll={false} zoomOnDoubleClick={false}>
-                <Background color="#e7e7e0" gap={22} />
-              </ReactFlow>
-            )}
+        <MindRail feed={feed} step={state?.step} />
+        <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+          {/* the stage: the governed agent, always present, receding when a card is up */}
+          <div style={{ position: 'absolute', inset: 0, filter: dimMap ? 'saturate(.5)' : 'none',
+            opacity: dimMap ? 0.32 : 1, transition: 'opacity .5s, filter .5s', pointerEvents: dimMap ? 'none' : 'auto' }}>
+            {nodes.length === 0
+              ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
+              : <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+                  style={{ width: '100%', height: '100%' }}
+                  onNodeClick={(e, node) => openProof(node.data.proofNode || node.id)}
+                  proOptions={{ hideAttribution: true }} nodesDraggable={false}
+                  nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
+                  zoomOnScroll={false} zoomOnDoubleClick={false}>
+                  <Background color="#e7e7e0" gap={22} />
+                </ReactFlow>}
           </div>
+          {/* the focal card the agent's attention raises */}
+          <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />
+          {/* Ending B — the presenter's deliberate riskier call, once routing holds */}
+          {route?.active && !pushed && !evalView &&
+            <TripAffordance onPush={() => { setPushed(true); setEvalView({ key: 'trip', mode: 'trip' }) }} />}
         </div>
-        {/* ZONE 3 — Phoenix: the senses that feed the agent + the courtroom it proves in */}
-        <PhoenixPanel state={state} />
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
@@ -131,7 +143,156 @@ export default function App() {
   )
 }
 
-// ---- the cognitive loop, current step lit (the visible mind) ---------------
+// ---- scene derivation: what the agent is attending to right now ------------
+function sceneFor(state, feed) {
+  if (!state) return { kind: 'idle' }
+  const route = state.levers && state.levers.find((l) => l.sig && l.sig.startsWith('route_model'))
+  // the pivot: a deferred decision waits for the human — it PERSISTS until acted
+  if (route && route.escalated && !route.active && !route.vetoed) return { kind: 'defer', route }
+  const n = feed[0]
+  if (!n) return { kind: 'idle' }
+  if (n.kind === 'thinking') return { kind: 'diagnose', text: n.text }
+  if (n.kind === 'applied') return { kind: 'act', text: n.text }
+  if (n.kind === 'verified') return { kind: 'verify', text: n.text }
+  if (n.kind === 'holding') return { kind: 'hold', text: n.text }
+  return { kind: 'idle' }
+}
+
+// ---- the focal layer: one card at a time, centred, over the dimmed map -----
+function FocalLayer({ scene, state, act, openProof }) {
+  if (!scene || scene.kind === 'idle') return null
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', pointerEvents: 'none', padding: 28 }}>
+      <div key={scene.kind} style={{ pointerEvents: 'auto', width: scene.kind === 'defer' ? 560 : 600,
+        animation: 'rise .45s ease-out' }}>
+        {scene.kind === 'diagnose' && <DiagnoseCard text={scene.text} state={state} openProof={openProof} />}
+        {scene.kind === 'act' && <ActCard text={scene.text} openProof={openProof} />}
+        {scene.kind === 'verify' && <VerifyCard text={scene.text} state={state} />}
+        {scene.kind === 'defer' && <DeferCard text={null} route={scene.route} act={act} />}
+        {scene.kind === 'hold' && <HoldCard text={scene.text} />}
+      </div>
+      <style>{`@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}`}</style>
+    </div>
+  )
+}
+
+function Card({ accent, kicker, children, glow }) {
+  return (
+    <div style={{ background: '#fff', border: `1.5px solid ${accent}`, borderRadius: 16,
+      padding: '20px 22px', boxShadow: glow ? `0 12px 44px ${accent}33` : '0 8px 30px rgba(0,0,0,.14)' }}>
+      <div style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase',
+        fontWeight: 800, color: accent }}>{kicker}</div>
+      {children}
+    </div>
+  )
+}
+
+function DiagnoseCard({ text, state, openProof }) {
+  const top = state?.classes?.find((c) => !c.baseline) || state?.classes?.[0]
+  return (
+    <Card accent={AMBER} kicker="◇ Diagnose · where the money leaks">
+      <div style={{ fontSize: 22, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      {top && (
+        <div style={{ display: 'flex', gap: 22, marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6' }}>
+          <Stat label={top.label} main={`$${top.cost_per_ticket.toFixed(4)}`} sub="per message" color={AMBER} />
+          <Stat label="vs cheapest task" main={`${top.mult}×`} sub="more expensive" color={AMBER} />
+          <Stat label="share of spend" main={`${Math.round(top.share * 100)}%`} sub="of the bill" color={AMBER} />
+          <div style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
+            <Btn onClick={() => openProof(top.tc)} label="see the traces ↗" color={AMBER} />
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function ActCard({ text, openProof }) {
+  return (
+    <Card accent={GREEN} kicker="✓ Act · safe, hands-off" glow>
+      <div style={{ fontSize: 22, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14,
+        paddingTop: 12, borderTop: '1px solid #eef4f0' }}>
+        <div style={{ fontSize: 13.5, color: '#3b3b37' }}>
+          The repeated paid call never runs — served from cache, same result.
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <Btn onClick={() => openProof('tools')} label="open the cached call in Phoenix ↗" color={GREEN} primary />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function VerifyCard({ text, state }) {
+  const v = state?.verify
+  return (
+    <Card accent={GREEN} kicker="✦ Verify · re-measured from the traffic">
+      <div style={{ fontSize: 20, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      {v && (
+        <div style={{ display: 'flex', gap: 22, marginTop: 14, paddingTop: 12, borderTop: '1px solid #eef4f0' }}>
+          <Stat label="$ / message" main={`$${v.baseline_dollars_per_message.toFixed(4)} → $${v.dollars_per_message.toFixed(4)}`} sub="baseline → governed" color={GREEN} />
+          <Stat label="saved" main={`$${Number(v.monthly_saving).toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo`} sub="at current volume" color={GREEN} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function DeferCard({ route, act }) {
+  return (
+    <Card accent={AMBER} kicker="⚑ Defer · the agent stops — your call" glow>
+      <div style={{ fontSize: 22, lineHeight: 1.36, color: INK, marginTop: 8 }}>
+        I proved caching is safe and applied it myself. The next lever routes simple
+        tickets to a cheaper model — but I <b>can't prove a cheaper model won't change
+        the answers</b>. That's a call I won't make for you.
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+        <div style={{ fontSize: 13, color: DIM }}>Arming it takes it live and instruments the consequence.</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
+          <Btn onClick={() => act('reject', route.sig)} label="not now" color={AMBER} />
+          <Btn onClick={() => act('accept', route.sig)} label="arm it →" color={AMBER} primary big />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function HoldCard({ text }) {
+  return (
+    <Card accent={GREEN} kicker="● Holding · the agent is watching">
+      <div style={{ fontSize: 19, lineHeight: 1.36, color: INK, marginTop: 7 }}>{text}</div>
+    </Card>
+  )
+}
+
+function Stat({ label, main, sub, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
+      <div style={{ fontSize: 10.5, color: DIM }}>{sub}</div>
+    </div>
+  )
+}
+
+// ---- Ending B: the deliberate riskier call -------------------------------
+function TripAffordance({ onPush }) {
+  return (
+    <div style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)',
+      background: '#fff', border: `1px solid #e6e1d4`, borderRadius: 12, padding: '10px 14px',
+      display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 22px rgba(0,0,0,.12)' }}>
+      <div style={{ fontSize: 13, color: '#5a5852' }}>
+        Now push it further than the agent would: route <b>refunds</b> to the cheap model too.
+      </div>
+      <Btn onClick={onPush} label="⚡ make the riskier call" color={RED} primary />
+    </div>
+  )
+}
+
+// ===========================================================================
+//  Top bar — the slim, always-on heartbeat (metrics + the agent's loop)
+// ===========================================================================
 const _STEP_LABEL = { OBSERVE: 'observe', DIAGNOSE: 'diagnose', DECIDE: 'decide', ACT: 'act', VERIFY: 'verify' }
 function MindLoop({ step, steps }) {
   const seq = steps || ['OBSERVE', 'DIAGNOSE', 'DECIDE', 'ACT', 'VERIFY']
@@ -141,13 +302,13 @@ function MindLoop({ step, steps }) {
         const on = s === step
         return (
           <React.Fragment key={s}>
-            <div style={{ fontSize: 11, fontWeight: on ? 800 : 500, letterSpacing: '.04em',
-              padding: '3px 9px', borderRadius: 999, textTransform: 'uppercase',
+            <div style={{ fontSize: 10.5, fontWeight: on ? 800 : 500, letterSpacing: '.03em',
+              padding: '3px 8px', borderRadius: 999, textTransform: 'uppercase',
               color: on ? '#fff' : DIM, background: on ? GREEN : '#f0efe9',
               border: `1px solid ${on ? GREEN : '#e6e4da'}`, transition: 'all .25s' }}>
               {_STEP_LABEL[s] || s.toLowerCase()}
             </div>
-            {i < seq.length - 1 && <span style={{ color: '#cfcdc2', fontSize: 12 }}>→</span>}
+            {i < seq.length - 1 && <span style={{ color: '#cfcdc2', fontSize: 11 }}>→</span>}
           </React.Fragment>
         )
       })}
@@ -155,233 +316,86 @@ function MindLoop({ step, steps }) {
   )
 }
 
-function Header({ state, latest }) {
-  return (
-    <div style={{ padding: '12px 22px', borderBottom: '1px solid #eceae0', display: 'flex',
-      alignItems: 'center', gap: 24, background: '#fff' }}>
-      <div>
-        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>AI COST GOVERNANCE · CONTROL PLANE</div>
-        <div style={{ fontSize: 15.5, fontWeight: 700 }}>An agent governing another agent — live, on Phoenix</div>
-      </div>
-      <div style={{ marginLeft: 'auto' }}>
-        <div style={{ fontSize: 11, color: DIM, marginBottom: 4, textAlign: 'center' }}>the agent's loop</div>
-        <MindLoop step={state?.step} steps={state?.steps} />
-      </div>
-      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-        <div style={{ fontSize: 12, color: DIM }}>measured saved · live</div>
-        <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.05, color: GREEN }}>
-          ${state ? state.realized_savings.toFixed(4) : '—'}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ---- the focal pair: messages/sec + $/message (co-equal), burn demoted -----
-function Focal({ state }) {
+function TopBar({ state }) {
   const dpm = useTween(state?.dollars_per_message)
   const base = state?.baseline_dollars_per_message
   const down = state && state.dollars_per_message < base - 1e-9
   const pct = down ? Math.round((1 - state.dollars_per_message / base) * 100) : 0
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 40, padding: '12px 24px 10px',
-      borderBottom: '1px solid #eceae0', background: PAPER }}>
+    <div style={{ padding: '10px 22px', borderBottom: '1px solid #eceae0', display: 'flex',
+      alignItems: 'center', gap: 26, background: '#fff' }}>
       <div>
-        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>THROUGHPUT</div>
-        <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, color: INK }}>
-          {state ? state.throughput_per_sec.toFixed(2) : '—'}
-          <span style={{ fontSize: 15, fontWeight: 500, color: DIM }}> msgs/sec</span>
-        </div>
+        <div style={{ fontSize: 11, color: DIM, letterSpacing: '.04em' }}>AI COST GOVERNANCE</div>
+        <div style={{ fontSize: 14.5, fontWeight: 700 }}>An agent governing another agent</div>
       </div>
-      <div style={{ width: 1, alignSelf: 'stretch', background: '#eceae0' }} />
-      <div>
-        <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.04em' }}>$ / MESSAGE — what governance moves</div>
-        <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, color: down ? GREEN : INK }}>
-          ${dpm.toFixed(4)}
-          {down && <span style={{ fontSize: 15, fontWeight: 600, color: GREEN }}> ▼{pct}%</span>}
-        </div>
-        {down && <div style={{ fontSize: 11.5, color: DIM, marginTop: 2 }}>
-          baseline <span style={{ textDecoration: 'line-through' }}>${base.toFixed(4)}</span>
-        </div>}
+      <div style={{ borderLeft: '1px solid #eceae0', paddingLeft: 22 }}>
+        <div style={{ fontSize: 10.5, color: DIM, marginBottom: 4 }}>the agent's loop</div>
+        <MindLoop step={state?.step} steps={state?.steps} />
       </div>
-      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-        <div style={{ fontSize: 11, color: DIM }}>burn rate</div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: down ? GREEN : INK }}>
-          ${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(4) : state.burn_per_min.toFixed(2)) : '—'}/min
-        </div>
-        <div style={{ fontSize: 11, color: DIM }}>{state ? state.active_count : 0} policies live</div>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: 26, alignItems: 'flex-end' }}>
+        <Metric label="throughput" main={state ? state.throughput_per_sec.toFixed(2) : '—'} unit="msgs/sec" color={INK} />
+        <Metric label="$ / message" main={`$${dpm.toFixed(4)}`} unit={down ? `▼${pct}%` : 'baseline'}
+          color={down ? GREEN : INK} unitColor={down ? GREEN : DIM} />
+        <Metric label="burn" main={`$${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(3) : state.burn_per_min.toFixed(2)) : '—'}`} unit="/min" color={DIM} small />
+        <Metric label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`} unit="live" color={GREEN} />
+      </div>
+    </div>
+  )
+}
+function Metric({ label, main, unit, color, unitColor, small }) {
+  return (
+    <div style={{ textAlign: 'right' }}>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: small ? 16 : 24, fontWeight: 800, lineHeight: 1.05, color }}>
+        {main}<span style={{ fontSize: 12, fontWeight: 600, color: unitColor || DIM }}> {unit}</span>
       </div>
     </div>
   )
 }
 
-function entryStyle(kind) {
-  if (kind === 'user') return { accent: '#3b3b37', bg: '#efece2', icon: '' }
-  if (kind === 'applied') return { accent: GREEN, bg: '#eaf6f0', icon: '✓ ' }
-  if (kind === 'verified') return { accent: GREEN, bg: '#eef7f1', icon: '✦ ' }
-  if (kind === 'escalate') return { accent: AMBER, bg: '#fbf0db', icon: '⚑ ' }
-  if (kind === 'holding') return { accent: DIM, bg: '#f7f7f3', icon: '' }
-  return { accent: GREEN, bg: '#f3faf6', icon: '' } // thinking / reaction / reasoned
+// ===========================================================================
+//  Mind rail — the agent thinking, receded to a quiet column
+// ===========================================================================
+function railIcon(kind) {
+  if (kind === 'user') return ''
+  if (kind === 'applied') return '✓ '
+  if (kind === 'verified') return '✦ '
+  if (kind === 'escalate') return '⚑ '
+  return ''
 }
-
-// The focal "happening now" card — large, highlighted, always visible.
-function NowCard({ c }) {
-  const s = entryStyle(c.kind)
-  const isUser = c.kind === 'user'
+function MindRail({ feed, step }) {
   return (
-    <div style={{ border: `2px solid ${s.accent}`, background: s.bg, borderRadius: 14,
-      padding: '16px 18px', marginBottom: 12 }}>
-      <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase',
-        color: s.accent, fontWeight: 800 }}>{isUser ? 'your move' : 'happening now'}</div>
-      <div style={{ fontSize: 21, lineHeight: 1.32, color: INK, marginTop: 5 }}>{s.icon}{c.text}</div>
-    </div>
-  )
-}
-
-function Inbox({ feed, q, setQ, state, act }) {
-  const latest = feed[0]
-  const rest = feed.slice(1).filter((c) => !q || c.text.toLowerCase().includes(q.toLowerCase()))
-  return (
-    <div style={{ width: 440, borderRight: '1px solid #eceae0', padding: '16px 18px',
-      display: 'flex', flexDirection: 'column', background: '#fff', minHeight: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-        <div style={{ fontWeight: 800, fontSize: 18 }}>The agent's mind</div>
-        <div style={{ color: GREEN, fontSize: 13 }}>● reasoning live</div>
-      </div>
-      {state?.pushback && (
-        <div style={{ border: `1px solid ${AMBER}`, background: '#fbf0db', borderRadius: 10,
-          padding: '12px 14px', marginBottom: 12 }}>
-          <div style={{ fontSize: 15, color: '#5a4815' }}>
-            Turning off {state.pushback.title.toLowerCase()} leaves <b>~${Number(state.pushback.monthly).toLocaleString()}/mo</b> of pure waste.
-          </div>
-          <button onClick={() => act('enable', state.pushback.sig)}
-            style={{ marginTop: 8, fontSize: 14, border: `1px solid ${AMBER}`, color: '#fff',
-              background: AMBER, borderRadius: 7, padding: '5px 14px', cursor: 'pointer' }}>
-            re-enable
-          </button>
-        </div>
-      )}
-      {latest ? <NowCard c={latest} />
-        : <div style={{ color: DIM, fontSize: 17, padding: '14px 0' }}>Reading the live traffic…</div>}
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search history…"
-        style={{ padding: '8px 11px', border: '1px solid #e0ded3', borderRadius: 8, marginBottom: 8, fontSize: 14 }} />
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        {rest.map((c) => {
-          const s = entryStyle(c.kind)
-          return (
-            <div key={c.seq} style={{ borderLeft: `3px solid ${s.accent}`, background: s.bg,
-              borderRadius: 4, padding: '9px 12px', margin: '8px 0' }}>
-              <div style={{ fontSize: 15.5, color: '#23231f', lineHeight: 1.36 }}>
-                {c.kind === 'user' ? <b>You: </b> : s.icon}{c.text}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ---- ZONE 3 — Phoenix: the senses that feed the agent + the courtroom -------
-function PhoenixPanel({ state }) {
-  const v = state?.verify
-  const projUrl = 'https://app.phoenix.arize.com/s/tomas'
-  return (
-    <div style={{ width: 360, borderLeft: '1px solid #eceae0', background: '#fff',
+    <div style={{ width: 320, borderRight: '1px solid #eceae0', background: '#fff',
       display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ padding: '16px 18px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Phoenix</div>
-          <div style={{ color: '#b5791a', fontSize: 12 }}>senses &amp; courtroom</div>
-        </div>
-        {/* senses: the live traces the agent reads */}
-        <div style={{ marginTop: 10, fontSize: 13.5, color: '#3b3b37', display: 'flex',
-          alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 9, background: GREEN,
-            display: 'inline-block' }} />
-          Live OTEL traces feeding <b>&nbsp;observe</b>
-        </div>
-        <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>
-          The agent senses every governed message here — then it proves the delta here too.
-        </div>
+      <div style={{ padding: '13px 16px 8px' }}>
+        <div style={{ fontWeight: 800, fontSize: 15 }}>The agent's mind</div>
+        <div style={{ fontSize: 12, color: GREEN }}>● reasoning live · {(step || 'observe').toLowerCase()}</div>
       </div>
-
-      {/* courtroom: the VERIFY result, re-measured from the same traffic */}
-      <div style={{ padding: '6px 18px 18px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        <div style={{ fontSize: 11, letterSpacing: '.08em', color: DIM, textTransform: 'uppercase',
-          fontWeight: 800, margin: '8px 0 8px' }}>Verified in Phoenix</div>
-        {!v && (
-          <div style={{ color: DIM, fontSize: 14, padding: '8px 0' }}>
-            The agent hasn't enacted yet — the first VERIFY appears the moment it does.
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 16px 16px' }}>
+        {feed.length === 0 && <div style={{ color: DIM, fontSize: 13 }}>Reading the live traffic…</div>}
+        {feed.map((c, i) => (
+          <div key={c.seq} style={{ padding: '7px 0', borderTop: i ? '1px solid #f4f2ea' : 'none',
+            opacity: i === 0 ? 1 : Math.max(0.4, 1 - i * 0.12) }}>
+            <div style={{ fontSize: 13.5, color: '#23231f', lineHeight: 1.4 }}>
+              {c.kind === 'user' ? <b>You: </b> : railIcon(c.kind)}{c.text}
+            </div>
           </div>
-        )}
-        {v && (
-          <div style={{ border: `1.5px solid ${v.same_answer ? GREEN : '#e6e4da'}`,
-            background: v.same_answer ? '#eef7f1' : PAPER, borderRadius: 12, padding: '14px 15px' }}>
-            <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{v.title}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
-              <span style={{ fontSize: 13, color: DIM, textDecoration: 'line-through' }}>
-                ${v.baseline_dollars_per_message.toFixed(4)}
-              </span>
-              <span style={{ color: DIM }}>→</span>
-              <span style={{ fontSize: 24, fontWeight: 800, color: GREEN }}>
-                ${v.dollars_per_message.toFixed(4)}
-              </span>
-              <span style={{ fontSize: 12.5, color: DIM }}>/ message</span>
-            </div>
-            <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 6 }}>
-              ≈ <b>${Number(v.monthly_saving).toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo</b> saved at current volume.
-            </div>
-            {/* quality verdict — asserted only when the captured pair proves it */}
-            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600,
-              color: v.same_answer ? GREEN : AMBER }}>
-              {v.same_answer ? '✦ Answer identical — quality held.'
-                : '◷ Watching the next traces to confirm quality holds.'}
-            </div>
-            {v.pair && (
-              <div style={{ marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
-                <div style={{ fontSize: 12, color: DIM, marginBottom: 6 }}>
-                  Same ticket, two ways · {v.pair.skipped_calls} paid calls skipped
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <a href={v.pair.baseline.phoenix_url} target="_blank" rel="noreferrer"
-                    style={ptag(false)}>baseline ${v.pair.baseline.total_usd.toFixed(4)} ↗</a>
-                  <a href={v.pair.governed.phoenix_url} target="_blank" rel="noreferrer"
-                    style={ptag(true)}>governed ${v.pair.governed.total_usd.toFixed(4)} ↗</a>
-                </div>
-              </div>
-            )}
-            <a href={projUrl} target="_blank" rel="noreferrer"
-              style={{ display: 'inline-block', marginTop: 12, fontSize: 13, color: GREEN, fontWeight: 600 }}>
-              open in Phoenix Cloud ↗
-            </a>
-          </div>
-        )}
-        <div style={{ fontSize: 11.5, color: DIM, marginTop: 14 }}>
-          System behaviour only — span names, counts, cost. No prompt text or PII.
-        </div>
+        ))}
       </div>
     </div>
   )
 }
-function ptag(gov) {
-  return { fontSize: 12, padding: '4px 9px', borderRadius: 7, textDecoration: 'none',
-    border: `1px solid ${gov ? GREEN : '#d8d6cc'}`, color: gov ? GREEN : '#5a5852',
-    background: gov ? '#eef7f1' : '#fff' }
-}
 
-// ---- the consequence popup: the accelerated quality eval (HOLD case) -------
-// Your decision (route simple tickets to the cheaper model) goes live, and this
-// instruments it: the REAL pre-run eval is revealed row-by-row on a disclosed
-// compressed clock. The scoring is real; only the wall-clock is compressed. The
-// verdict is the agent's judgment over the signals and carries NO Phoenix link;
-// each replayed row links to its real trace (evidence).
+// ===========================================================================
+//  The model-eval consequence popup (ARM → HOLD, and the staged TRIP)
+// ===========================================================================
 function qColor(b, e) { return e >= b ? GREEN : AMBER }
 
 function EvalPopup({ view, onClose }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
   const [revealed, setRevealed] = useState(0)
+  const trip = view.mode === 'trip'
 
   useEffect(() => {
     fetch(`${API}/api/eval/${view.key}`)
@@ -393,7 +407,7 @@ function EvalPopup({ view, onClose }) {
     if (!data) return
     const n = data.rows.length
     setRevealed(0)
-    const per = Math.max(900, Math.round(10000 / n))  // ~10s total reveal
+    const per = Math.max(900, Math.round(10000 / n))
     let i = 0
     const id = setInterval(() => { i += 1; setRevealed(i); if (i >= n) clearInterval(id) }, per)
     return () => clearInterval(id)
@@ -408,16 +422,21 @@ function EvalPopup({ view, onClose }) {
   const clar = shown.filter((r) => r.clarified).length
   const refused = shown.filter((r) => r.refused_escalated).length
   const hold = data && data.verdict === 'hold'
+  const accent = hold ? GREEN : RED
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: 24,
         width: 660, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 11, letterSpacing: '.09em', color: AMBER, fontWeight: 800 }}>YOUR DECISION · ARMED &amp; LIVE</div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>Route simple tickets → economy model</div>
+            <div style={{ fontSize: 11, letterSpacing: '.09em', color: trip ? RED : AMBER, fontWeight: 800 }}>
+              {trip ? 'DELIBERATELY RISKIER CALL · the agent is checking it' : 'YOUR DECISION · ARMED & LIVE'}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
+              {trip ? 'Route refunds → economy model' : 'Route simple tickets → economy model'}
+            </div>
             <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>
               Accelerated eval · real replays through both models, scored by an LLM-judge · clock compressed to ~10s
             </div>
@@ -430,30 +449,25 @@ function EvalPopup({ view, onClose }) {
 
         {data && (
           <>
-            {/* progress on the disclosed clock */}
             <div style={{ height: 4, background: '#eee', borderRadius: 3, margin: '16px 0 14px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${(revealed / data.rows.length) * 100}%`,
-                background: hold ? GREEN : AMBER, transition: 'width .4s' }} />
+                background: accent, transition: 'width .4s' }} />
             </div>
 
-            {/* the signals, forming as rows reveal */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
               <Tile label="answer quality" main={`${mBase.toFixed(1)} → ${mEcon.toFixed(1)}`}
                 color={qColor(mBase, mEcon)} sub="baseline → economy" />
               <Tile label="same resolution" main={`${equiv}/${shown.length || 0}`}
                 color={equiv === shown.length ? GREEN : AMBER} sub="judged equivalent" />
-              <Tile label="new clarifications" main={`${clar}`}
-                color={clar ? AMBER : GREEN} sub="economy asked back" />
-              <Tile label="refused / escalated" main={`${refused}`}
-                color={refused ? AMBER : GREEN} sub="instead of resolving" />
+              <Tile label="new clarifications" main={`${clar}`} color={clar ? AMBER : GREEN} sub="economy asked back" />
+              <Tile label="refused / escalated" main={`${refused}`} color={refused ? AMBER : GREEN} sub="instead of resolving" />
             </div>
 
-            {/* the replayed rows — each links to its real Phoenix trace (evidence) */}
             <div style={{ border: '1px solid #eceae0', borderRadius: 10, overflow: 'hidden' }}>
               {shown.map((r, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
                   borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 13 }}>
-                  <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 58)}</span>
+                  <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 56)}</span>
                   <span style={{ fontWeight: 700, color: qColor(r.baseline_quality, r.economy_quality) }}>
                     {r.baseline_quality} → {r.economy_quality}
                   </span>
@@ -466,20 +480,21 @@ function EvalPopup({ view, onClose }) {
               ))}
             </div>
 
-            {/* the agent's verdict — judgment, no Phoenix link */}
             {done && (
-              <div style={{ marginTop: 16, border: `1.5px solid ${hold ? GREEN : AMBER}`,
-                background: hold ? '#eef7f1' : '#fbf0db', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800,
-                  color: hold ? GREEN : AMBER }}>THE AGENT'S VERDICT</div>
+              <div style={{ marginTop: 16, border: `1.5px solid ${accent}`,
+                background: hold ? '#eef7f1' : '#f9ede9', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800, color: accent }}>THE AGENT'S VERDICT</div>
                 <div style={{ fontSize: 16, color: INK, marginTop: 4 }}>
                   {hold
                     ? '✦ Quality held — the economy model resolves these as well as the baseline. Routing stays live, and I keep watching.'
-                    : '⚑ Quality dropped — the economy model is degrading these answers. I recommend reverting.'}
+                    : '⚑ Quality collapses — the cheaper model fumbles refunds, asking for details it should look up or escalating. I recommend against this call.'}
                 </div>
                 <div style={{ fontSize: 11.5, color: DIM, marginTop: 7 }}>
                   My judgment over the signals above — Phoenix surfaces the evidence, I render the verdict.
                 </div>
+                {!hold && <div style={{ marginTop: 12 }}>
+                  <Btn onClick={onClose} label="stand down — don't route refunds" color={RED} primary big />
+                </div>}
               </div>
             )}
           </>
@@ -498,6 +513,7 @@ function Tile({ label, main, sub, color }) {
   )
 }
 
+// ---- the trace drill-down (per node / per workload) -----------------------
 function ProofPanel({ proof, onClose }) {
   const pair = proof.pair
   return (
@@ -552,10 +568,8 @@ function ProofPanel({ proof, onClose }) {
   )
 }
 
-// ---- derive the React Flow graph: a LANE per workload (conversation type),
-//      each showing the operations it runs and the lever governing them -------
+// ---- the system map: a LANE per workload, its ops, the lever on each -------
 const leverState = (l) => l.active ? 'green' : l.escalated ? 'escalate' : l.vetoed ? 'vetoed' : 'amber'
-
 function opLabel(op) {
   if (op.kind === 'model') return 'model'
   return op.count ? `${op.op} ×${Math.round(op.count)}` : op.op
@@ -567,7 +581,6 @@ function opSub(op, lever) {
   if (op.kind === 'model') return lever ? 'premium · routable' : 'premium model'
   return lever ? 'paying — the agent will cache' : 'paying'
 }
-
 function buildGraph(state, act) {
   if (!state || !state.classes) return { nodes: [], edges: [] }
   const leverBySig = Object.fromEntries((state.levers || []).map((l) => [l.sig, l]))
