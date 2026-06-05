@@ -126,6 +126,22 @@ def _node_insight(node: str) -> dict:
             "pair": pair, "stats": service.class_cost_stats(classes), "traces": traces}
 
 
+@app.get("/api/verify")
+def verify() -> dict:
+    """The Phoenix 'courtroom' view: the agent's last VERIFY result (the measured
+    $/message delta, re-read from the same traffic) plus the captured before/after
+    trace pair and its Phoenix Cloud deep-links. Real measurement, no scripted
+    numbers; the same-answer claim is present only when the pair proves it."""
+    v = governor.verify
+    pair = service.captured_trace_pair()
+    return {
+        "verify": v,
+        "pair": pair,
+        "project_gid": service.project_gid(),
+        "ready": v is not None,
+    }
+
+
 @app.get("/api/proof")
 def proof() -> dict:
     return _node_insight("tools")

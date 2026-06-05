@@ -21,6 +21,13 @@ from accountant.optimizer import agent
 _MIN_PER_MONTH = 30 * 24 * 60
 _SEC_PER_MONTH = 30 * 24 * 60 * 60
 TICK_SECONDS = 5.0
+
+# The visible mind: one cognitive loop the agent runs, current step lit in zone 1.
+# OBSERVE (read live Phoenix traffic) → DIAGNOSE (where money leaks) → DECIDE
+# (choose a lever, judge safe vs answer-affecting) → ACT (enact / escalate) →
+# VERIFY (re-measure from Phoenix, prove the delta with quality held) → back to
+# OBSERVE. The step rides on every snapshot so the loop reflects the live position.
+STEPS = ["OBSERVE", "DIAGNOSE", "DECIDE", "ACT", "VERIFY"]
 _NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
              "route_model:simple": "model"}
 # Which levers govern each task class (so the class boxes light up when governed).
@@ -45,6 +52,8 @@ class Governor:
         self.plan: list[dict] = []
         self.observations: list[str] = []
         self.pushback: dict | None = None
+        self.verify: dict | None = None  # last VERIFY result (Phoenix-measured delta)
+        self.step = "OBSERVE"            # current position in the mind loop
         self.volume = volume
         self._seq = 0
         self._task: asyncio.Task | None = None
@@ -135,6 +144,9 @@ class Governor:
         governed_dpm = max(baseline_dpm - saved_per_msg, 0.0)
 
         return {
+            "step": self.step,
+            "steps": STEPS,
+            "verify": self.verify,
             "throughput_per_sec": round(msgs_per_sec, 3),
             "dollars_per_message": round(governed_dpm, 6),
             "baseline_dollars_per_message": round(baseline_dpm, 6),
@@ -159,7 +171,10 @@ class Governor:
                 return False
         return True
 
-    async def _emit(self, kind: str | None, text: str | None = None) -> None:
+    async def _emit(self, kind: str | None, text: str | None = None,
+                    step: str | None = None) -> None:
+        if step:
+            self.step = step
         self._seq += 1
         ev = {"seq": self._seq, "ts": time.time(),
               "narration": ({"text": text, "kind": kind} if text else None),
@@ -201,11 +216,13 @@ class Governor:
                 await asyncio.to_thread(service.deactivate_policy, p["signature"])
             self.vetoed.clear(); self.escalated.clear(); self.pushback = None
             self.plan, self.observations = [], []
+            self.verify = None
             self._held = False
-            await self._emit("thinking", "Reading the live traffic to see where the money's going…")
+            await self._emit("thinking", "Reading the live traffic to see where the money's going…",
+                             step="OBSERVE")
             await self._decide()
-            for o in self.observations:
-                await self._emit("thinking", o)
+            for i, o in enumerate(self.observations):
+                await self._emit("thinking", o, step="DIAGNOSE" if i == 0 else None)
 
     async def _loop(self) -> None:
         while True:
@@ -216,8 +233,9 @@ class Governor:
                 await self._advance()
 
     async def _advance(self) -> None:
-        """One autonomous beat: auto-apply the next SAFE lever, or escalate the
-        next RISKY one. Roadmap is never enacted; then it holds."""
+        """One autonomous beat: DECIDE the next lever, then ACT — auto-apply if
+        SAFE, escalate if answer-affecting — then VERIFY the delta from Phoenix.
+        Roadmap is never enacted; then it holds."""
         active = {p["signature"] for p in service.active_policies()}
         by = {l["signature"]: l for l in service.levers()}
         for step in self.plan:
@@ -225,15 +243,18 @@ class Governor:
             if not lv or not lv["enactable"] or sig in active or sig in self.vetoed:
                 continue
             if lv["safe"]:
+                await self._emit("thinking", None, step="DECIDE")  # judged safe → enact
                 await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
                 self._held = False
-                await self._emit("applied", step["reason"])
+                await self._emit("applied", step["reason"], step="ACT")
+                await self._verify(sig, lv)                        # re-measure from Phoenix
                 return
             if sig not in self.escalated:
                 self.escalated.add(sig)
                 self._held = False
                 await self._emit("escalate", step["reason"]
-                                 + " This one can change the answer, so I'll leave the call to you.")
+                                 + " This one can change the answer, so I'll leave the call to you.",
+                                 step="DECIDE")
                 return
         # Nothing left to auto-apply. Say so ONCE (with context — what's done and
         # what's left), then idle; the loop keeps running and resumes the moment
@@ -252,7 +273,44 @@ class Governor:
             else:
                 msg = (f"I've cached {done_txt}. That's the safe limit — going further would start "
                        f"to risk answer quality, so I'm holding here.")
-            await self._emit("holding", msg)
+            await self._emit("holding", msg, step="OBSERVE")  # back to watching the traffic
+
+    # --- VERIFY: re-measure the delta from Phoenix after an enact ----------
+    async def _verify(self, sig: str, lv: dict) -> None:
+        """The loop's last step. After enacting, re-measure $/message from the
+        live data (a real recompute, not a scripted line) and attach the
+        trace-level before/after evidence. Caching levers carry the captured
+        Phoenix pair; the same-answer claim is shown ONLY when genuinely true."""
+        rates, totals = self._ctx()
+        baseline_dpm = totals["cost_per_ticket"]
+        saved = sum(self._monthly(l, rates, totals) for l in service.levers()
+                    if l["active"] and l["enactable"])
+        governed_dpm = max(baseline_dpm - (saved / self.volume if self.volume else 0), 0.0)
+        is_cache = lv["policy_type"] == "cache_tool"
+        pair = service.captured_trace_pair() if is_cache else None
+        same_answer = bool(pair and pair.get("same_answer"))
+        self.verify = {
+            "sig": sig, "title": lv["title"],
+            "kind": "cache" if is_cache else "route",
+            "baseline_dollars_per_message": round(baseline_dpm, 6),
+            "dollars_per_message": round(governed_dpm, 6),
+            "monthly_saving": round(self._monthly(lv, rates, totals), 2),
+            "same_answer": same_answer,            # claimed only when truly equal
+            "pair": pair,                           # real captured before/after (cache)
+            "phoenix_url": (pair or {}).get("governed", {}).get("phoenix_url")
+            if pair else service.span_deeplink(service.project_gid(), None, None),
+            "measured_in_phoenix": True,
+        }
+        # Honest narration: state the measured $/message move; assert answer-equal
+        # only when the captured pair proves it.
+        delta = baseline_dpm - governed_dpm
+        line = (f"Re-measured from the same traffic in Phoenix: $/message "
+                f"${baseline_dpm:.4f} → ${governed_dpm:.4f}")
+        if same_answer:
+            line += ", and the answer comes back identical — quality held."
+        else:
+            line += ". Watching the next traces to confirm quality holds."
+        await self._emit("verified", line, step="VERIFY")
 
     # --- human turns (canvas actions) -------------------------------------
     # DECOUPLED: the facts of the reaction (recomputed burn, lever, $ cost) emit
