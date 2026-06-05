@@ -25,6 +25,7 @@ dependencies = [
     { name = "google-adk" },
     { name = "mcp" },
     { name = "openinference-instrumentation-google-adk" },
+    { name = "openinference-instrumentation-google-genai" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "python-dotenv" },
@@ -40,6 +41,7 @@ requires-dist = [
     { name = "google-adk" },
     { name = "mcp", specifier = ">=1.27.1" },
     { name = "openinference-instrumentation-google-adk" },
+    { name = "openinference-instrumentation-google-genai", specifier = ">=1.0.2" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "python-dotenv" },
     { name = "streamlit", specifier = ">=1.57.0" },
@@ -1151,6 +1153,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c3/9e/9771a2d88f1d33fec62d7a7d48f9d934a19af1f7490224287d3b7885765a/openinference_instrumentation_google_adk-0.1.14.tar.gz", hash = "sha256:07c0afdd2979209983b589f9193e280dc1f0b8a4ef4877e9c9e10cc898cd15f5", size = 14499, upload-time = "2026-05-18T18:51:35.127Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/ac/3baa4132764ad671f3a6ec6f31dfa5c946a2b83f2b062879b05f1c3bef21/openinference_instrumentation_google_adk-0.1.14-py3-none-any.whl", hash = "sha256:8f92c6fdb720e44ee9326a63566ca2c971984c8b5540c8d6d50af88cf17eace8", size = 16443, upload-time = "2026-05-18T18:51:33.562Z" },
+]
+
+[[package]]
+name = "openinference-instrumentation-google-genai"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-instrumentation" },
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/c4/52e9b262e840cac5f0e22277fc5d0528acf562778e180e13878bed8b3ce2/openinference_instrumentation_google_genai-1.0.2.tar.gz", hash = "sha256:e1667fa6b18be3b54fdb5b5885c4e21a80de5de09651f626a5e78b93ca1f8126", size = 133429, upload-time = "2026-05-18T18:51:37.149Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/b9/20a39466f66e94c05498b069b71f8b7d7bab6dc05dde532c8ef80069f203/openinference_instrumentation_google_genai-1.0.2-py3-none-any.whl", hash = "sha256:b27b0c995551e55e688663c32e67b7ab9c4b93c89b69f9d7679fc7a026ccb2ae", size = 32700, upload-time = "2026-05-18T18:51:33.04Z" },
 ]
 
 [[package]]

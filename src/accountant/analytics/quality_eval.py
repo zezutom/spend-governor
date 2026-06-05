@@ -117,9 +117,27 @@ def _judge(ticket: str, baseline: str, economy: str) -> _Verdict:
     return resp.parsed if isinstance(resp.parsed, _Verdict) else _Verdict.model_validate_json(resp.text)
 
 
-def _eval_ticket(ticket: str, baseline_model: str, economy_model: str) -> dict:
-    base = _replay(ticket, baseline_model)
-    econ = _replay(ticket, economy_model)
+def _traced_replay(ticket: str, model: str, gid: str | None):
+    """Replay inside a span so the call lands as a real, inspectable Phoenix
+    trace (the google-genai instrumentor fills in model/tokens/cost). Returns
+    the answer and a Phoenix Cloud deep-link to that trace."""
+    from opentelemetry import trace as _ot
+    from accountant.pipeline import phoenix_cost
+    tracer = _ot.get_tracer("accountant.quality_eval")
+    with tracer.start_as_current_span(f"eval.replay.{model}") as span:
+        ans = _replay(ticket, model)
+        tid = format(span.get_span_context().trace_id, "032x")
+    url = phoenix_cost.span_deeplink(gid, tid, None) if gid else None
+    return ans, url
+
+
+def _eval_ticket(ticket: str, baseline_model: str, economy_model: str,
+                 gid: str | None = None) -> dict:
+    if gid is not None:
+        base, _ = _traced_replay(ticket, baseline_model, gid)
+        econ, econ_url = _traced_replay(ticket, economy_model, gid)
+    else:
+        base, econ, econ_url = _replay(ticket, baseline_model), _replay(ticket, economy_model), None
     v = _judge(ticket, base, econ)
     return {
         "ticket": ticket,
@@ -128,19 +146,28 @@ def _eval_ticket(ticket: str, baseline_model: str, economy_model: str) -> dict:
         "economy_quality": v.economy_quality,
         "clarified": v.economy_asked_clarification,
         "refused_escalated": v.economy_refused_or_escalated,
+        "phoenix_url": econ_url,  # the economy trace, inspectable in Phoenix
     }
 
 
 # --- the eval: aggregate the signals + the agent's verdict ------------------
 def run_quality_eval(tickets: list[str], *, baseline_model: str = BASELINE_MODEL,
-                     economy_model: str = ECONOMY_MODEL, max_workers: int = 4) -> dict:
+                     economy_model: str = ECONOMY_MODEL, max_workers: int = 4,
+                     trace: bool = False) -> dict:
     """Replay every ticket through both models, judge each, aggregate the signals,
     and render the agent's verdict (hold vs revert). Returns real numbers + the
-    wall-clock so the caller can decide live-vs-prerun."""
+    wall-clock so the caller can decide live-vs-prerun. With trace=True, each
+    replay lands as a real Phoenix trace and rows carry a Phoenix deep-link."""
+    gid = None
+    if trace:
+        from observed.telemetry import init_telemetry
+        from accountant.pipeline import phoenix_cost
+        init_telemetry()
+        gid = phoenix_cost.project_gid()
     t0 = time.monotonic()
     rows: list[dict] = []
     with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = [ex.submit(_eval_ticket, t, baseline_model, economy_model) for t in tickets]
+        futs = [ex.submit(_eval_ticket, t, baseline_model, economy_model, gid) for t in tickets]
         for f in cf.as_completed(futs):
             rows.append(f.result())
     n = len(rows) or 1
@@ -170,6 +197,7 @@ def run_quality_eval(tickets: list[str], *, baseline_model: str = BASELINE_MODEL
         "refusal_escalation_rate": round(refusal_rate, 3),
         "verdict": "revert" if trip else "hold",
         "elapsed_sec": round(time.monotonic() - t0, 1),
+        "project_gid": gid,
         "rows": rows,
     }
 
