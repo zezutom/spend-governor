@@ -129,20 +129,26 @@ export default function App() {
 
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
   const scene = useMemo(() => sceneFor(state, feed), [state, feed])
-  // the map dims whenever a focal card commands attention
-  const dimMap = scene && scene.kind !== 'idle'
+  const decision = scene.kind === 'defer' ? scene : null
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
       <TopBar state={state} onLab={() => setLab({ uc: 'account_question' })} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} onOpenSession={setSessionId} />
-        <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, filter: dimMap ? 'saturate(.5)' : 'none',
-            opacity: dimMap ? 0.32 : 1, transition: 'opacity .5s, filter .5s', pointerEvents: dimMap ? 'none' : 'auto' }}>
+        {/* stage: the decision docks at the TOP (so it never covers the box it's
+            about); the canvas stays fully visible below, focus carried by the
+            spotlight + red problem node — never a whole-map dim. */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {decision && <div style={{ padding: '12px 18px 0', animation: 'rise .45s ease-out' }}>
+            <DeferCard route={decision.route} act={act} state={state} openProof={openProof}
+              onExperiment={(uc) => setLab({ uc })} />
+            <style>{`@keyframes rise{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}`}</style>
+          </div>}
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             {nodes.length === 0
               ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
-              : <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+              : <ReactFlow key={decision ? 'decide' : 'idle'} nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   style={{ width: '100%', height: '100%' }}
                   onNodeClick={(e, node) => setInspectTc(node.data.proofNode || node.id)}
                   proOptions={{ hideAttribution: true }} nodesDraggable={false}
@@ -151,9 +157,6 @@ export default function App() {
                   <Background color="#e7e7e0" gap={22} />
                 </ReactFlow>}
           </div>
-          {/* the arc's focal cards rise over the dimmed map, one at a time */}
-          <FocalLayer scene={scene} state={state} act={act} openProof={openProof}
-            onExperiment={(uc) => setLab({ uc })} />
         </div>
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
