@@ -681,11 +681,10 @@ function buildStepGraph(boxes, litIdx) {
 }
 
 function phoenixTestUrl(gid) {
+  // the project's spans table (reliable); Phoenix doesn't honor a filter via URL,
+  // so we land on the table and tell the operator the tag to filter by.
   const base = 'https://app.phoenix.arize.com/s/tomas'
-  if (!gid) return base
-  // zone into THIS run's traces: the project's spans filtered to the test tag
-  const f = encodeURIComponent("attributes['accountant.run_type'] == 'test'")
-  return `${base}/projects/${gid}/spans?filterCondition=${f}`
+  return gid ? `${base}/projects/${gid}/spans` : base
 }
 
 function ReplayLab({ onClose }) {
