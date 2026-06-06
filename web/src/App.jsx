@@ -687,62 +687,89 @@ function phoenixTestUrl(gid) {
   return gid ? `${base}/projects/${gid}/spans` : base
 }
 
+// derive any {cache, economy} config's impact from ONE run's rows — no re-run.
+// cache removes duplicate tool costs (output-preserving); economy swaps the model
+// cost and carries the judge verdict. Baseline = all levers OFF (premium, no cache).
+function deriveImpact(rows, config) {
+  let base = 0, cfg = 0, held = 0
+  const degraded = []
+  rows.forEach((r, i) => {
+    const tools = r.calls.filter((c) => c.kind === 'tool')
+    const toolAll = tools.reduce((s, c) => s + (c.cost || 0), 0)
+    const toolKept = tools.reduce((s, c) => s + ((config.cache && c.dup) ? 0 : (c.cost || 0)), 0)
+    base += (r.baseline_model_cost || 0) + toolAll
+    cfg += (config.economy ? (r.economy_model_cost || 0) : (r.baseline_model_cost || 0)) + toolKept
+    const rowHeld = config.economy ? r.held : true   // cache is output-preserving
+    if (rowHeld) held++; else degraded.push({ ...r, _i: i })
+  })
+  const n = rows.length || 1
+  return { savedPct: base ? Math.max(0, 1 - cfg / base) : 0, heldPct: held / n,
+    degradedPct: 1 - held / n, degraded, savedPerMsg: (base - cfg) / n }
+}
+
+function Toggle({ on, onClick, title, sub, risky }) {
+  const accent = risky ? AMBER : GREEN
+  return (
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px',
+      cursor: 'pointer', borderRadius: 10, marginBottom: 8,
+      border: `1px solid ${on ? accent : '#e0ded3'}`, background: on ? (risky ? '#faeeda' : '#eef7f1') : '#fff' }}>
+      <div style={{ width: 34, height: 20, borderRadius: 999, background: on ? accent : '#cfcdc2', position: 'relative', transition: 'background .2s' }}>
+        <div style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 999, background: '#fff', transition: 'left .2s' }} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: INK }}>{title}</div>
+        <div style={{ fontSize: 11.5, color: on ? (risky ? '#85540b' : '#1a4f40') : DIM }}>{sub}</div>
+      </div>
+    </div>
+  )
+}
+
 function ReplayLab({ onClose }) {
   const [uc, setUc] = useState('account_question')
   const [data, setData] = useState(null)
-  const [tab, setTab] = useState('step')          // 'step' (debug one conv) | 'load' (batch)
-  // — step mode: ONE chosen conversation, looped/stepped deterministically —
+  const [config, setConfig] = useState({ cache: true, economy: false })  // candidate; toggles instant
   const [selConv, setSelConv] = useState(0)
   const [cursorCall, setCursorCall] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [bp, setBp] = useState('none')            // breakpoint within the conversation
-  // — load test: stream the batch, aggregate only —
-  const [ltRevealed, setLtRevealed] = useState(0)
-  const [ltRunning, setLtRunning] = useState(false)
+  const [bp, setBp] = useState('none')
+  const [source, setSource] = useState('replay')   // replay | synthetic
+  const [ran, setRan] = useState(false)            // load test run → impact panel
+  const [running, setRunning] = useState(false)
   const [trickle, setTrickle] = useState(null)
+  const [confirm, setConfirm] = useState(false)    // close-to-apply
 
   useEffect(() => {
-    setData(null)
+    setData(null); setRan(false)
     fetch(`${API}/api/lab/${uc}`).then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {})
   }, [uc])
-  // pick a representative conversation by default (degraded, with a duplicate)
-  useEffect(() => {
+  useEffect(() => {   // default to a representative degraded-with-dup conversation
     if (!data) return
     let i = data.rows.findIndex((r) => !r.held && r.calls.some((c) => c.dup))
     if (i < 0) i = data.rows.findIndex((r) => !r.held)
     if (i < 0) i = 0
-    setSelConv(i); setCursorCall(0); setPlaying(false); setLtRevealed(0); setLtRunning(false)
+    setSelConv(i); setCursorCall(0); setPlaying(false)
   }, [data])
 
   const selRow = data?.rows?.[selConv]
-  // play walks the chosen conversation call-by-call; it never jumps conversations
-  useEffect(() => {
-    if (tab !== 'step' || !playing || !selRow) return
+  useEffect(() => {   // play walks the chosen conversation call-by-call
+    if (!playing || !selRow) return
     if (cursorCall >= selRow.calls.length - 1) { setPlaying(false); return }
     const t = setTimeout(() => {
-      const next = cursorCall + 1
-      const nc = selRow.calls[next]
+      const next = cursorCall + 1, nc = selRow.calls[next]
       if (bp === 'model' && nc.kind === 'model') { setCursorCall(next); setPlaying(false); return }
       if (bp === 'dup' && nc.dup) { setCursorCall(next); setPlaying(false); return }
       setCursorCall(next)
     }, 750)
     return () => clearTimeout(t)
-  }, [tab, playing, cursorCall, selRow, bp])
-
-  // load test streams the batch; only the distribution accumulates (no stepping)
-  useEffect(() => {
-    if (tab !== 'load' || !ltRunning || !data) return
-    if (ltRevealed >= data.rows.length) { setLtRunning(false); return }
-    const t = setTimeout(() => setLtRevealed((r) => r + 1), 280)
-    return () => clearTimeout(t)
-  }, [tab, ltRunning, ltRevealed, data])
+  }, [playing, cursorCall, selRow, bp])
 
   const playC = () => { if (selRow && cursorCall >= selRow.calls.length - 1) setCursorCall(0); setPlaying(true) }
   const stepC = () => { setPlaying(false); setCursorCall((c) => Math.min(c + 1, (selRow?.calls.length || 1) - 1)) }
   const restartC = () => { setPlaying(false); setCursorCall(0) }
   const pickConv = (i) => { setSelConv(i); setCursorCall(0); setPlaying(false) }
   const runLoad = () => {
-    setLtRevealed(0); setLtRunning(true); setTrickle(null)
+    setRan(true); setRunning(true); setTrickle(null)
+    setTimeout(() => setRunning(false), 1100)   // brief pacing; the N replays really ran (pre-run)
     fetch(`${API}/api/lab/${uc}/trickle?idx=${Math.floor((data?.n || 4) / 2)}`)
       .then((r) => (r.ok ? r.json() : null)).then(setTrickle).catch(() => {})
   }
@@ -751,64 +778,55 @@ function ReplayLab({ onClose }) {
   const litBox = boxes.findIndex((b) => b.calls.includes(cursorCall))
   const { nodes, edges } = useMemo(() => buildStepGraph(boxes, litBox), [boxes, litBox])
   const call = selRow?.calls?.[cursorCall]
-  const ltShown = data ? data.rows.slice(0, ltRevealed) : []
-  const ltHeldPct = ltShown.length ? Math.round((ltShown.filter((r) => r.held).length / ltShown.length) * 100) : 0
-  const ucLabel = LAB_USE_CASES.find((u) => u.key === uc)?.label
+  const imp = useMemo(() => (data ? deriveImpact(data.rows, config) : null), [data, config])
+  const proj = imp && data?.monthly_volume ? imp.savedPerMsg * data.monthly_volume : null
+  const anyOn = config.cache || config.economy
+  const tryClose = () => { if (anyOn) setConfirm(true); else onClose() }
+  const apply = () => {
+    const q = `use_case=${uc}&cache=${config.cache}&economy=${config.economy}&held_pct=${imp ? imp.heldPct : ''}&n=${data?.n || ''}`
+    fetch(`${API}/api/lab/apply?${q}`, { method: 'POST' }).catch(() => {}).finally(onClose)
+  }
+  const openDegraded = (i) => { setSelConv(i); setCursorCall(0); setPlaying(false) }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+    <div onClick={tryClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 65 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '16px 20px',
-        width: '94vw', maxWidth: 1080, height: '90vh', display: 'flex', flexDirection: 'column',
+        width: 'min(96vw, 1460px)', height: '90vh', display: 'flex', flexDirection: 'column', position: 'relative',
         boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <div><b style={{ fontSize: 16 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 13 }}>· sandbox · your lab</span></div>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+          <button onClick={tryClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
         </div>
 
-        {/* setup + the two activities as tabs */}
+        {/* setup + transport (drives left/center) */}
         <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
           <select value={uc} onChange={(e) => setUc(e.target.value)}
             style={{ fontSize: 13, padding: '5px 9px', borderRadius: 999, border: '1px solid #d8d6cc' }}>
             {LAB_USE_CASES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
           </select>
-          <span style={labChip(true)}>→ economy</span>
-          <span style={labChip(false)}>{data ? data.n : '…'} real conversations</span>
-          <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 6px' }} />
-          <button onClick={() => setTab('step')} style={tabBtn(tab === 'step')}>① Step a conversation</button>
-          <button onClick={() => setTab('load')} style={tabBtn(tab === 'load')}>② Load test</button>
+          {data && <select value={selConv} onChange={(e) => pickConv(+e.target.value)}
+            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc', maxWidth: 320 }}>
+            {data.rows.map((r, i) => <option key={i} value={i}>#{r.conv_id} · {r.ticket.slice(0, 30)} · {r.held ? 'held' : 'degraded'}</option>)}
+          </select>}
+          <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 4px' }} />
+          <button onClick={playC} style={transBtn(playing)}>▶ play</button>
+          <button onClick={() => setPlaying(false)} style={transBtn(!playing && cursorCall > 0)}>⏸ pause</button>
+          <button onClick={stepC} style={transBtn(false)}>⏭ step</button>
+          <button onClick={restartC} style={transBtn(false)}>⟲ restart</button>
+          <select value={bp} onChange={(e) => setBp(e.target.value)} title="breakpoint"
+            style={{ fontSize: 12, padding: '5px 8px', borderRadius: 999, border: '1px solid #d8d6cc', color: bp === 'none' ? DIM : AMBER }}>
+            <option value="none">● no breakpoint</option>
+            <option value="model">● break on the model call</option>
+            <option value="dup">● break on a duplicate call</option>
+          </select>
+          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: DIM }}>sandbox · live untouched · traces tagged 'test'</span>
         </div>
-        <div style={{ fontSize: 11.5, color: DIM, marginTop: 7 }}>
-          replaying real past conversations · live system untouched · traces tagged 'test'
-        </div>
 
-        {!data && <div style={{ color: DIM, padding: 24 }}>Loading the pre-run batch…</div>}
-
-        {/* ===== MODE 1 — STEP one chosen conversation ===== */}
-        {data && tab === 'step' && <>
-          <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: DIM }}>conversation</span>
-            <select value={selConv} onChange={(e) => pickConv(+e.target.value)}
-              style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc', maxWidth: 360 }}>
-              {data.rows.map((r, i) => <option key={i} value={i}>
-                #{r.conv_id} · {r.ticket.slice(0, 34)} · {r.held ? 'held' : 'degraded'}</option>)}
-            </select>
-            <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 4px' }} />
-            <button onClick={playC} style={transBtn(playing)}>▶ play</button>
-            <button onClick={() => setPlaying(false)} style={transBtn(!playing && cursorCall > 0)}>⏸ pause</button>
-            <button onClick={stepC} style={transBtn(false)}>⏭ step</button>
-            <button onClick={restartC} style={transBtn(false)}>⟲ restart</button>
-            <select value={bp} onChange={(e) => setBp(e.target.value)} title="breakpoint"
-              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 999, border: '1px solid #d8d6cc', color: bp === 'none' ? DIM : AMBER }}>
-              <option value="none">● no breakpoint</option>
-              <option value="model">● break on the model call</option>
-              <option value="dup">● break on a duplicate call</option>
-            </select>
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 12 }}>
-            {/* LEFT — call list of the chosen conversation */}
-            <div style={{ width: 320, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {!data ? <div style={{ color: DIM, padding: 24 }}>Loading the pre-run batch…</div> : (
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 12 }}>
+            {/* LEFT — call list (UNCHANGED) */}
+            <div style={{ width: 290, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em' }}>
                 conv #{selRow.conv_id} · call {cursorCall + 1} of {selRow.calls.length}
               </div>
@@ -831,10 +849,9 @@ function ReplayLab({ onClose }) {
                   )
                 })}
               </div>
-              <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>▶ play / ⏸ pause / ⏭ step this conversation · loop with ⟲</div>
             </div>
-            {/* RIGHT — path (current call's box lit) + the shared inspector */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #eceae0', paddingLeft: 16 }}>
+            {/* CENTER — path + span detail (UNCHANGED) */}
+            <div style={{ flex: 1, minWidth: 360, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #eceae0', paddingLeft: 14 }}>
               <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em' }}>conv #{selRow.conv_id} · path · current call lit</div>
               <div style={{ height: 110 }}>
                 <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
@@ -848,63 +865,123 @@ function ReplayLab({ onClose }) {
                 <CallInspector call={call} row={selRow} />
               </div>
             </div>
-          </div>
-        </>}
+            {/* RIGHT — NEW: lever rail + run + impact + degraded */}
+            <div style={{ width: 380, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: '1px solid #eceae0', paddingLeft: 14 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 4 }}>
+                <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', marginBottom: 8 }}>EXPERIMENT · levers apply instantly</div>
+                <Toggle on={config.cache} onClick={() => setConfig((c) => ({ ...c, cache: !c.cache }))}
+                  title="cache repeated calls" sub="safe · keeps answers" />
+                <Toggle on={config.economy} onClick={() => setConfig((c) => ({ ...c, economy: !c.economy }))}
+                  title="economy model" sub="affects answers" risky />
 
-        {/* ===== MODE 2 — LOAD TEST the batch (aggregate only) ===== */}
-        {data && tab === 'load' && <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 12,
-          borderTop: '1px solid #eceae0', paddingTop: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button onClick={runLoad} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff',
-              background: GREEN, border: 'none', borderRadius: 999, padding: '7px 18px' }}>▶ run load test</button>
-            <span style={{ fontSize: 12.5, color: '#3b3b37' }}>
-              {ltRevealed} / {data.n} replayed · {ltRunning ? '▶ streaming' : ltRevealed ? '✓ done' : 'ready'}
-            </span>
-          </div>
-          <div style={{ fontSize: 13, color: INK, margin: '16px 0 7px' }}>answer quality across {data.n} real replays</div>
-          <div style={{ display: 'flex', height: 16, borderRadius: 5, overflow: 'hidden', background: '#f0eee6' }}>
-            <div style={{ width: `${ltHeldPct}%`, background: GREEN, opacity: 0.6, transition: 'width .35s' }} />
-            <div style={{ width: `${100 - ltHeldPct}%`, background: AMBER, opacity: 0.55, transition: 'width .35s' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12.5 }}>
-            <span style={{ color: GREEN }}>held {ltHeldPct}%</span>
-            <span style={{ color: AMBER }}>degraded {100 - ltHeldPct}%{ltRunning ? ' (so far)' : ''}</span>
-          </div>
-          {data.cost && <div style={{ marginTop: 16, fontSize: 13 }}>
-            <b>$ / message</b> &nbsp; ${data.cost.baseline.toFixed(4)} → <span style={{ color: GREEN, fontWeight: 700 }}>${data.cost.projected.toFixed(4)}</span>
-            <span style={{ color: GREEN }}> &nbsp;−{data.cost.pct}% (if it shipped)</span>
-          </div>}
-          {!ltRunning && ltRevealed >= data.n && <div style={{ marginTop: 16, border: `1px solid ${AMBER}`,
-            background: '#faeeda', borderRadius: 10, padding: '13px 15px' }}>
-            <div style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>⚑ The agent: {data.recommendation}</div>
-            <div style={{ fontSize: 12, color: '#85540b', marginTop: 5 }}>
-              my judgment over the replayed evidence — found safely, before anything touched live traffic
+                {/* run controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                  <button onClick={runLoad} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff',
+                    background: GREEN, border: 'none', borderRadius: 8, padding: '7px 14px' }}>▶ run load test</button>
+                  <span style={{ fontSize: 12, color: DIM }}>N</span>
+                  <select disabled value={data.n} style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
+                    <option value={data.n}>{data.n} real</option>
+                  </select>
+                  <select value={source} onChange={(e) => setSource(e.target.value)}
+                    style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
+                    <option value="replay">replay real</option>
+                    <option value="synthetic" disabled>synthetic (soon)</option>
+                  </select>
+                </div>
+
+                {!ran && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to see the impact of this config across {data.n} real replays.</div>}
+
+                {ran && imp && <>
+                  {running && <div style={{ fontSize: 12, color: DIM, margin: '12px 0 4px' }}>● running {data.n} replays…</div>}
+                  {/* COST IMPACT — measured vs estimated, visually distinct */}
+                  <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1, border: `1.5px solid ${GREEN}`, background: '#eef7f1', borderRadius: 10, padding: '11px 12px' }}>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: GREEN, lineHeight: 1 }}>−{Math.round(imp.savedPct * 100)}%</div>
+                      <div style={{ fontSize: 11.5, color: '#1a4f40', marginTop: 4 }}>saved vs baseline</div>
+                      <div style={{ fontSize: 10.5, color: DIM }}>measured · Phoenix · {data.n} replays</div>
+                    </div>
+                    <div style={{ flex: 1, border: '1.5px dashed #c8b88f', background: '#fbf8f1', borderRadius: 10, padding: '11px 12px' }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#85540b', lineHeight: 1 }}>~${proj != null ? Math.round(proj).toLocaleString() : '—'}<span style={{ fontSize: 12, fontWeight: 600 }}>/mo</span></div>
+                      <div style={{ fontSize: 11.5, color: '#85540b', marginTop: 4 }}>projected in production</div>
+                      <div style={{ fontSize: 10.5, color: DIM }}>estimate, not Phoenix-backed</div>
+                    </div>
+                  </div>
+
+                  {/* QUALITY IMPACT */}
+                  <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '16px 0 7px' }}>QUALITY IMPACT</div>
+                  <div style={{ display: 'flex', height: 14, borderRadius: 5, overflow: 'hidden', background: '#f0eee6' }}>
+                    <div style={{ width: `${Math.round(imp.heldPct * 100)}%`, background: GREEN, opacity: 0.6 }} />
+                    <div style={{ width: `${Math.round(imp.degradedPct * 100)}%`, background: AMBER, opacity: 0.55 }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12.5 }}>
+                    <span style={{ color: GREEN }}>held {Math.round(imp.heldPct * 100)}%</span>
+                    <span style={{ color: AMBER }}>degraded {Math.round(imp.degradedPct * 100)}%</span>
+                  </div>
+                  {!config.economy && <div style={{ fontSize: 11.5, color: DIM, marginTop: 6 }}>cache is output-preserving — quality holds by construction.</div>}
+
+                  {/* degraded drill-down */}
+                  {imp.degraded.length > 0 && <>
+                    <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 6px' }}>DEGRADED CASES ({imp.degraded.length})</div>
+                    {imp.degraded.map((r) => (
+                      <div key={r._i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', fontSize: 12.5,
+                        borderBottom: '1px solid #f1efe8' }}>
+                        <span style={{ flex: 1, color: '#3b3b37' }}>#{r.conv_id} · {r.ticket.slice(0, 22)}</span>
+                        <span style={{ color: AMBER, fontWeight: 600 }}>q{r.economy_quality}</span>
+                        <button onClick={() => openDegraded(r._i)} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600,
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>open</button>
+                        {r.phoenix_url && <SpanLink url={redirectUrl({}, r)} label="trace ↗" />}
+                      </div>
+                    ))}
+                  </>}
+
+                  {trickle && <div style={{ marginTop: 12, fontSize: 11.5, color: DIM }}>
+                    ● live replay landed: <b style={{ color: trickle.held ? GREEN : AMBER }}>{trickle.held ? 'held' : 'degraded'}</b> (q{trickle.economy_quality}) — real, not canned
+                  </div>}
+                </>}
+              </div>
+
+              {/* source + Phoenix (facts) */}
+              <div style={{ borderTop: '1px solid #eceae0', paddingTop: 8, marginTop: 8 }}>
+                <span style={{ fontSize: 10.5, color: source === 'synthetic' ? AMBER : DIM, fontWeight: 600 }}>
+                  source: {source === 'synthetic' ? 'synthetic · exploration' : 'real replays · evidence'}
+                </span>
+                <div style={{ marginTop: 4 }}>
+                  <a href={phoenixTestUrl(data.project_gid)} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11.5, color: GREEN, fontWeight: 600 }}>this run's 'test' traces ↗</a>
+                  <span style={{ fontSize: 10.5, color: DIM, marginLeft: 8 }}>{data.test_tag || 'accountant.run_type = test'}</span>
+                </div>
+              </div>
             </div>
-          </div>}
-          {trickle && <div style={{ marginTop: 12, fontSize: 12.5, color: DIM }}>
-            ● live replay just landed: <b style={{ color: trickle.held ? GREEN : AMBER }}>{trickle.held ? 'held' : 'degraded'}</b>
-            {' '}(economy quality {trickle.economy_quality}/5) — proves the run is real, not canned
-          </div>}
-        </div>}
+          </div>
+        )}
 
-        {/* footer — the actual test traces in Phoenix (filtered), never the verdict */}
-        <div style={{ borderTop: '1px solid #eceae0', paddingTop: 9, marginTop: 8 }}>
-          <a href={phoenixTestUrl(data?.project_gid)} target="_blank" rel="noreferrer"
-            style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>open this run's 'test' traces in Phoenix ↗</a>
-          <span style={{ fontSize: 11.5, color: DIM, marginLeft: 10 }}>
-            filtered to {data?.test_tag || 'accountant.run_type = test'} · filter out of production in one click · real run, never touches live
-          </span>
-        </div>
+        {/* CLOSE-TO-APPLY confirmation */}
+        {confirm && data && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,.86)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}>
+          <div style={{ width: 460, background: '#fff', border: '1px solid #e0ded3', borderRadius: 14, padding: 22, boxShadow: '0 12px 44px rgba(0,0,0,.2)' }}>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>Apply your changes to real data?</div>
+            <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 10 }}>
+              Applying to <b>{LAB_USE_CASES.find((u) => u.key === uc)?.label}</b>:
+            </div>
+            <ul style={{ fontSize: 13.5, color: INK, margin: '6px 0 0 18px' }}>
+              {config.cache && <li>cache repeated calls <span style={{ color: GREEN }}>· safe</span></li>}
+              {config.economy && <li>economy model <span style={{ color: AMBER }}>· affects answers</span></li>}
+            </ul>
+            {config.economy && imp && <div style={{ fontSize: 12.5, color: '#85540b', background: '#faeeda',
+              border: `1px solid ${AMBER}`, borderRadius: 9, padding: '10px 12px', marginTop: 12 }}>
+              ⚑ economy held {Math.round(imp.heldPct * 100)}% / {data.n} replays — I'd keep premium. You can apply anyway; I'll watch live and flag if quality slips.
+            </div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+              <button onClick={onClose} style={{ fontSize: 13, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>close without applying</button>
+              <button onClick={apply} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: GREEN, color: '#fff', borderRadius: 8, padding: '7px 16px' }}>apply to production</button>
+            </div>
+          </div>
+        </div>}
       </div>
     </div>
   )
 }
-function tabBtn(active) {
-  return { fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 13px', borderRadius: 999,
-    border: `1px solid ${active ? GREEN : '#d8d6cc'}`, color: active ? '#fff' : '#5a5852',
-    background: active ? GREEN : '#fff' }
-}
-
 // the shared inspector — renders whatever the cursor points at; the model call
 // is the payoff (premium vs economy side by side).
 function CallInspector({ call, row }) {

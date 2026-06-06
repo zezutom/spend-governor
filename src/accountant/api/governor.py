@@ -413,5 +413,48 @@ class Governor:
             await self._emit("reaction", "Leaving that one off, then.")
         asyncio.create_task(self._reason_async())
 
+    # --- promote a debug-session config to PRODUCTION ----------------------
+    async def apply_from_debug(self, use_case: str, cache: bool, economy: bool,
+                               evidence: dict | None = None) -> dict:
+        """The debugger's one sanctioned crossing into production: activate the
+        chosen real levers for this use case (deactivate the ones turned off),
+        then write the decision to the inbox — with the agent's grounded advisory
+        if a risky (answer-affecting) lever is included. Non-blocking: applied at
+        the operator's direction; the agent then watches live (trip lifecycle)."""
+        async with self._lock:
+            applied, removed = [], []
+            for sig in _CLASS_LEVERS.get(use_case, []):
+                lv = next((l for l in service.levers() if l["signature"] == sig), None)
+                if not lv or not lv["enactable"]:
+                    continue
+                want = cache if lv["policy_type"] == "cache_tool" else economy
+                if want and not lv["active"]:
+                    await asyncio.to_thread(service.activate_policy, sig, lv["policy_type"], lv["params"])
+                    self.vetoed.discard(sig); self.escalated.discard(sig)
+                    applied.append(lv["title"])
+                elif want and lv["active"]:
+                    applied.append(lv["title"])
+                elif (not want) and lv["active"]:
+                    await asyncio.to_thread(service.deactivate_policy, sig)
+                    removed.append(lv["title"])
+            label = _CLASS_LABEL.get(use_case, use_case)
+            await self._emit("user", f"You applied a debug-session config to {label}.")
+            parts = []
+            if applied:
+                parts.append("now running " + " + ".join(t.lower() for t in applied))
+            if removed:
+                parts.append("turned off " + " + ".join(t.lower() for t in removed))
+            ack = f"Applied from your debug session on {label.lower()}: {('; '.join(parts)) or 'no change'}."
+            ev = evidence or {}
+            if economy and ev.get("held_pct") is not None:
+                ack += (f" Load test held {round(ev['held_pct'] * 100)}% on {ev.get('n', '?')} replays — "
+                        f"I'd keep premium, but it's your call. Applied; I'm watching live and I'll flag "
+                        f"the moment quality slips.")
+            elif applied:
+                ack += " Output-preserving — safe; I'll keep watching the traffic."
+            await self._emit("applied", ack)
+        asyncio.create_task(self._reason_async())
+        return {"applied": applied, "removed": removed}
+
 
 governor = Governor()

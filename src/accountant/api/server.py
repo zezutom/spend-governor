@@ -212,13 +212,21 @@ async def tool_rate(tool: str, rate: float) -> dict:
 @app.get("/api/lab/{use_case}")
 def lab_result(use_case: str) -> dict:
     """The replay-at-scale lab result, PRE-RUN and stored: N real past
-    conversations replayed through the candidate in a sandbox (spans tagged
-    'test', live untouched), returning the quality DISTRIBUTION + cost projection
-    + the agent's recommendation. Displayed N == what actually ran."""
+    conversations replayed in a sandbox (spans tagged 'test', live untouched).
+    Each row carries the premium AND economy model cost + per-tool cost/dup + both
+    judge verdicts, so the UI derives any {cache, economy} config's impact from
+    this one run. Augmented with monthly_volume for the production $ projection."""
     from accountant.analytics import quality_eval
     r = quality_eval.load_eval(f"lab_{use_case}")
     if r is None:
         raise HTTPException(404, f"lab '{use_case}' not pre-run")
+    try:  # projection input: this use case's monthly message volume (operator volume × share)
+        live = service.live_state(); recs = service.recommendations(); rates = service.default_tool_rates()
+        rows, _ = service.cost_breakdown(live, recs, rates)
+        share = next((x["share"] for x in rows if x["tc"] == use_case), 0.0)
+        r["monthly_volume"] = int(round(governor.volume * share))
+    except Exception:
+        r["monthly_volume"] = None
     return r
 
 
@@ -228,6 +236,17 @@ async def lab_trickle(use_case: str, idx: int = 0) -> dict:
     doesn't feel canned. Sandbox + tagged 'test'; never touches live policies."""
     from accountant.analytics import quality_eval
     return await asyncio.to_thread(quality_eval.replay_one_live, use_case, idx=idx)
+
+
+@app.post("/api/lab/apply")
+async def lab_apply(use_case: str, cache: bool = False, economy: bool = False,
+                    held_pct: float | None = None, n: int | None = None) -> dict:
+    """Promote a debug-session config to production: the agent activates the chosen
+    real levers, deactivates the rest, and writes the decision (+ advisory) to the
+    inbox. The debugger's one sanctioned sandbox→production crossing."""
+    res = await governor.apply_from_debug(use_case, cache, economy,
+                                          evidence={"held_pct": held_pct, "n": n})
+    return {"ok": True, "applied": res, "state": governor.snapshot()}
 
 
 @app.get("/api/proof")
