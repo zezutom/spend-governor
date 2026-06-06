@@ -733,15 +733,20 @@ function ReplayLab({ onClose }) {
   const [playing, setPlaying] = useState(false)
   const [bp, setBp] = useState('none')
   const [source, setSource] = useState('replay')   // replay | synthetic
-  const [ran, setRan] = useState(false)            // load test run → impact panel
+  const [N, setN] = useState(12)                    // adjustable run size
+  const [ran, setRan] = useState(false)            // a load test has been run
   const [running, setRunning] = useState(false)
+  const [runRows, setRunRows] = useState([])        // rows from the live run
+  const [runSource, setRunSource] = useState('replay')
   const [trickle, setTrickle] = useState(null)
   const [confirm, setConfirm] = useState(false)    // close-to-apply
+  const esRef = useRef(null)
 
   useEffect(() => {
-    setData(null); setRan(false)
+    setData(null); setRan(false); setRunRows([]); esRef.current?.close()
     fetch(`${API}/api/lab/${uc}`).then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {})
   }, [uc])
+  useEffect(() => () => esRef.current?.close(), [])
   useEffect(() => {   // default to a representative degraded-with-dup conversation
     if (!data) return
     let i = data.rows.findIndex((r) => !r.held && r.calls.some((c) => c.dup))
@@ -750,7 +755,10 @@ function ReplayLab({ onClose }) {
     setSelConv(i); setCursorCall(0); setPlaying(false)
   }, [data])
 
-  const selRow = data?.rows?.[selConv]
+  // active dataset: the live run's rows once a run has produced any, else the
+  // pre-run (so the stepper works before the first run).
+  const rows = runRows.length ? runRows : (data?.rows || [])
+  const selRow = rows[Math.min(selConv, Math.max(0, rows.length - 1))]
   useEffect(() => {   // play walks the chosen conversation call-by-call
     if (!playing || !selRow) return
     if (cursorCall >= selRow.calls.length - 1) { setPlaying(false); return }
@@ -767,23 +775,30 @@ function ReplayLab({ onClose }) {
   const stepC = () => { setPlaying(false); setCursorCall((c) => Math.min(c + 1, (selRow?.calls.length || 1) - 1)) }
   const restartC = () => { setPlaying(false); setCursorCall(0) }
   const pickConv = (i) => { setSelConv(i); setCursorCall(0); setPlaying(false) }
-  const runLoad = () => {
-    setRan(true); setRunning(true); setTrickle(null)
-    setTimeout(() => setRunning(false), 1100)   // brief pacing; the N replays really ran (pre-run)
-    fetch(`${API}/api/lab/${uc}/trickle?idx=${Math.floor((data?.n || 4) / 2)}`)
-      .then((r) => (r.ok ? r.json() : null)).then(setTrickle).catch(() => {})
+  const run = () => {   // EXECUTE a fresh load test live; rows stream in as they land
+    setRan(true); setRunning(true); setRunRows([]); setRunSource(source)
+    setSelConv(0); setCursorCall(0); setPlaying(false)
+    esRef.current?.close()
+    const es = new EventSource(`${API}/api/lab/${uc}/run?n=${N}&source=${source}`)
+    esRef.current = es
+    es.onmessage = (e) => {
+      const ev = JSON.parse(e.data)
+      if (ev.row) setRunRows((rs) => [...rs, ev.row])
+      if (ev.done) { es.close(); setRunning(false) }
+    }
+    es.onerror = () => { es.close(); setRunning(false) }
   }
 
   const boxes = useMemo(() => convBoxes(selRow?.calls), [selRow])
   const litBox = boxes.findIndex((b) => b.calls.includes(cursorCall))
   const { nodes, edges } = useMemo(() => buildStepGraph(boxes, litBox), [boxes, litBox])
   const call = selRow?.calls?.[cursorCall]
-  const imp = useMemo(() => (data ? deriveImpact(data.rows, config) : null), [data, config])
+  const imp = useMemo(() => (rows.length ? deriveImpact(rows, config) : null), [rows, config])
   const proj = imp && data?.monthly_volume ? imp.savedPerMsg * data.monthly_volume : null
   const anyOn = config.cache || config.economy
   const tryClose = () => { if (anyOn) setConfirm(true); else onClose() }
   const apply = () => {
-    const q = `use_case=${uc}&cache=${config.cache}&economy=${config.economy}&held_pct=${imp ? imp.heldPct : ''}&n=${data?.n || ''}`
+    const q = `use_case=${uc}&cache=${config.cache}&economy=${config.economy}&held_pct=${imp ? imp.heldPct : ''}&n=${rows.length || data?.n || ''}`
     fetch(`${API}/api/lab/apply?${q}`, { method: 'POST' }).catch(() => {}).finally(onClose)
   }
   const openDegraded = (i) => { setSelConv(i); setCursorCall(0); setPlaying(false) }
@@ -805,9 +820,9 @@ function ReplayLab({ onClose }) {
             style={{ fontSize: 13, padding: '5px 9px', borderRadius: 999, border: '1px solid #d8d6cc' }}>
             {LAB_USE_CASES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
           </select>
-          {data && <select value={selConv} onChange={(e) => pickConv(+e.target.value)}
+          {rows.length > 0 && <select value={Math.min(selConv, rows.length - 1)} onChange={(e) => pickConv(+e.target.value)}
             style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc', maxWidth: 320 }}>
-            {data.rows.map((r, i) => <option key={i} value={i}>#{r.conv_id} · {r.ticket.slice(0, 30)} · {r.held ? 'held' : 'degraded'}</option>)}
+            {rows.map((r, i) => <option key={i} value={i}>#{r.conv_id} · {r.ticket.slice(0, 30)} · {r.held ? 'held' : 'degraded'}</option>)}
           </select>}
           <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 4px' }} />
           <button onClick={playC} style={transBtn(playing)}>▶ play</button>
@@ -874,32 +889,35 @@ function ReplayLab({ onClose }) {
                 <Toggle on={config.economy} onClick={() => setConfig((c) => ({ ...c, economy: !c.economy }))}
                   title="economy model" sub="affects answers" risky />
 
-                {/* run controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                  <button onClick={runLoad} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#fff',
-                    background: GREEN, border: 'none', borderRadius: 8, padding: '7px 14px' }}>▶ run load test</button>
+                {/* run controls — a real, live re-measure */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <button onClick={run} disabled={running} style={{ fontSize: 13, fontWeight: 700,
+                    cursor: running ? 'default' : 'pointer', color: '#fff', background: running ? '#9bbcae' : GREEN,
+                    border: 'none', borderRadius: 8, padding: '7px 14px' }}>
+                    {running ? `running ${runRows.length}/${N}…` : '▶ run load test'}</button>
                   <span style={{ fontSize: 12, color: DIM }}>N</span>
-                  <select disabled value={data.n} style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
-                    <option value={data.n}>{data.n} real</option>
-                  </select>
-                  <select value={source} onChange={(e) => setSource(e.target.value)}
+                  <select value={N} onChange={(e) => setN(+e.target.value)} disabled={running}
                     style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
+                    {[6, 12, 18, 24].map((v) => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={source} onChange={(e) => setSource(e.target.value)} disabled={running}
+                    style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: `1px solid ${source === 'synthetic' ? AMBER : '#d8d6cc'}`, color: source === 'synthetic' ? AMBER : INK }}>
                     <option value="replay">replay real</option>
-                    <option value="synthetic" disabled>synthetic (soon)</option>
+                    <option value="synthetic">synthetic</option>
                   </select>
                 </div>
 
-                {!ran && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to see the impact of this config across {data.n} real replays.</div>}
+                {!ran && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
 
                 {ran && imp && <>
-                  {running && <div style={{ fontSize: 12, color: DIM, margin: '12px 0 4px' }}>● running {data.n} replays…</div>}
+                  {running && <div style={{ fontSize: 12, color: GREEN, margin: '12px 0 4px' }}>● running live — {runRows.length}/{N} replayed…</div>}
                   {/* COST IMPACT — measured vs estimated, visually distinct */}
                   <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: 1, border: `1.5px solid ${GREEN}`, background: '#eef7f1', borderRadius: 10, padding: '11px 12px' }}>
                       <div style={{ fontSize: 26, fontWeight: 800, color: GREEN, lineHeight: 1 }}>−{Math.round(imp.savedPct * 100)}%</div>
                       <div style={{ fontSize: 11.5, color: '#1a4f40', marginTop: 4 }}>saved vs baseline</div>
-                      <div style={{ fontSize: 10.5, color: DIM }}>measured · Phoenix · {data.n} replays</div>
+                      <div style={{ fontSize: 10.5, color: DIM }}>measured · {rows.length} {(ran ? runSource : source) === 'synthetic' ? 'synthetic' : 'real'} replays</div>
                     </div>
                     <div style={{ flex: 1, border: '1.5px dashed #c8b88f', background: '#fbf8f1', borderRadius: 10, padding: '11px 12px' }}>
                       <div style={{ fontSize: 22, fontWeight: 800, color: '#85540b', lineHeight: 1 }}>~${proj != null ? Math.round(proj).toLocaleString() : '—'}<span style={{ fontSize: 12, fontWeight: 600 }}>/mo</span></div>
@@ -943,8 +961,8 @@ function ReplayLab({ onClose }) {
 
               {/* source + Phoenix (facts) */}
               <div style={{ borderTop: '1px solid #eceae0', paddingTop: 8, marginTop: 8 }}>
-                <span style={{ fontSize: 10.5, color: source === 'synthetic' ? AMBER : DIM, fontWeight: 600 }}>
-                  source: {source === 'synthetic' ? 'synthetic · exploration' : 'real replays · evidence'}
+                <span style={{ fontSize: 10.5, color: (ran ? runSource : source) === 'synthetic' ? AMBER : DIM, fontWeight: 600 }}>
+                  source: {(ran ? runSource : source) === 'synthetic' ? 'synthetic · exploration (not real-traffic proof)' : 'real replays · evidence'}
                 </span>
                 <div style={{ marginTop: 4 }}>
                   <a href={phoenixTestUrl(data.project_gid)} target="_blank" rel="noreferrer"
@@ -970,7 +988,7 @@ function ReplayLab({ onClose }) {
             </ul>
             {config.economy && imp && <div style={{ fontSize: 12.5, color: '#85540b', background: '#faeeda',
               border: `1px solid ${AMBER}`, borderRadius: 9, padding: '10px 12px', marginTop: 12 }}>
-              ⚑ economy held {Math.round(imp.heldPct * 100)}% / {data.n} replays — I'd keep premium. You can apply anyway; I'll watch live and flag if quality slips.
+              ⚑ economy held {Math.round(imp.heldPct * 100)}% / {rows.length || data.n} replays — I'd keep premium. You can apply anyway; I'll watch live and flag if quality slips.
             </div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
               <button onClick={onClose} style={{ fontSize: 13, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>close without applying</button>

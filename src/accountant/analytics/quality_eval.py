@@ -543,6 +543,63 @@ def _resolve_span_urls(rows: list[dict], gid: str | None) -> None:
                     c["span_url"] = span_deeplink(gid, tid, node)
 
 
+def generate_synthetic_tickets(use_case: str, n: int) -> list[dict]:
+    """Simple synthetic stress-test inputs: plausible requests for the use case,
+    to probe variety/edge cases beyond history. NOT a conversation simulator —
+    one LLM call yields short messages; they run through the real eval like any
+    replay (real tools, real cost, real spans tagged 'test'). Source is marked
+    synthetic so the UI never presents these as real-traffic proof."""
+    import itertools
+    from observed.generate_dataset import CUSTOMER_POOL
+    label = {"account_question": "account questions", "refund_handling": "refund requests",
+             "password_reset": "password resets", "plan_change": "plan-change requests"}.get(
+        use_case, use_case.replace("_", " "))
+    prompt = (f"Generate {n} short, varied, realistic customer-support messages — {label} — for a SaaS "
+              f"online-forms product called Stratus Forms. Mix straightforward and tricky/edge cases. "
+              f"One message per line, no numbering, no quotes.")
+    try:
+        resp = _genai().models.generate_content(
+            model=JUDGE_MODEL, contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.9, max_output_tokens=1000,
+                                               thinking_config=types.ThinkingConfig(thinking_budget=0)))
+        lines = [l.strip(" -•\t0123456789.") for l in (resp.text or "").splitlines() if l.strip()]
+    except Exception:
+        lines = []
+    lines = [l for l in lines if len(l) > 8][:n]
+    cust = itertools.cycle(CUSTOMER_POOL)
+    return [{"ticket": (l if "-001" in l else f"{l} (account {next(cust)})"),
+             "sub_type": _subtype(use_case, l)} for l in lines]
+
+
+def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
+                  baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
+                  max_workers: int = 3):
+    """Execute N replays LIVE and yield each captured row as it completes — for a
+    real, visible re-measure. REPLAY samples real past tickets; SYNTHETIC generates
+    plausible ones. Every span tagged 'test' (+ the source); sandbox, never touches
+    live policies. Rows carry the call sequence + both model costs + judge verdict,
+    so the UI derives any {cache, economy} config's impact from the run."""
+    from observed.telemetry import init_telemetry
+    from accountant.pipeline import phoenix_cost
+    from accountant import service
+    init_telemetry()
+    gid = phoenix_cost.project_gid()
+    rates = service.default_tool_rates()
+    tickets = (generate_synthetic_tickets(use_case, n) if source == "synthetic"
+               else _sample_with_subtype(use_case, n))
+    tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
+           "accountant.lab.candidate": "route_economy", "accountant.lab.source": source}
+    with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = [ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
+                          gid, tag, rates, baseline_model, economy_model)
+                for i, t in enumerate(tickets)]
+        for f in cf.as_completed(futs):
+            try:
+                yield f.result()
+            except Exception:
+                continue
+
+
 def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
                    baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
                    max_workers: int = 3) -> dict:

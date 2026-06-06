@@ -238,6 +238,38 @@ async def lab_trickle(use_case: str, idx: int = 0) -> dict:
     return await asyncio.to_thread(quality_eval.replay_one_live, use_case, idx=idx)
 
 
+@app.get("/api/lab/{use_case}/run")
+async def lab_run(use_case: str, n: int = 12, source: str = "replay"):
+    """Execute a load test LIVE and stream each real replay as it lands (SSE), so
+    the impact genuinely re-measures. n is clamped to a feasible live range; the
+    displayed count = what actually ran. Sandbox, spans tagged 'test'."""
+    import threading
+    from accountant.analytics import quality_eval
+    n = max(1, min(int(n), 30))
+    loop = asyncio.get_event_loop()
+    q: asyncio.Queue = asyncio.Queue()
+
+    def worker():
+        try:
+            for row in quality_eval.iter_lab_rows(use_case, n, source):
+                loop.call_soon_threadsafe(q.put_nowait, {"row": row})
+        except Exception as e:  # noqa: BLE001
+            loop.call_soon_threadsafe(q.put_nowait, {"error": str(e)[:200]})
+        finally:
+            loop.call_soon_threadsafe(q.put_nowait, {"done": True})
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    async def gen():
+        while True:
+            ev = await q.get()
+            yield {"event": "message", "data": json.dumps(ev)}
+            if ev.get("done"):
+                break
+
+    return EventSourceResponse(gen())
+
+
 @app.post("/api/lab/apply")
 async def lab_apply(use_case: str, cache: bool = False, economy: bool = False,
                     held_pct: float | None = None, n: int | None = None) -> dict:
