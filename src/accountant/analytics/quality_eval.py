@@ -460,13 +460,18 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     calls = _calls_from_resp(er, rates, tool_span_ids)
     econ_cost = _model_cost_of(er, economy_model)
     econ_in, econ_out = _tokens(er)
-    # baseline (premium) — answer only, for the judge + the diff
-    with tracer.start_as_current_span(f"eval.replay.{baseline_model}") as span:
-        for k, v in attrs.items():
-            span.set_attribute(k, v)
-        br = _replay_full(ticket, baseline_model)
-    base = _final_answer(br)
-    base_cost = _model_cost_of(br, baseline_model)
+    # baseline (premium) — deterministic; reuse the memoized result if we have it,
+    # else run it once and cache (answer + cost are all we need for the judge + diff)
+    cached = _baseline_cache.get((ticket, baseline_model))
+    if cached:
+        base, base_cost = cached
+    else:
+        with tracer.start_as_current_span(f"eval.replay.{baseline_model}") as span:
+            for k, v in attrs.items():
+                span.set_attribute(k, v)
+            br = _replay_full(ticket, baseline_model)
+        base, base_cost = _final_answer(br), _model_cost_of(br, baseline_model)
+        _baseline_cache[(ticket, baseline_model)] = (base, base_cost)
     v = _judge(ticket, base, econ)
     seq = ([{"kind": "user", "label": f'user: "{ticket[:90]}"'}]
            + calls
@@ -573,6 +578,10 @@ def generate_synthetic_tickets(use_case: str, n: int) -> list[dict]:
 
 _lab_inited = False
 _lab_gid = None
+# The premium baseline is deterministic (temp 0) and never changes between runs —
+# memoize it so a re-measure only executes the economy candidate + judge (~half the
+# model work). Keyed by (ticket, model); a real measurement, just not re-run.
+_baseline_cache: dict = {}
 
 
 def _lab_setup():
@@ -591,7 +600,7 @@ def _lab_setup():
 
 def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
                   baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
-                  max_workers: int = 3):
+                  max_workers: int = 6):
     """Execute N replays LIVE and yield each captured row as it completes — for a
     real, visible re-measure. REPLAY samples real past tickets; SYNTHETIC generates
     plausible ones. Every span tagged 'test' (+ the source); sandbox, never touches
@@ -600,6 +609,12 @@ def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
     from accountant import service
     gid = _lab_setup()
     rates = service.default_tool_rates()
+    if source != "synthetic":   # replay tickets match the pre-run — warm the baseline cache from it
+        stored = load_eval(f"lab_{use_case}")
+        for row in (stored or {}).get("rows", []):
+            key = (row.get("ticket"), baseline_model)
+            if key[0] and key not in _baseline_cache and row.get("baseline_answer"):
+                _baseline_cache[key] = (row["baseline_answer"], row.get("baseline_model_cost", 0.0))
     tickets = (generate_synthetic_tickets(use_case, n) if source == "synthetic"
                else _sample_with_subtype(use_case, n))
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,

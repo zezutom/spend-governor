@@ -733,7 +733,7 @@ function ReplayLab({ onClose }) {
   const [playing, setPlaying] = useState(false)
   const [bp, setBp] = useState('none')
   const [source, setSource] = useState('replay')   // replay | synthetic
-  const [N, setN] = useState(12)                    // adjustable run size
+  const [N, setN] = useState(6)                     // adjustable run size
   const [ran, setRan] = useState(false)            // a load test has been run
   const [running, setRunning] = useState(false)
   const [runRows, setRunRows] = useState([])        // rows from the live run
