@@ -22,20 +22,33 @@ function Btn({ onClick, label, color, primary, big }) {
 }
 
 // ---- system-map control node ----------------------------------------------
-const _STC = { green: GREEN, amber: AMBER, escalate: AMBER, vetoed: '#8f8f86', struct: '#b7b6ae' }
-const _STF = { green: '#e6f5ef', amber: '#fbf0db', escalate: '#fbf0db', vetoed: '#efeee8', struct: '#fff' }
+// Color grammar (no legend): GREEN = resolved/safe (cached), AMBER = costly-but-fine
+// (cost-heat), LIGHT RED = the specific node a decision is about. Plus a cost-heat
+// ramp on lanes (warm = more spend) and an "agent here" spotlight.
+const _STC = { green: GREEN, amber: AMBER, escalate: AMBER, vetoed: '#8f8f86', struct: '#b7b6ae', problem: '#dc2626' }
+const _STF = { green: '#e6f5ef', amber: '#fbf0db', escalate: '#fbf0db', vetoed: '#efeee8', struct: '#fff', problem: '#fef2f2' }
 
 function CtrlNode({ data }) {
-  const c = _STC[data.state] || '#b7b6ae', fill = _STF[data.state] || '#fff'
+  let c = _STC[data.state] || '#b7b6ae'
+  let fill = _STF[data.state] || '#fff'
   const isClass = data.kind === 'class', isOp = data.kind === 'op'
+  // cost-heat fill for lanes: cool → amber by spend intensity (always on)
+  if (isClass && data.heat != null && data.state !== 'green') {
+    fill = `rgba(181,121,26,${(0.05 + data.heat * 0.32).toFixed(3)})`
+    c = data.heat > 0.45 ? AMBER : '#cbb78a'
+  }
+  const lit = data.spotlight
   return (
-    <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: isOp ? 9 : 12,
+    <div style={{ position: 'relative', border: `1.5px solid ${lit ? '#5a4815' : c}`, background: fill, borderRadius: isOp ? 9 : 12,
       padding: isOp ? '7px 10px' : '10px 13px', minWidth: isClass ? 188 : isOp ? 124 : 150,
-      cursor: 'pointer', boxShadow: isClass ? '0 1px 6px rgba(0,0,0,.08)' : '0 1px 3px rgba(0,0,0,.05)' }}>
+      opacity: data.dimmed ? 0.5 : 1, transition: 'opacity .4s',
+      boxShadow: lit ? '0 0 0 3px rgba(90,72,21,.25)' : (isClass ? '0 1px 6px rgba(0,0,0,.08)' : '0 1px 3px rgba(0,0,0,.05)') }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      {lit && <div style={{ position: 'absolute', top: -9, left: 10, fontSize: 9.5, fontWeight: 800,
+        color: '#fff', background: '#5a4815', borderRadius: 999, padding: '1px 7px', letterSpacing: '.04em' }}>● AGENT HERE</div>}
       <div style={{ fontWeight: isClass ? 800 : 600, fontSize: isClass ? 14.5 : 12.5,
         color: INK, fontFamily: isOp ? 'monospace' : 'inherit' }}>{data.label}</div>
-      <div style={{ fontSize: isClass ? 12 : 10.5, color: c, marginTop: 1 }}>{data.sub}</div>
+      <div style={{ fontSize: isClass ? 12 : 10.5, color: data.state === 'problem' ? '#dc2626' : c, marginTop: 1 }}>{data.sub}</div>
       {data.kind === 'lever' && (
         <div style={{ marginTop: 6, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {data.escalated && <>
@@ -81,7 +94,7 @@ export default function App() {
   const [proof, setProof] = useState(null)
   const [evalView, setEvalView] = useState(null)   // consequence popup (arm / trip)
   const [inspectTc, setInspectTc] = useState(null) // per-box inspector — DEFAULT click
-  const [lab, setLab] = useState(false)            // the replay-at-scale debugger (sandbox)
+  const [lab, setLab] = useState(null)             // {uc} when the debugger is open (sandbox)
   const [sessionId, setSessionId] = useState(null) // debug-session metadata popup (#DS-…)
   // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
@@ -121,7 +134,7 @@ export default function App() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <TopBar state={state} onLab={() => setLab(true)} />
+      <TopBar state={state} onLab={() => setLab({ uc: 'account_question' })} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} onOpenSession={setSessionId} />
         <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
@@ -139,14 +152,15 @@ export default function App() {
                 </ReactFlow>}
           </div>
           {/* the arc's focal cards rise over the dimmed map, one at a time */}
-          <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />
+          <FocalLayer scene={scene} state={state} act={act} openProof={openProof}
+            onExperiment={(uc) => setLab({ uc })} />
         </div>
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
       {inspectTc && <DebuggerPanel tc={inspectTc} onClose={() => setInspectTc(null)}
         onForceCache={onForceCache} onForceRoute={onForceRoute} />}
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
-      {lab && <ReplayLab onClose={() => setLab(false)} />}
+      {lab && <ReplayLab initialUc={lab.uc} onClose={() => setLab(null)} />}
       {sessionId && <SessionPopup id={sessionId} onClose={() => setSessionId(null)} />}
     </div>
   )
@@ -214,17 +228,18 @@ function sceneFor(state, feed) {
 }
 
 // ---- the focal layer: one card at a time, centred, over the dimmed map -----
-function FocalLayer({ scene, state, act, openProof }) {
+function FocalLayer({ scene, state, act, openProof, onExperiment }) {
   if (!scene || scene.kind === 'idle') return null
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
       justifyContent: 'center', pointerEvents: 'none', padding: 28 }}>
-      <div key={scene.kind} style={{ pointerEvents: 'auto', width: scene.kind === 'defer' ? 560 : 600,
+      <div key={scene.kind} style={{ pointerEvents: 'auto', width: scene.kind === 'defer' ? 600 : 600,
         animation: 'rise .45s ease-out' }}>
         {scene.kind === 'diagnose' && <DiagnoseCard text={scene.text} state={state} openProof={openProof} />}
         {scene.kind === 'act' && <ActCard text={scene.text} openProof={openProof} />}
         {scene.kind === 'verify' && <VerifyCard text={scene.text} state={state} />}
-        {scene.kind === 'defer' && <DeferCard text={null} route={scene.route} act={act} />}
+        {scene.kind === 'defer' && <DeferCard route={scene.route} act={act} state={state}
+          onExperiment={onExperiment} openProof={openProof} />}
       </div>
       <style>{`@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}`}</style>
     </div>
@@ -293,19 +308,38 @@ function VerifyCard({ text, state }) {
   )
 }
 
-function DeferCard({ route, act }) {
+const _SIMPLE_CLASSES = ['account_question', 'password_reset']
+function DeferCard({ route, act, state, onExperiment, openProof }) {
+  const classes = state?.classes || []
+  const simpleShare = classes.filter((c) => _SIMPLE_CLASSES.includes(c.tc)).reduce((s, c) => s + (c.share || 0), 0)
+  const vol = state ? Math.round(state.volume * simpleShare) : null
+  const lever = (state?.levers || []).find((l) => l.sig === route.sig)
+  const saving = lever ? lever.monthly : null
+  const expUc = classes.find((c) => c.tc === 'account_question') ? 'account_question' : _SIMPLE_CLASSES[0]
   return (
-    <Card accent={AMBER} kicker="⚑ Defer · the agent stops — your call" glow>
-      <div style={{ fontSize: 23, lineHeight: 1.38, color: INK, marginTop: 8 }}>
-        Caching was safe — done. Routing to a cheaper model could <b>change the
-        answers</b>, and I can't prove it won't. That call is yours.
+    <Card accent={RED} kicker="⚑ Decide · the agent stops — your call" glow>
+      <div style={{ fontSize: 22, lineHeight: 1.38, color: INK, marginTop: 8 }}>
+        Caching was safe — applied. The <b>model</b> is the cost now on simple tickets,
+        and routing it to economy could <b style={{ color: RED }}>change the answers</b> —
+        I can't prove it won't. So I've stopped here.
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-        <div style={{ fontSize: 13.5, color: DIM }}>Arming it takes it live and instruments the consequence.</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
-          <Btn onClick={() => act('reject', route.sig)} label="not now" color={AMBER} />
-          <Btn onClick={() => act('accept', route.sig)} label="arm it →" color={AMBER} primary big />
+      {/* evidence line — grounds the ask */}
+      <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
+        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <span><b>simple tickets</b></span>
+        <span style={{ color: DIM }}>~{vol != null ? vol.toLocaleString() : '—'} msgs/mo on this path</span>
+        <span style={{ color: GREEN }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 11 }}>(est.)</span></span>
+        <Btn onClick={() => openProof(expUc)} label="sample traces ↗" color={DIM} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
+        <Btn onClick={() => act('reject', route.sig)} label="not now" color={DIM} />
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 9, alignItems: 'center' }}>
+          <Btn onClick={() => act('accept', route.sig)} label="arm it" color={AMBER} />
+          <Btn onClick={() => onExperiment(expUc)} label="experiment →" color={GREEN} primary big />
         </div>
+      </div>
+      <div style={{ fontSize: 11.5, color: DIM, marginTop: 8, textAlign: 'right' }}>
+        can't prove it yet? test it first — that's the honest move.
       </div>
     </Card>
   )
@@ -778,8 +812,8 @@ function Toggle({ on, onClick, title, sub, risky }) {
   )
 }
 
-function ReplayLab({ onClose }) {
-  const [uc, setUc] = useState('account_question')
+function ReplayLab({ onClose, initialUc }) {
+  const [uc, setUc] = useState(initialUc || 'account_question')
   const [data, setData] = useState(null)
   const [config, setConfig] = useState({ cache: true, economy: false })  // candidate; toggles instant
   const [selConv, setSelConv] = useState(0)
@@ -1265,25 +1299,35 @@ function buildGraph(state, act) {
   const leverBySig = Object.fromEntries((state.levers || []).map((l) => [l.sig, l]))
   const nodes = [], edges = []
   const laneH = 92
+  const maxShare = Math.max(0.0001, ...state.classes.map((c) => c.share || 0))
+  // the agent's attention: the lane with a pending decision, else the hottest lane
+  const decisionTc = state.classes.find((c) => (c.ops || []).some((o) => leverBySig[o.lever]?.escalated))?.tc
+  const focusTc = decisionTc || state.classes.slice().sort((a, b) => b.share - a.share)[0]?.tc
+  const anyDecision = !!decisionTc
   state.classes.forEach((cls, i) => {
     const y = 22 + i * laneH
     const cid = 'cls_' + cls.tc
+    const isFocus = cls.tc === focusTc
     nodes.push(nd(cid, 12, y, {
       kind: 'class', label: cls.label, proofNode: cls.tc,
       sub: `$${cls.cost_per_ticket.toFixed(4)}/ticket · ${Math.round(cls.share * 100)}% of spend`,
-      state: cls.governed === true ? 'green' : cls.governed === false ? 'amber' : 'struct',
+      state: cls.governed === true ? 'green' : 'amber',
+      heat: (cls.share || 0) / maxShare,          // cost-heat ramp (always on)
+      spotlight: isFocus, dimmed: anyDecision && !isFocus,
     }))
     let prev = cid
     cls.ops.forEach((op, j) => {
       const oid = cid + '_' + op.op
       const lever = op.lever ? leverBySig[op.lever] : null
+      // LIGHT RED = the specific node a decision is about (an escalated lever)
+      const isProblem = !!lever?.escalated
       nodes.push(nd(oid, 250 + j * 168, y, {
         kind: lever ? 'lever' : 'op', label: opLabel(op), sub: opSub(op, lever),
-        state: op.governed ? 'green' : lever ? leverState(lever) : (op.kind === 'model' ? 'struct' : 'amber'),
+        state: op.governed ? 'green' : isProblem ? 'problem' : lever ? leverState(lever) : (op.kind === 'model' ? 'struct' : 'amber'),
         sig: op.lever, active: lever?.active, vetoed: lever?.vetoed, escalated: lever?.escalated,
-        act, proofNode: cls.tc,
+        act, proofNode: cls.tc, dimmed: anyDecision && !isFocus && !isProblem,
       }))
-      edges.push(ed(oid + '_e', prev, oid, op.governed ? GREEN : '#c8c7c0'))
+      edges.push(ed(oid + '_e', prev, oid, op.governed ? GREEN : isProblem ? '#dc2626' : '#c8c7c0'))
       prev = oid
     })
   })
