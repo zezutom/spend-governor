@@ -636,156 +636,270 @@ function mdCode(s) {
 }
 
 // ===========================================================================
-//  The replay-at-scale lab — a sandbox modal OVER the live system (which keeps
-//  running underneath). Same connected-box canvas; the candidate is highlighted
-//  in place (model node "TESTING"). Replays REAL past conversations at scale,
-//  shows the held/degraded DISTRIBUTION + conditional cost + the agent's
-//  recommendation. Real 'test'-tagged Phoenix traces; never touches production.
+//  The DEBUGGER — a sandbox lab over the live system. Set up, RUN (real past
+//  conversations stream through the canvas, distribution accumulates live),
+//  PAUSE / STEP call-by-call (the cursor lingers inside a ×N box so you watch
+//  the same call fire repeatedly — the waste), with a shared inspector that
+//  follows the cursor and, at the model call, shows premium-vs-economy quality.
+//  Real 'test'-tagged Phoenix traces; never touches production.
 // ===========================================================================
 const LAB_USE_CASES = [
   { key: 'account_question', label: 'Account questions' },
   { key: 'refund_handling', label: 'Refund tickets' },
 ]
 
-function buildLabGraph(uc, data) {
-  const base = data?.cost?.baseline
-  const title = uc === 'refund_handling' ? 'Refund tickets' : 'Account questions'
-  const ops = uc === 'refund_handling'
-    ? [['web_search ×3', 'cached · $0'], ['kb_lookup', 'cached · $0']]
-    : [['kb_lookup', 'cached · $0']]
-  const nodes = [nd('lane', 8, 54, { kind: 'class', label: title,
-    sub: base ? `$${base.toFixed(4)}/msg` : '—', state: 'struct' })]
-  const edges = []
-  let prev = 'lane', x = 230
-  ops.forEach(([l, s], i) => {
-    const id = 'op' + i
-    nodes.push(nd(id, x, 58, { kind: 'op', label: l, sub: s, state: 'green' }))
-    edges.push(ed('e' + id, prev, id, '#c8c7c0')); prev = id; x += 168
+// group a conversation's calls into canvas boxes (consecutive same-tool → ×N),
+// each box remembering which call indices live inside it (so a ×N box stays lit
+// while the cursor steps through its repeats).
+function convBoxes(calls) {
+  if (!calls) return []
+  const boxes = []
+  calls.forEach((c, i) => {
+    if (c.kind === 'tool') {
+      const last = boxes[boxes.length - 1]
+      if (last && last.kind === 'tool' && last.tool === c.tool) {
+        last.count++; last.calls.push(i); last.dup = last.dup || c.dup
+      } else boxes.push({ kind: 'tool', tool: c.tool, count: 1, calls: [i], dup: c.dup })
+    } else if (c.kind === 'model') boxes.push({ kind: 'model', calls: [i] })
   })
-  nodes.push(nd('model', x, 50, { kind: 'op', label: 'model · TESTING', sub: 'premium → economy', state: 'escalate' }))
-  edges.push(ed('emodel', prev, 'model', AMBER))
+  return boxes
+}
+
+function buildStepGraph(boxes, litIdx) {
+  const nodes = [], edges = []
+  let x = 8
+  boxes.forEach((b, i) => {
+    const lit = i === litIdx
+    const label = b.kind === 'model' ? 'model' : `${b.tool}${b.count > 1 ? ' ×' + b.count : ''}`
+    const sub = b.kind === 'model' ? 'premium → economy' : (b.dup ? '⚠ repeated' : 'tool')
+    const state = lit ? 'escalate' : (b.kind === 'model' ? 'amber' : 'struct')
+    nodes.push(nd('b' + i, x, 44, { kind: 'op', label, sub, state }))
+    if (i > 0) edges.push(ed('e' + i, 'b' + (i - 1), 'b' + i, lit ? AMBER : '#c8c7c0'))
+    x += 150
+  })
   return { nodes, edges }
 }
 
 function ReplayLab({ onClose }) {
   const [uc, setUc] = useState('account_question')
   const [data, setData] = useState(null)
-  const [ran, setRan] = useState(false)
+  const [mode, setMode] = useState('idle')        // idle | streaming | paused | done
+  const [revealed, setRevealed] = useState(0)     // rows streamed so far
+  const [cursorConv, setCursorConv] = useState(null)
+  const [cursorCall, setCursorCall] = useState(0)
+  const [bp, setBp] = useState('none')            // breakpoint: none | degrade | model
   const [trickle, setTrickle] = useState(null)
-  const [waiting, setWaiting] = useState(false)
 
   const load = useCallback((u) => {
-    setData(null); setRan(false); setTrickle(null)
+    setData(null); setMode('idle'); setRevealed(0); setCursorConv(null); setCursorCall(0); setTrickle(null)
     fetch(`${API}/api/lab/${u}`).then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {})
   }, [])
   useEffect(() => { load(uc) }, [uc, load])
 
-  const run = () => {
-    setRan(true); setTrickle(null); setWaiting(true)
-    fetch(`${API}/api/lab/${uc}/trickle?idx=${Math.floor((data?.n || 4) / 2)}`)
-      .then((r) => (r.ok ? r.json() : null)).then((t) => { setTrickle(t); setWaiting(false) })
-      .catch(() => setWaiting(false))
-  }
+  // the stream: reveal one real replay at a time; the distribution accumulates.
+  useEffect(() => {
+    if (mode !== 'streaming' || !data) return
+    if (revealed >= data.rows.length) { setMode('done'); return }
+    const t = setTimeout(() => {
+      const row = data.rows[revealed]
+      if (bp === 'degrade' && !row.held) {
+        setCursorConv(revealed); setCursorCall(0); setRevealed(revealed + 1); setMode('paused'); return
+      }
+      if (bp === 'model') {
+        const mi = row.calls.findIndex((c) => c.kind === 'model')
+        setCursorConv(revealed); setCursorCall(mi >= 0 ? mi : 0); setRevealed(revealed + 1); setMode('paused'); return
+      }
+      setRevealed(revealed + 1)
+    }, 600)
+    return () => clearTimeout(t)
+  }, [mode, revealed, data, bp])
 
-  const { nodes, edges } = useMemo(() => buildLabGraph(uc, data), [uc, data])
-  const held = data ? Math.round(data.held_pct * 100) : 0
-  const deg = data ? Math.round(data.degraded_pct * 100) : 0
-  const c = data?.cost
+  const run = () => {
+    setRevealed(0); setCursorConv(null); setCursorCall(0); setTrickle(null); setMode('streaming')
+    fetch(`${API}/api/lab/${uc}/trickle?idx=${Math.floor((data?.n || 4) / 2)}`)
+      .then((r) => (r.ok ? r.json() : null)).then(setTrickle).catch(() => {})
+  }
+  const pause = () => { setMode('paused'); setCursorConv((c) => (c != null ? c : Math.max(0, revealed - 1))) }
+  const play = () => { if (mode === 'done') run(); else setMode('streaming') }
+  const convIdx = cursorConv != null ? cursorConv : Math.max(0, revealed - 1)
+  const row = (data && (revealed > 0 || cursorConv != null)) ? data.rows[convIdx] : null
+  const step = () => {
+    if (!row) return
+    setCursorConv(convIdx); setMode('paused')
+    setCursorCall((c) => Math.min(c + 1, row.calls.length - 1))
+  }
+  const gotoConv = (d) => { const ni = Math.min(Math.max(0, convIdx + d), revealed - 1); setCursorConv(ni); setCursorCall(0) }
+
+  const boxes = useMemo(() => convBoxes(row?.calls), [row])
+  const litBox = boxes.findIndex((b) => b.calls.includes(cursorCall))
+  const { nodes, edges } = useMemo(() => buildStepGraph(boxes, litBox), [boxes, litBox])
+  const shown = data ? data.rows.slice(0, revealed) : []
+  const heldN = shown.filter((r) => r.held).length
+  const heldPct = shown.length ? Math.round((heldN / shown.length) * 100) : 0
+  const call = row?.calls?.[cursorCall]
   const projUrl = 'https://app.phoenix.arize.com/s/tomas'
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)',
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 65 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '20px 24px',
-        width: 720, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '16px 20px',
+        width: '94vw', maxWidth: 1080, height: '90vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div><b style={{ fontSize: 16 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 13 }}>· sandbox</span></div>
+          <div><b style={{ fontSize: 16 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 13 }}>· sandbox · your lab</span></div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
         </div>
 
-        {/* lab setup — same canvas, candidate highlighted in place */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12.5, color: DIM }}>use case</span>
+        {/* setup + transport — all functional */}
+        <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
           <select value={uc} onChange={(e) => setUc(e.target.value)}
-            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc' }}>
+            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 999, border: '1px solid #d8d6cc' }}>
             {LAB_USE_CASES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
           </select>
+          <span style={labChip(true)}>→ economy</span>
           <span style={labChip(false)}>replay {data ? data.n : '…'} real</span>
-          <span style={labChip(true)}>candidate: → economy</span>
-          <button onClick={run} disabled={!data} style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700,
-            cursor: data ? 'pointer' : 'default', color: '#fff', background: GREEN, border: 'none',
-            borderRadius: 8, padding: '7px 16px', opacity: data ? 1 : 0.5 }}>▶ run</button>
+          <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 4px' }} />
+          <button onClick={play} style={transBtn(mode === 'streaming')}>▶ play</button>
+          <button onClick={pause} style={transBtn(mode === 'paused')}>⏸ pause</button>
+          <button onClick={step} style={transBtn(false)}>⏭ step</button>
+          <select value={bp} onChange={(e) => setBp(e.target.value)} title="breakpoint"
+            style={{ fontSize: 12, padding: '5px 8px', borderRadius: 999, border: '1px solid #d8d6cc', color: bp === 'none' ? DIM : AMBER }}>
+            <option value="none">● no breakpoint</option>
+            <option value="degrade">● break when a replay degrades</option>
+            <option value="model">● break on the model call</option>
+          </select>
+          <button onClick={run} style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            color: '#fff', background: GREEN, border: 'none', borderRadius: 999, padding: '6px 16px' }}>⟲ run</button>
         </div>
-        <div style={{ fontSize: 12, color: DIM, marginTop: 8 }}>
-          replaying real past conversations · live system untouched · every trace tagged 'test'
+        <div style={{ fontSize: 11.5, color: DIM, marginTop: 7 }}>
+          replaying real past conversations · live system untouched · traces tagged 'test'
         </div>
 
-        {/* the same connected-box canvas, candidate node TESTING */}
-        <div style={{ height: 130, marginTop: 8, borderTop: '1px solid #eceae0', borderBottom: '1px solid #eceae0' }}>
-          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
-            proOptions={{ hideAttribution: true }} nodesDraggable={false} nodesConnectable={false}
-            elementsSelectable={false} panOnDrag={false} zoomOnScroll={false} zoomOnDoubleClick={false}>
-            <Background color="#eeede6" gap={20} />
-          </ReactFlow>
-        </div>
-
-        {!ran && <div style={{ color: DIM, fontSize: 14, padding: '20px 0', textAlign: 'center' }}>
-          {data ? `Press ▶ run to replay ${data.n} real ${LAB_USE_CASES.find((u) => u.key === uc)?.label.toLowerCase()} through the candidate.`
-            : 'No pre-run batch for this use case yet.'}
+        {/* RUN status + live-accumulating distribution */}
+        {data && <div style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#3b3b37' }}>
+            <span>RUN · {revealed} / {data.n} replayed · {mode === 'streaming' ? '▶ streaming' : mode === 'paused' ? '⏸ paused' : mode === 'done' ? '✓ done' : 'idle'}</span>
+            {row && <span style={{ color: DIM }}>stepping conv #{row.conv_id} · {LAB_USE_CASES.find((u) => u.key === uc)?.label.toLowerCase()}</span>}
+          </div>
+          <div style={{ display: 'flex', height: 10, borderRadius: 4, overflow: 'hidden', background: '#f0eee6', marginTop: 6 }}>
+            <div style={{ width: `${heldPct}%`, background: GREEN, opacity: 0.6, transition: 'width .4s' }} />
+            <div style={{ width: `${100 - heldPct}%`, background: AMBER, opacity: 0.55, transition: 'width .4s' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 12 }}>
+            <span style={{ color: GREEN }}>held {heldPct}%</span>
+            <span style={{ color: AMBER }}>degraded {100 - heldPct}%{mode !== 'done' ? ' (so far)' : ''}</span>
+          </div>
         </div>}
 
-        {ran && data && <>
-          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 16 }}>
-            RESULT — does it hold across volume &amp; variety?
-          </div>
-          <div style={{ display: 'flex', gap: 28, marginTop: 10 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: INK, marginBottom: 7 }}>answer quality across {data.n} real replays</div>
-              <div style={{ display: 'flex', height: 16, borderRadius: 5, overflow: 'hidden', background: '#f0eee6' }}>
-                <div style={{ width: `${held}%`, background: GREEN, opacity: 0.65, transition: 'width 1.1s ease-out' }} />
-                <div style={{ width: `${deg}%`, background: AMBER, opacity: 0.6, transition: 'width 1.1s ease-out' }} />
+        {/* two columns: call list | path + shared inspector */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 12 }}>
+          {/* LEFT — call-by-call list of the stepped conversation */}
+          <div style={{ width: 320, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {row ? <>
+              <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', display: 'flex', justifyContent: 'space-between' }}>
+                <span>STEPPING · conv #{row.conv_id} · call {cursorCall + 1} of {row.calls.length}</span>
+                <span>
+                  <button onClick={() => gotoConv(-1)} style={navBtn}>◀</button>
+                  <button onClick={() => gotoConv(1)} style={navBtn}>▶</button>
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, fontSize: 12.5 }}>
-                <span style={{ color: GREEN }}>held {held}%</span>
-                <span style={{ color: AMBER }}>degraded {deg}%{data.degraded_dominant_sub ? ` · ${data.degraded_dominant_sub} cases` : ''}</span>
+              <div style={{ overflowY: 'auto', flex: 1, marginTop: 8 }}>
+                {row.calls.map((c, i) => {
+                  const here = i === cursorCall
+                  return (
+                    <div key={i} onClick={() => { setCursorConv(convIdx); setCursorCall(i) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', cursor: 'pointer',
+                        borderRadius: 7, marginBottom: 2, background: here ? '#f5f4ed' : 'transparent',
+                        border: here ? '1px solid #d8d6cc' : '1px solid transparent' }}>
+                      <span style={{ width: 16, color: DIM, fontSize: 12 }}>{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: here ? 600 : 400, color: INK }}>
+                        {c.kind === 'user' ? c.label : c.kind === 'tool' ? c.tool : c.kind === 'model' ? 'model · respond' : 'reply sent'}
+                      </span>
+                      {c.dup && <span style={{ fontSize: 11, color: AMBER }}>⚠ dup</span>}
+                      {c.cost ? <span style={{ fontSize: 12, color: '#555' }}>${c.cost.toFixed(4)}</span> : null}
+                      {here && <span style={{ fontSize: 11, fontWeight: 700, color: INK }}>◀ HERE</span>}
+                    </div>
+                  )
+                })}
               </div>
-            </div>
-            {c && <div style={{ minWidth: 170 }}>
-              <div style={{ fontSize: 13, color: INK }}>$ / message</div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: GREEN, marginTop: 4 }}>
-                ${c.baseline.toFixed(4)} → ${c.projected.toFixed(4)}
-              </div>
-              <div style={{ fontSize: 12, color: GREEN }}>−{c.pct}% (if it shipped)</div>
-            </div>}
+              <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>⏭ step = next call · ▶ = resume the stream · ● = breakpoint</div>
+            </> : <div style={{ color: DIM, fontSize: 13, padding: '20px 0' }}>Press <b>⟲ run</b> to stream real replays, then ⏸ and ⏭ to step into one.</div>}
           </div>
 
-          {/* the agent's recommendation — judgment over the evidence, no Phoenix link */}
-          <div style={{ marginTop: 16, border: `1px solid ${AMBER}`, background: '#faeeda', borderRadius: 10, padding: '13px 15px' }}>
-            <div style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>⚑ The agent: {data.recommendation}</div>
-            <div style={{ fontSize: 12, color: '#85540b', marginTop: 5 }}>
-              my judgment over the replayed evidence — found safely, before anything touched live traffic
-            </div>
+          {/* RIGHT — the conversation path (current call's box lit) + the shared inspector */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #eceae0', paddingLeft: 16 }}>
+            {row ? <>
+              <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em' }}>conv #{row.conv_id} · path · current call lit</div>
+              <div style={{ height: 110 }}>
+                <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+                  proOptions={{ hideAttribution: true }} nodesDraggable={false} nodesConnectable={false}
+                  onNodeClick={(e, n) => { const bi = +n.id.slice(1); const b = boxes[bi]; if (b) { setCursorConv(convIdx); setCursorCall(b.calls[0]) } }}
+                  panOnDrag={false} zoomOnScroll={false} zoomOnDoubleClick={false}>
+                  <Background color="#eeede6" gap={18} />
+                </ReactFlow>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 8 }}>
+                <CallInspector call={call} row={row} />
+              </div>
+            </> : <div style={{ color: DIM, fontSize: 13, padding: 20 }}>The shared inspector appears here — it follows the step cursor, and clicking a box jumps to it.</div>}
           </div>
+        </div>
 
-          {/* a small LIVE trickle so it doesn't feel canned */}
-          <div style={{ marginTop: 12, fontSize: 12.5, color: DIM }}>
-            {waiting && <span>● running one more replay live…</span>}
-            {trickle && <span>● live replay just landed: <b style={{ color: trickle.held ? GREEN : AMBER }}>
-              {trickle.held ? 'held' : 'degraded'}</b> (economy quality {trickle.economy_quality}/5)
-              {trickle.phoenix_url && <> · <a href={trickle.phoenix_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a></>}</span>}
-          </div>
-
-          {/* facts → Phoenix; the 'test' traces are real and filterable */}
-          <div style={{ marginTop: 14, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
-            <a href={projUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, color: GREEN, fontWeight: 600 }}>
-              {data.n} 'test' traces in Phoenix ↗
-            </a>
-            <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>
-              tagged <code style={{ background: '#efe9da', borderRadius: 4, padding: '0 4px' }}>{data.test_tag}</code> · filter them out of production in one click · pre-run batch, real result (not generated live)
-            </div>
-          </div>
-        </>}
+        {/* footer — facts to Phoenix, never the verdict */}
+        <div style={{ borderTop: '1px solid #eceae0', paddingTop: 9, marginTop: 8 }}>
+          <a href={projUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
+            {revealed || (data ? data.n : 0)} 'test' traces in Phoenix ↗
+          </a>
+          <span style={{ fontSize: 11.5, color: DIM, marginLeft: 10 }}>
+            {data?.test_tag || 'accountant.run_type = test'} · filter out of production in one click · real run, never touches live
+            {trickle && <> · <b style={{ color: trickle.held ? GREEN : AMBER }}>● live replay landed: {trickle.held ? 'held' : 'degraded'}</b></>}
+          </span>
+        </div>
       </div>
+    </div>
+  )
+}
+
+// the shared inspector — renders whatever the cursor points at; the model call
+// is the payoff (premium vs economy side by side).
+function CallInspector({ call, row }) {
+  if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
+  if (call.kind === 'user')
+    return <InsShell title="user message" accent={DIM}>
+      <div style={{ fontSize: 14, color: INK }}>{row.ticket}</div></InsShell>
+  if (call.kind === 'reply')
+    return <InsShell title="reply sent · economy answer" accent={DIM}>
+      <div style={{ fontSize: 13.5, color: '#3b3b37', lineHeight: 1.45 }}>{row.economy_answer}</div></InsShell>
+  if (call.kind === 'tool')
+    return <InsShell title={`${call.tool} · tool call`} accent={AMBER}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
+        <span style={{ color: INK }}>cost</span>
+        <span style={{ color: INK }}>${(call.cost || 0).toFixed(4)} <span style={{ color: AMBER, fontSize: 12 }}>your rate</span></span>
+      </div>
+      {call.dup && <div style={{ marginTop: 8, fontSize: 13, color: AMBER }}>⚠ duplicate — this same lookup already fired in this conversation. That's the waste the cache removes.</div>}
+    </InsShell>
+  // model call — the payoff: the candidate diff
+  const bites = row.economy_quality < row.baseline_quality
+  return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN}>
+    <div style={{ border: `1px solid ${GREEN}`, background: '#e1f5ee', borderRadius: 8, padding: '10px 12px' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700 }}>premium (baseline) · judge quality {row.baseline_quality}/5</div>
+      <div style={{ fontSize: 13, color: '#1a4f40', marginTop: 4, lineHeight: 1.4 }}>{row.baseline_answer}</div>
+    </div>
+    <div style={{ border: `1px solid ${AMBER}`, background: '#faeeda', borderRadius: 8, padding: '10px 12px', marginTop: 8 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700 }}>economy (candidate) · judge quality {row.economy_quality}/5 {bites ? '⚠' : ''}</div>
+      <div style={{ fontSize: 13, color: '#85540b', marginTop: 4, lineHeight: 1.4 }}>{row.economy_answer}</div>
+    </div>
+    <div style={{ fontSize: 12.5, color: bites ? AMBER : GREEN, marginTop: 8 }}>
+      → this replay {row.held ? 'holds' : 'degrades'} under the candidate
+      {row.phoenix_url && <> · <a href={row.phoenix_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a></>}
+    </div>
+  </InsShell>
+}
+function InsShell({ title, accent, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
+      <div style={{ marginTop: 8 }}>{children}</div>
     </div>
   )
 }
@@ -793,6 +907,13 @@ function labChip(amber) {
   return { fontSize: 12.5, padding: '5px 11px', borderRadius: 999,
     border: `1px solid ${amber ? AMBER : '#d8d6cc'}`, color: amber ? AMBER : '#5a5852' }
 }
+function transBtn(active) {
+  return { fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '5px 11px', borderRadius: 999,
+    border: `1px solid ${active ? '#5a4815' : '#d8d6cc'}`, color: active ? '#fff' : '#5a5852',
+    background: active ? '#5a4815' : '#fff' }
+}
+const navBtn = { fontSize: 11, cursor: 'pointer', border: '1px solid #d8d6cc', borderRadius: 6,
+  background: '#fff', color: '#5a5852', padding: '1px 6px', marginLeft: 3 }
 
 // ---- the trace drill-down (per node / per workload) -----------------------
 function ProofPanel({ proof, onClose }) {

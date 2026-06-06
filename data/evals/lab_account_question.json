@@ -1,221 +1,857 @@
 {
+  "held_pct": 0.444,
+  "degraded_pct": 0.556,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "complex": 0.4,
+    "simple": 0.46
+  },
   "use_case": "account_question",
   "candidate": "economy",
   "n": 18,
-  "held_pct": 0.556,
-  "degraded_pct": 0.444,
-  "degraded_dominant_sub": "simple",
-  "held_by_sub": {
-    "complex": 0.6,
-    "simple": 0.54
-  },
   "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
   "cost": {
     "baseline": 0.0044,
     "projected": 0.002,
     "pct": 55
   },
-  "elapsed_sec": 51.6,
+  "elapsed_sec": 54.7,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
     {
-      "ticket": "How do I transfer ownership of my account to a colleague?",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/25b7e649b8218d3644700188282a6e95",
-      "sub_type": "complex",
-      "held": true
-    },
-    {
-      "ticket": "Where do I update my billing address?",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c36d7c798f591d57d43a4d57290ddb37",
-      "sub_type": "simple",
-      "held": true
-    },
-    {
+      "conv_id": "1200",
       "ticket": "How do I add a teammate to my account?",
-      "equivalent": false,
-      "baseline_quality": 1,
-      "economy_quality": 1,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0e54188bec432cb75f4d2e2ddeaa27f5",
       "sub_type": "complex",
-      "held": false
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d8bc74ffcdb7c097b66a8951d72397f5",
+      "baseline_answer": "To add a teammate, go to Settings \u2192 Account. You'll find team member management options there.",
+      "economy_answer": "I encountered an error while trying to resolve the ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000195,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I add a teammate to my account?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000195,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1201",
+      "ticket": "Where do I update my billing address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b85fed1771ce15f5aa22d66fa32934f3",
+      "baseline_answer": "To update your billing address, navigate to Settings \u2192 Account.",
+      "economy_answer": "The billing address can be updated under Settings \u2192 Account.",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000158,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I update my billing address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000158,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1202",
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "sub_type": "complex",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f419d6c94ffcd712278744f47dffcc48",
+      "baseline_answer": "To transfer ownership of your account, please go to Settings \u2192 Account. You should find the option to transfer ownership there.",
+      "economy_answer": "The account owner can transfer ownership of the account under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I transfer ownership of my account to a colleague?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1203",
       "ticket": "How do I enable SSO?",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bc8b393a96d2fad48bb5343a681edd0d",
       "sub_type": "complex",
-      "held": true
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 3,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/482649c29faf5dc2a2b44c0bd6aaf0b6",
+      "baseline_answer": "You can enable SSO in your account settings. Go to Settings -> Account to configure it.",
+      "economy_answer": "I can help with that! You can enable SSO under Settings \u2192 Account. The Account owner can manage this setting. However, I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.00019,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I enable SSO?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00019,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1204",
       "ticket": "Where's my invoice from last month?",
-      "equivalent": false,
-      "baseline_quality": 1,
-      "economy_quality": 4,
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/da18669794fe956a092e92ee1c323776",
-      "sub_type": "simple",
-      "held": true
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d9bb1210f94b6943ba411fcfaf56b74a",
+      "baseline_answer": "I can help with that! Invoices are available in your account settings. Please log in to Stratus Forms, then navigate to Settings -> Account. You should find your past invoices there.\n\nIf you have any trouble finding it, please let me know!",
+      "economy_answer": "I can help with that. You can find your invoice from last month in your account settings. Navigate to \"Settings\" and then \"Account\" to view your billing history and invoices.",
+      "baseline_model_cost": 0.000506,
+      "economy_model_cost": 0.000196,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where's my invoice from last month?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000196,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1205",
       "ticket": "How do I change my email address?",
-      "equivalent": false,
-      "baseline_quality": 1,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5a96a0a89baa7e795fbcac171877ef3a",
       "sub_type": "simple",
-      "held": true
-    },
-    {
-      "ticket": "Where do I find my API key?",
-      "equivalent": false,
+      "equivalent": true,
       "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/73526c1e1bc2502a938322608a05d3d4",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
-      "ticket": "How do I delete a form?",
-      "equivalent": false,
-      "baseline_quality": 1,
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d317dc7b30a34af0acfac25c7d8c68c6",
-      "sub_type": "simple",
-      "held": true
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/2c9fe06b0ab8bcef5418a59471ed4c08",
+      "baseline_answer": "To change your email address, navigate to Settings \u2192 Account in your Stratus Forms account. If you have any trouble finding it, let me know!",
+      "economy_answer": "The Stratus Forms account settings, including email address, are available under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000493,
+      "economy_model_cost": 0.000161,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I change my email address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000161,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Can I export all my form responses?",
+      "conv_id": "1206",
+      "ticket": "Where do I find my API key?",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 4,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/576c7e4b61b98027a0d454720f109516",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/70e24711cf365511bab22a27b725ab37",
+      "baseline_answer": "Your API key can be found in your account settings under the 'API' tab. If you have trouble finding it, please let us know!",
+      "economy_answer": "I encountered an error while trying to resolve the ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000629,
+      "economy_model_cost": 0.000193,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I find my API key?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000193,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1207",
+      "ticket": "Can I export all my form responses?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8e48b1de9bd7a91be259e5be2cf2c92f",
+      "baseline_answer": "Yes, you can export all your form responses. This feature is available in your account settings.",
+      "economy_answer": "I am sorry, I cannot resolve this ticket without a ticket ID. Please provide the ticket ID.",
+      "baseline_model_cost": 0.000604,
+      "economy_model_cost": 0.0002,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I export all my form responses?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.0002,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1208",
+      "ticket": "How do I delete a form?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e9760c7ed4d41cbfb100d2b227b93dad",
+      "baseline_answer": "To delete a form, navigate to the forms list in your Stratus Forms account. Hover over the form you wish to delete, and a 'Delete' option should appear. Click on it and confirm your decision.",
+      "economy_answer": "It looks like I can't resolve this ticket without a ticket ID. Could you please provide it?",
+      "baseline_model_cost": 0.000502,
+      "economy_model_cost": 0.000191,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I delete a form?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000191,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1209",
       "ticket": "What's the difference between Pro and Enterprise?",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e03e196506e674cadf8f302cc52c4ec1",
+      "baseline_answer": "I can't find specific documentation comparing Pro and Enterprise plans. I'd recommend checking our pricing page or contacting sales for a detailed breakdown of features.",
+      "economy_answer": "I can't resolve this ticket without a ticket ID. Could you please provide it?",
+      "baseline_model_cost": 0.000665,
+      "economy_model_cost": 0.0002,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What's the difference between Pro and Enterprise?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.0002,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1210",
+      "ticket": "Can I use a custom domain for my forms?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f27af0cc347ee4a0719eeb144530ac66",
+      "baseline_answer": "Yes, Stratus Forms supports custom domains for your forms. You can configure this in your account settings.",
+      "economy_answer": "I am sorry, I cannot resolve this ticket without the ticket ID. Could you please provide it?",
+      "baseline_model_cost": 0.000607,
+      "economy_model_cost": 0.000218,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I use a custom domain for my forms?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000218,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1211",
+      "ticket": "Where do I see analytics for my forms?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/eb99d8b966a442f94e5a476645961da6",
+      "baseline_answer": "I've escalated your ticket to a human agent who can provide more specific information about where to find analytics for your forms within Stratus Forms. They will be able to assist you further.",
+      "economy_answer": "I can help with that! You can find analytics for your forms under the \"Analytics\" tab in your Stratus Forms dashboard. If you're having trouble locating it, please let us know!",
+      "baseline_model_cost": 0.000649,
+      "economy_model_cost": 0.000229,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I see analytics for my forms?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000229,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1212",
+      "ticket": "How do I integrate Stratus Forms with Zapier?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0e86aad0fbe09ed89adb3b6f9e95b190",
+      "baseline_answer": "Stratus Forms integrates with Zapier! You can find more information on how to set it up in our knowledge base or by searching online for 'Stratus Forms Zapier integration guide'.",
+      "economy_answer": "I'm sorry, but I need a ticket ID to update the ticket. Could you please provide it?",
+      "baseline_model_cost": 0.000653,
+      "economy_model_cost": 0.000252,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I integrate Stratus Forms with Zapier?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000252,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1213",
+      "ticket": "Can I embed forms in my website?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 4,
       "economy_quality": 4,
       "clarified": false,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4d2f400ddb4109695b113598d2661d54",
-      "sub_type": "simple",
-      "held": true
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9848a9d98a71655c699fca34f40b123d",
+      "baseline_answer": "Yes, you can embed forms in your website. Please refer to our documentation for detailed instructions.",
+      "economy_answer": "I can help with that! You can embed Stratus Forms into your website. You can find instructions on how to do this in our knowledge base under the \"Account\" section.",
+      "baseline_model_cost": 0.0006,
+      "economy_model_cost": 0.000204,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I embed forms in my website?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000204,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Can I use a custom domain for my forms?",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": false,
-      "refused_escalated": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/afabeabf76af1a77046d5820f08fe701",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
-      "ticket": "Where do I see analytics for my forms?",
-      "equivalent": false,
-      "baseline_quality": 1,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/62670da7e9d4eaa40943f14f27653bcd",
-      "sub_type": "simple",
-      "held": true
-    },
-    {
-      "ticket": "How do I integrate Stratus Forms with Zapier?",
-      "equivalent": false,
-      "baseline_quality": 3,
-      "economy_quality": 1,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/683e0b7c512193f70ea1869c3e4183d9",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
-      "ticket": "Can I embed forms in my website?",
-      "equivalent": false,
-      "baseline_quality": 4,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f3d371411f2f32234aee78b70d12e50d",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
+      "conv_id": "1214",
       "ticket": "What payment methods do you accept?",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/96983ef4882b8572776b37d61c392b32",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/19cea8a6cddfa46937cdda731a7cc050",
+      "baseline_answer": "We accept major credit cards, including Visa, Mastercard, American Express, and Discover. You can update your payment methods in your account settings under Settings \u2192 Account.",
+      "economy_answer": "I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.000608,
+      "economy_model_cost": 0.000186,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What payment methods do you accept?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000186,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Where do I update my billing address?",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7cf224646a42fed2291fc3f7e8f7d0f4",
-      "sub_type": "simple",
-      "held": true
-    },
-    {
+      "conv_id": "1215",
       "ticket": "How do I add a teammate to my account?",
+      "sub_type": "complex",
       "equivalent": false,
-      "baseline_quality": 1,
+      "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": true,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/cccef31d627e16611266ad481f975d70",
-      "sub_type": "complex",
-      "held": false
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3fd26c1825f39ce7e97e896bb2f707dd",
+      "baseline_answer": "To add a teammate, go to Settings \u2192 Account. You'll find team member management options there.",
+      "economy_answer": "I'm sorry, I encountered an error trying to resolve the ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000196,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I add a teammate to my account?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000196,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "conv_id": "1216",
+      "ticket": "Where do I update my billing address?",
+      "sub_type": "simple",
       "equivalent": true,
       "baseline_quality": 5,
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/869b3ead28da7d35232b42821efc69f7",
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/94d92250ada52c8d0b3de7f0719b6b40",
+      "baseline_answer": "To update your billing address, navigate to Settings \u2192 Account.",
+      "economy_answer": "The billing address can be updated under Settings \u2192 Account.",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000158,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I update my billing address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000158,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1217",
+      "ticket": "How do I transfer ownership of my account to a colleague?",
       "sub_type": "complex",
-      "held": true
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/fc37f96eadc006ec1cf7539d7ecd20b2",
+      "baseline_answer": "To transfer ownership of your account, please go to Settings \u2192 Account. You should find the option to transfer ownership there.",
+      "economy_answer": "The account owner can transfer ownership of the account under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I transfer ownership of my account to a colleague?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     }
   ]
 }

@@ -1,221 +1,1061 @@
 {
+  "held_pct": 0.056,
+  "degraded_pct": 0.944,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "simple": 0.08,
+    "complex": 0.0
+  },
   "use_case": "refund_handling",
   "candidate": "economy",
   "n": 18,
-  "held_pct": 0.167,
-  "degraded_pct": 0.833,
-  "degraded_dominant_sub": "simple",
-  "held_by_sub": {
-    "simple": 0.25,
-    "complex": 0.0
-  },
   "recommendation": "Breaks across the variety \u2014 keep the premium model here. The small eval looked fine; at scale it doesn't hold.",
   "cost": {
     "baseline": 0.0192,
     "projected": 0.016,
     "pct": 17
   },
-  "elapsed_sec": 67.6,
+  "elapsed_sec": 66.3,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
     {
+      "conv_id": "1200",
+      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f69fa1736796e8b0efa71d844e14b1a4",
+      "baseline_answer": "Your refund for $49 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
+      "economy_answer": "I apologize for the error. I need the ticket ID to update its status. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000813,
+      "economy_model_cost": 0.000277,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"I want a refund. My account is ACME-001. The charge was $49 on May 1.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "refund_api",
+          "cost": 0.001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000277,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1201",
       "ticket": "Please refund me. Account GLOBEX-001, charged $49 last month.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ad63124152f670da28ed3b2459539c90",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5709720bbb78e4fb25db12edf29b528c",
+      "baseline_answer": "Your refund for $49 has been processed.",
+      "economy_answer": "I have escalated your request to a human agent who will review your case and reach out to you shortly.",
+      "baseline_model_cost": 0.000753,
+      "economy_model_cost": 0.00025,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Please refund me. Account GLOBEX-001, charged $49 last month.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "escalate_human",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00025,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1970691d93523de487d13523a3970386",
-      "sub_type": "simple",
-      "held": true
-    },
-    {
+      "conv_id": "1202",
       "ticket": "Refund $49 from my Pro subscription. Account INITECH-001.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 3,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8469a70808bd6010f4d1b6ef2957522f",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db18f0b5c4ae14a3623bcdb3fdedc84c",
+      "baseline_answer": "I've escalated your request to a human agent for review. They will be able to assist you further.",
+      "economy_answer": "I apologize, but I encountered an error while trying to resolve the ticket. I need the ticket ID to update its status. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000755,
+      "economy_model_cost": 0.000268,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Refund $49 from my Pro subscription. Account INITECH-001.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000268,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1203",
+      "ticket": "Account STARK-001, refund the $49 charge from last month.",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/358519f6e5dc379207e1ff8e2b89bd2f",
+      "baseline_answer": "The $49 charge has been refunded to your account. Please allow 5-10 business days for the refund to process.",
+      "economy_answer": "I apologize, but I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.0008,
+      "economy_model_cost": 0.000275,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Account STARK-001, refund the $49 charge from last month.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "refund_api",
+          "cost": 0.001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000275,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1204",
+      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d1efb7912b30bf868fda27175e23006b",
+      "baseline_answer": "Your refund of $499 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
+      "economy_answer": "The customer is on the \"pro\" plan, which is eligible for refunds within 30 days of the charge. The charge was on April 15th. To determine eligibility, I need to know the current date. Could you please provide today's date?",
+      "baseline_model_cost": 0.000808,
+      "economy_model_cost": 0.000254,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"I need a refund. WONKA-001, $499 on April 15.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000254,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1205",
       "ticket": "Please reverse the May 1 charge of $49 on WAYNE-001.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 2,
       "economy_quality": 2,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c39166b0de032edd231776fa5447728d",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9478e66cd2d9aeac697accc6fa1a95f0",
+      "baseline_answer": "I'm sorry, I can only process refunds if the task class is `refund_handling`. I've classified this as an `account_question`. Would you like me to escalate this to a human agent?",
+      "economy_answer": "I can help with that. Could you please provide the full date of the charge you would like reversed?",
+      "baseline_model_cost": 0.000562,
+      "economy_model_cost": 0.000159,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Please reverse the May 1 charge of $49 on WAYNE-001.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000159,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/662ab926148b4a4be5e0c1f672f13402",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
-      "ticket": "Account STARK-001, refund the $49 charge from last month.",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/24f4fa466ddb5a3d2bc70219d7929302",
-      "sub_type": "simple",
-      "held": false
-    },
-    {
+      "conv_id": "1206",
       "ticket": "Can you refund my last charge? My account is ACME-001.",
+      "sub_type": "complex",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b0767849693641ffcd8b227ba799bc6d",
-      "sub_type": "complex",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d924bfc8b51f33c60e86ef16ff6464f4",
+      "baseline_answer": "Your last charge of $49 has been refunded. You should see the credit in your account within 5-10 business days.",
+      "economy_answer": "I need to look up your customer record to determine your eligibility for a refund. What is the amount of the charge you are requesting to be refunded?",
+      "baseline_model_cost": 0.000798,
+      "economy_model_cost": 0.000235,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can you refund my last charge? My account is ACME-001.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000235,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Reverse the charge from last month.",
-      "equivalent": true,
-      "baseline_quality": 3,
-      "economy_quality": 3,
-      "clarified": true,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a223f812b6427f24fcdec4d95b72b960",
-      "sub_type": "complex",
-      "held": false
-    },
-    {
+      "conv_id": "1207",
       "ticket": "I want my money back.",
+      "sub_type": "complex",
       "equivalent": true,
       "baseline_quality": 3,
       "economy_quality": 3,
-      "clarified": false,
+      "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f2a20ac43c617f372f16cd4ddcb7dcb8",
-      "sub_type": "complex",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/2efe729a19833ad8b2993f1aebf5b7b3",
+      "baseline_answer": "I can help with that. To process your refund request, I need your customer ID. Can you please provide it?",
+      "economy_answer": "I understand you'd like a refund. To process this request, I need a bit more information. Could you please provide your customer ID?",
+      "baseline_model_cost": 0.000716,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"I want my money back.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Refund the charge from last week.",
-      "equivalent": true,
-      "baseline_quality": 3,
-      "economy_quality": 3,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c5d8adb0a657f6625441eb3c378dc95c",
+      "conv_id": "1208",
+      "ticket": "Reverse the charge from last month.",
       "sub_type": "complex",
-      "held": false
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 2,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ca591bb20cb1b30e58c443faba2b6029",
+      "baseline_answer": "I can help with that. To process a refund, I need the customer ID associated with your account. Could you please provide it?",
+      "economy_answer": "Okay, I can help you with that. To process your request, I need to look up our refund policy and some general information about refund regulations. I'll also need your customer ID to look up your account details. Could you please provide yo",
+      "baseline_model_cost": 0.000724,
+      "economy_model_cost": 0.00017,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Reverse the charge from last month.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00017,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Got double-charged, need a refund.",
-      "equivalent": true,
-      "baseline_quality": 3,
-      "economy_quality": 3,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c0d59c0cb85f00700cf177bc62c94cff",
-      "sub_type": "complex",
-      "held": false
-    },
-    {
+      "conv_id": "1209",
       "ticket": "Refund please. Account STARK-001.",
+      "sub_type": "complex",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/06d057ec2a528feb736ff11356d91fe2",
-      "sub_type": "complex",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c187dbae7db67f4319131761e1e5a39e",
+      "baseline_answer": "Your refund for $999 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
+      "economy_answer": "The user has not specified the amount to be refunded. I need to ask for this information.",
+      "baseline_model_cost": 0.000795,
+      "economy_model_cost": 0.000303,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Refund please. Account STARK-001.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": true
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000303,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1210",
+      "ticket": "Got double-charged, need a refund.",
+      "sub_type": "complex",
+      "equivalent": true,
+      "baseline_quality": 3,
+      "economy_quality": 3,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/75af47aa4d8d04630501e53822aec9f4",
+      "baseline_answer": "I can help with that. To process your refund, I need your customer ID. Can you please provide it?",
+      "economy_answer": "I understand you need a refund due to being double-charged. I'll need your customer ID to proceed. Can you please provide it?",
+      "baseline_model_cost": 0.000716,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Got double-charged, need a refund.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1211",
+      "ticket": "Refund the charge from last week.",
+      "sub_type": "complex",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 2,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0140b18889096e84b425496bbf863220",
+      "baseline_answer": "I can help with that. Do you have a customer ID I can use to locate your account and the charge?",
+      "economy_answer": "I can help with that. To process the refund, I need a customer ID and the amount of the charge. Can you please provide them?",
+      "baseline_model_cost": 0.000496,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Refund the charge from last week.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1212",
+      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7c0f2dfb9864339d0836dff17f6a404c",
+      "baseline_answer": "Your refund for $49 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
+      "economy_answer": "I have processed your refund of $49. It should reflect in your account within 3-5 business days.",
+      "baseline_model_cost": 0.000813,
+      "economy_model_cost": 0.000277,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"I want a refund. My account is ACME-001. The charge was $49 on May 1.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "refund_api",
+          "cost": 0.001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000277,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1213",
       "ticket": "Please refund me. Account GLOBEX-001, charged $49 last month.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3c9785a81bda061fd7b8bd8f2b0d5600",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e218a3bee793e0b5d097655eb414bf3e",
+      "baseline_answer": "Your refund for $49 has been processed.",
+      "economy_answer": "I have escalated your request to a human agent who will review your case and reach out to you shortly.",
+      "baseline_model_cost": 0.00075,
+      "economy_model_cost": 0.00025,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Please refund me. Account GLOBEX-001, charged $49 last month.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "escalate_human",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00025,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/94e396b8ad8a1decd9edecb27ff8de01",
-      "sub_type": "simple",
-      "held": true
-    },
-    {
+      "conv_id": "1214",
       "ticket": "Refund $49 from my Pro subscription. Account INITECH-001.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 3,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5d9be45a30d2276d73dfbdec89776785",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f454039c2b347c9f8213564befb7daeb",
+      "baseline_answer": "I've escalated your request to a human agent for review. They will be able to assist you further.",
+      "economy_answer": "I apologize, but I encountered an error while trying to resolve the ticket. I need the ticket ID to update its status. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000755,
+      "economy_model_cost": 0.000268,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Refund $49 from my Pro subscription. Account INITECH-001.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000268,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
+      "conv_id": "1215",
+      "ticket": "Account STARK-001, refund the $49 charge from last month.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/68eabd62cb372244a81649054f79a6df",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e918ff0c3f5580e77ece787e0e1d88f2",
+      "baseline_answer": "The $49 charge has been refunded to your account. Please allow 5-10 business days for the refund to process.",
+      "economy_answer": "I apologize, but I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.000804,
+      "economy_model_cost": 0.000279,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Account STARK-001, refund the $49 charge from last month.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "refund_api",
+          "cost": 0.001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000279,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
-      "ticket": "Account STARK-001, refund the $49 charge from last month.",
-      "equivalent": true,
+      "conv_id": "1216",
+      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
+      "sub_type": "simple",
+      "equivalent": false,
       "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
+      "economy_quality": 1,
+      "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e1a21fd0a3543f2877f84eb81e9e0aec",
-      "sub_type": "simple",
-      "held": true
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f0b3d764c4ca2250f39008a9cb8ebf2b",
+      "baseline_answer": "Your refund for $499 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
+      "economy_answer": "The customer is on the \"pro\" plan, which is eligible for refunds within 30 days of the charge. The charge was on April 15th. To determine eligibility, I need to know the current date. Could you please provide today's date?",
+      "baseline_model_cost": 0.000807,
+      "economy_model_cost": 0.000254,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"I need a refund. WONKA-001, $499 on April 15.\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true
+        },
+        {
+          "kind": "tool",
+          "tool": "customer_lookup",
+          "cost": 0.0001,
+          "dup": false
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000254,
+          "bites": true
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     },
     {
+      "conv_id": "1217",
       "ticket": "Please reverse the May 1 charge of $49 on WAYNE-001.",
+      "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 2,
       "economy_quality": 2,
       "clarified": true,
       "refused_escalated": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/372a432231f599c60ea90e5bb22693bd",
-      "sub_type": "simple",
-      "held": false
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c14abae1c812a7f61ea7744e870e0a05",
+      "baseline_answer": "I'm sorry, I can only process refunds if the task class is `refund_handling`. I've classified this as an `account_question`. Would you like me to escalate this to a human agent?",
+      "economy_answer": "I can help with that. Could you please provide the full date of the charge you would like reversed?",
+      "baseline_model_cost": 0.000562,
+      "economy_model_cost": 0.000159,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Please reverse the May 1 charge of $49 on WAYNE-001.\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000159,
+          "bites": false
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
     }
   ]
 }

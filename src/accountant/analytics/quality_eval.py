@@ -59,6 +59,23 @@ def _tools() -> list:
             T.refund_api, T.ticket_update, T.escalate_human]
 
 
+def _final_answer(resp) -> str:
+    """The agent's actual resolution. Often it's resp.text, but the agent can
+    resolve THROUGH a tool — passing the customer-facing reply as an arg to
+    ticket_update / escalate_human — and emit no final text. Fall back to that
+    arg so the judge scores the real answer, not an empty string."""
+    if resp.text and resp.text.strip():
+        return resp.text.strip()
+    for content in reversed(getattr(resp, "automatic_function_calling_history", None) or []):
+        for p in (content.parts or []):
+            fc = getattr(p, "function_call", None)
+            args = dict(getattr(fc, "args", None) or {}) if fc else {}
+            reply = args.get("customer_reply") or args.get("reply") or args.get("message")
+            if reply:
+                return str(reply)
+    return "(no answer)"
+
+
 # --- replay: the agent's real answer to a ticket, on a chosen model ---------
 def _replay(ticket: str, model: str) -> str:
     resp = _genai().models.generate_content(
@@ -71,7 +88,7 @@ def _replay(ticket: str, model: str) -> str:
             thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
-    return (resp.text or "").strip() or "(no answer)"
+    return _final_answer(resp)
 
 
 # --- judge: score the pair on the dimensions the decision turns on ----------
@@ -316,33 +333,108 @@ def replay_one_live(use_case: str, *, idx: int = 0, baseline_model: str = BASELI
     return r
 
 
+def _replay_full(ticket: str, model: str):
+    """Like _replay but returns the whole response, so we can read the agent's
+    real call sequence (AFC history) and token usage for call-by-call stepping."""
+    return _genai().models.generate_content(
+        model=model, contents=ticket,
+        config=types.GenerateContentConfig(
+            system_instruction=_instruction(), temperature=0.0, tools=_tools(),
+            thinking_config=types.ThinkingConfig(thinking_budget=0)))
+
+
+def _calls_from_resp(resp, rates: dict) -> list[dict]:
+    """The real tool-call sequence the agent ran, in order, with per-call tool
+    cost and a duplicate flag (the SAME tool fired again = the waste story)."""
+    calls, seen = [], set()
+    for content in (getattr(resp, "automatic_function_calling_history", None) or []):
+        for p in (content.parts or []):
+            fc = getattr(p, "function_call", None)
+            if fc and fc.name and fc.name != "task_classifier":  # classifier is structural
+                dup = fc.name in seen
+                seen.add(fc.name)
+                calls.append({"kind": "tool", "tool": fc.name,
+                              "cost": round(rates.get(fc.name, 0.0), 5), "dup": dup})
+    return calls
+
+
+def _model_cost_of(resp, model: str) -> float:
+    from accountant.pricing.gemini import MODELS
+    u = getattr(resp, "usage_metadata", None)
+    mp = MODELS.get(model)
+    if not u or not mp:
+        return 0.0
+    inp = getattr(u, "prompt_token_count", 0) or 0
+    out = getattr(u, "candidates_token_count", 0) or 0
+    return round(inp / 1e6 * mp.input_uncached_per_1m_usd + out / 1e6 * mp.output_per_1m_usd, 6)
+
+
+def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict, rates: dict,
+                     baseline_model: str, economy_model: str) -> dict:
+    """One replayed conversation, captured for stepping: the call sequence, the
+    per-call cost, the model diff (premium vs economy answer + judge quality)."""
+    from opentelemetry import trace as _ot
+    from accountant.pipeline import phoenix_cost
+    tracer = _ot.get_tracer("accountant.quality_eval")
+    # economy (the candidate under test) — capture its real path + trace
+    with tracer.start_as_current_span(f"eval.replay.{economy_model}") as span:
+        for k, v in attrs.items():
+            span.set_attribute(k, v)
+        er = _replay_full(ticket, economy_model)
+        etid = format(span.get_span_context().trace_id, "032x")
+    econ = _final_answer(er)
+    calls = _calls_from_resp(er, rates)
+    econ_cost = _model_cost_of(er, economy_model)
+    # baseline (premium) — answer only, for the judge + the diff
+    with tracer.start_as_current_span(f"eval.replay.{baseline_model}") as span:
+        for k, v in attrs.items():
+            span.set_attribute(k, v)
+        br = _replay_full(ticket, baseline_model)
+    base = _final_answer(br)
+    base_cost = _model_cost_of(br, baseline_model)
+    v = _judge(ticket, base, econ)
+    seq = ([{"kind": "user", "label": f'user: "{ticket[:90]}"'}]
+           + calls
+           + [{"kind": "model", "label": "model · respond", "cost": econ_cost,
+               "bites": v.economy_quality < v.baseline_quality},
+              {"kind": "reply", "label": "reply sent"}])
+    return {
+        "conv_id": conv_id, "ticket": ticket, "sub_type": sub_type,
+        "equivalent": v.equivalent, "baseline_quality": v.baseline_quality,
+        "economy_quality": v.economy_quality, "clarified": v.economy_asked_clarification,
+        "refused_escalated": v.economy_refused_or_escalated,
+        "held": v.economy_quality >= 4, "phoenix_url": phoenix_cost.span_deeplink(gid, etid, None) if gid else None,
+        "baseline_answer": base[:240], "economy_answer": econ[:240],
+        "baseline_model_cost": base_cost, "economy_model_cost": econ_cost,
+        "calls": seq,
+    }
+
+
 def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
                    baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
                    max_workers: int = 3) -> dict:
     """Replay N real past conversations through the candidate in a sandbox (every
     span tagged 'test', live policies untouched) and return the quality
-    DISTRIBUTION + cost projection + recommendation."""
+    DISTRIBUTION + per-conversation call sequences (for step-mode) + cost
+    projection + recommendation."""
     from observed.telemetry import init_telemetry
     from accountant.pipeline import phoenix_cost
-    from collections import Counter
+    from accountant import service
     init_telemetry()
     gid = phoenix_cost.project_gid()
+    rates = service.default_tool_rates()
     tickets = _sample_with_subtype(use_case, n)
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
            "accountant.lab.candidate": f"route_{candidate}"}
     t0 = time.monotonic()
     rows: list[dict] = []
     with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_eval_ticket, t["ticket"], baseline_model, economy_model, gid, tag): t
-                for t in tickets}
+        futs = {ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
+                          gid, tag, rates, baseline_model, economy_model): i
+                for i, t in enumerate(tickets)}
         for f in cf.as_completed(futs):
-            r = f.result()
-            r["sub_type"] = futs[f]["sub_type"]
-            # "quality held" = the economy answer is genuinely good on its own
-            # (not byte-identical to premium — different wording can still resolve).
-            r["held"] = r["economy_quality"] >= 4
-            rows.append(r)
-    rows = _lab_recompute(rows)
+            rows.append(f.result())
+    rows.sort(key=lambda r: int(r["conv_id"]))
     return {
         **_lab_aggregate(rows, use_case),
         "use_case": use_case, "candidate": candidate, "n": len(rows),
