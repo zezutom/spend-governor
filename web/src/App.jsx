@@ -80,7 +80,10 @@ export default function App() {
   const [feed, setFeed] = useState([])
   const [proof, setProof] = useState(null)
   const [evalView, setEvalView] = useState(null)   // consequence popup (arm / trip)
-  const [pushed, setPushed] = useState(false)      // presenter armed the riskier call (Ending B)
+  const [debug, setDebug] = useState(false)        // a deliberate MODE you enter
+  const [debugTc, setDebugTc] = useState(null)     // the box dropped into
+  // Ending B is reached deliberately via the debugger's force-route on refunds —
+  // no floating controls on the main canvas (that protects the supervise default).
 
   useEffect(() => {
     const es = new EventSource(`${API}/api/stream`)
@@ -92,7 +95,6 @@ export default function App() {
     es.onerror = () => {}
     // Open mid-crisis: restart ungoverned so each visit plays the full arc.
     fetch(`${API}/api/reset`, { method: 'POST' }).catch(() => {})
-    setPushed(false)
     return () => es.close()
   }, [])
 
@@ -103,41 +105,51 @@ export default function App() {
   const openProof = useCallback((node) => {
     fetch(`${API}/api/proof/${node || 'requests'}`).then((r) => r.json()).then(setProof).catch(() => {})
   }, [])
+  // manual control from inside a box — REAL levers, agent stays on watch
+  const onForceCache = useCallback((sig) => { act('enable', sig) }, [act])
+  const onForceRoute = useCallback((rt) => {
+    setDebugTc(null)
+    if (rt.risky) setEvalView({ key: rt.eval_key, mode: 'trip' })  // catches it on the real eval
+    else act('accept', rt.sig)                                     // arms + opens the hold eval
+  }, [act])
 
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
   const scene = useMemo(() => sceneFor(state, feed), [state, feed])
-  // the map dims whenever a focal card commands attention
-  const dimMap = scene && scene.kind !== 'idle'
-  const route = state?.levers?.find((l) => l.sig && l.sig.startsWith('route_model'))
+  // the map dims whenever a focal card commands attention — but in debug mode the
+  // arc steps aside so you can inspect and click into any box
+  const dimMap = !debug && scene && scene.kind !== 'idle'
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <TopBar state={state} />
+      <TopBar state={state} debug={debug} onDebug={() => { setDebug((d) => !d); setDebugTc(null) }} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} />
         <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
-          {/* the stage: the governed agent, always present, receding when a card is up */}
           <div style={{ position: 'absolute', inset: 0, filter: dimMap ? 'saturate(.5)' : 'none',
             opacity: dimMap ? 0.32 : 1, transition: 'opacity .5s, filter .5s', pointerEvents: dimMap ? 'none' : 'auto' }}>
             {nodes.length === 0
               ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
               : <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   style={{ width: '100%', height: '100%' }}
-                  onNodeClick={(e, node) => openProof(node.data.proofNode || node.id)}
+                  onNodeClick={(e, node) => (debug ? setDebugTc(node.data.proofNode || node.id)
+                    : openProof(node.data.proofNode || node.id))}
                   proOptions={{ hideAttribution: true }} nodesDraggable={false}
                   nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
                   zoomOnScroll={false} zoomOnDoubleClick={false}>
                   <Background color="#e7e7e0" gap={22} />
                 </ReactFlow>}
           </div>
-          {/* the focal card the agent's attention raises */}
-          <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />
-          {/* Ending B — the presenter's deliberate riskier call, once routing holds */}
-          {route?.active && !pushed && !evalView &&
-            <TripAffordance onPush={() => { setPushed(true); setEvalView({ key: 'trip', mode: 'trip' }) }} />}
+          {/* the arc's focal cards — only when NOT inspecting in debug mode */}
+          {!debug && <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />}
+          {debug && <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+            background: '#5a4815', color: '#fff', fontSize: 12.5, padding: '6px 14px', borderRadius: 999 }}>
+            🐞 debug mode — click any box to drop in
+          </div>}
         </div>
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
+      {debugTc && <DebuggerPanel tc={debugTc} onClose={() => setDebugTc(null)}
+        onForceCache={onForceCache} onForceRoute={onForceRoute} />}
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
     </div>
   )
@@ -242,13 +254,12 @@ function VerifyCard({ text, state }) {
 function DeferCard({ route, act }) {
   return (
     <Card accent={AMBER} kicker="⚑ Defer · the agent stops — your call" glow>
-      <div style={{ fontSize: 22, lineHeight: 1.36, color: INK, marginTop: 8 }}>
-        I proved caching is safe and applied it myself. The next lever routes simple
-        tickets to a cheaper model — but I <b>can't prove a cheaper model won't change
-        the answers</b>. That's a call I won't make for you.
+      <div style={{ fontSize: 23, lineHeight: 1.38, color: INK, marginTop: 8 }}>
+        Caching was safe — done. Routing to a cheaper model could <b>change the
+        answers</b>, and I can't prove it won't. That call is yours.
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-        <div style={{ fontSize: 13, color: DIM }}>Arming it takes it live and instruments the consequence.</div>
+        <div style={{ fontSize: 13.5, color: DIM }}>Arming it takes it live and instruments the consequence.</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
           <Btn onClick={() => act('reject', route.sig)} label="not now" color={AMBER} />
           <Btn onClick={() => act('accept', route.sig)} label="arm it →" color={AMBER} primary big />
@@ -272,20 +283,6 @@ function Stat({ label, main, sub, color }) {
       <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
       <div style={{ fontSize: 10.5, color: DIM }}>{sub}</div>
-    </div>
-  )
-}
-
-// ---- Ending B: the deliberate riskier call -------------------------------
-function TripAffordance({ onPush }) {
-  return (
-    <div style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)',
-      background: '#fff', border: `1px solid #e6e1d4`, borderRadius: 12, padding: '10px 14px',
-      display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 22px rgba(0,0,0,.12)' }}>
-      <div style={{ fontSize: 13, color: '#5a5852' }}>
-        Now push it further than the agent would: route <b>refunds</b> to the cheap model too.
-      </div>
-      <Btn onClick={onPush} label="⚡ make the riskier call" color={RED} primary />
     </div>
   )
 }
@@ -316,7 +313,7 @@ function MindLoop({ step, steps }) {
   )
 }
 
-function TopBar({ state }) {
+function TopBar({ state, debug, onDebug }) {
   const dpm = useTween(state?.dollars_per_message)
   const base = state?.baseline_dollars_per_message
   const down = state && state.dollars_per_message < base - 1e-9
@@ -339,6 +336,11 @@ function TopBar({ state }) {
         <Metric label="burn" main={`$${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(3) : state.burn_per_min.toFixed(2)) : '—'}`} unit="/min" color={DIM} small />
         <Metric label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`} unit="live" color={GREEN} />
       </div>
+      <button onClick={onDebug} style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${debug ? '#5a4815' : '#d8d6cc'}`, borderRadius: 8, padding: '6px 12px',
+        color: debug ? '#fff' : '#5a5852', background: debug ? '#5a4815' : '#fff' }}>
+        🐞 debug{debug ? ' · on' : ''}
+      </button>
     </div>
   )
 }
@@ -356,28 +358,55 @@ function Metric({ label, main, unit, color, unitColor, small }) {
 // ===========================================================================
 //  Mind rail — the agent thinking, receded to a quiet column
 // ===========================================================================
-function railIcon(kind) {
-  if (kind === 'user') return ''
-  if (kind === 'applied') return '✓ '
-  if (kind === 'verified') return '✦ '
-  if (kind === 'escalate') return '⚑ '
-  return ''
+function railStyle(kind) {
+  if (kind === 'user') return { accent: '#3b3b37', bg: '#efece2', icon: '' }
+  if (kind === 'applied') return { accent: GREEN, bg: '#eaf6f0', icon: '✓ ' }
+  if (kind === 'verified') return { accent: GREEN, bg: '#eef7f1', icon: '✦ ' }
+  if (kind === 'escalate') return { accent: AMBER, bg: '#fbf0db', icon: '⚑ ' }
+  if (kind === 'holding') return { accent: DIM, bg: '#f6f6f1', icon: '' }
+  return { accent: GREEN, bg: '#f3faf6', icon: '' }
 }
+// The mind rail shows NOW big and readable; the past collapses behind search.
 function MindRail({ feed, step }) {
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const now = feed[0]
+  const rest = feed.slice(1)
+  const shown = q ? rest.filter((c) => c.text.toLowerCase().includes(q.toLowerCase())) : (open ? rest : [])
+  const s = now ? railStyle(now.kind) : null
   return (
-    <div style={{ width: 320, borderRight: '1px solid #eceae0', background: '#fff',
+    <div style={{ width: 380, borderRight: '1px solid #eceae0', background: '#fff',
       display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ padding: '13px 16px 8px' }}>
-        <div style={{ fontWeight: 800, fontSize: 15 }}>The agent's mind</div>
-        <div style={{ fontSize: 12, color: GREEN }}>● reasoning live · {(step || 'observe').toLowerCase()}</div>
+      <div style={{ padding: '15px 18px 6px' }}>
+        <div style={{ fontWeight: 800, fontSize: 18 }}>The agent's mind</div>
+        <div style={{ fontSize: 13, color: GREEN }}>● reasoning live · {(step || 'observe').toLowerCase()}</div>
       </div>
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 16px 16px' }}>
-        {feed.length === 0 && <div style={{ color: DIM, fontSize: 13 }}>Reading the live traffic…</div>}
-        {feed.map((c, i) => (
-          <div key={c.seq} style={{ padding: '7px 0', borderTop: i ? '1px solid #f4f2ea' : 'none',
-            opacity: i === 0 ? 1 : Math.max(0.4, 1 - i * 0.12) }}>
-            <div style={{ fontSize: 13.5, color: '#23231f', lineHeight: 1.4 }}>
-              {c.kind === 'user' ? <b>You: </b> : railIcon(c.kind)}{c.text}
+      {/* NOW — the current thought, large and prominent */}
+      <div style={{ padding: '8px 18px 4px' }}>
+        {now ? (
+          <div style={{ border: `2px solid ${s.accent}`, background: s.bg, borderRadius: 13, padding: '15px 16px' }}>
+            <div style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase',
+              fontWeight: 800, color: s.accent }}>{now.kind === 'user' ? 'your move' : 'now'}</div>
+            <div style={{ fontSize: 19, lineHeight: 1.42, color: INK, marginTop: 5 }}>
+              {now.kind === 'user' ? <b>You: </b> : s.icon}{now.text}
+            </div>
+          </div>
+        ) : <div style={{ color: DIM, fontSize: 17, padding: '10px 0' }}>Reading the live traffic…</div>}
+      </div>
+      {/* history, collapsed behind search */}
+      <div style={{ padding: '8px 18px 4px', display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search the agent's history…"
+          style={{ flex: 1, padding: '7px 11px', border: '1px solid #e0ded3', borderRadius: 8, fontSize: 13.5 }} />
+        {!q && rest.length > 0 &&
+          <button onClick={() => setOpen((o) => !o)} style={{ fontSize: 12.5, color: DIM, cursor: 'pointer',
+            border: '1px solid #e6e4da', borderRadius: 8, padding: '6px 9px', background: '#fff', whiteSpace: 'nowrap' }}>
+            {open ? 'hide' : `${rest.length} earlier`}</button>}
+      </div>
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '4px 18px 16px' }}>
+        {shown.map((c) => (
+          <div key={c.seq} style={{ padding: '8px 0', borderTop: '1px solid #f4f2ea' }}>
+            <div style={{ fontSize: 15, color: '#3b3b37', lineHeight: 1.42 }}>
+              {c.kind === 'user' ? <b>You: </b> : railStyle(c.kind).icon}{c.text}
             </div>
           </div>
         ))}
@@ -434,11 +463,11 @@ function EvalPopup({ view, onClose }) {
             <div style={{ fontSize: 11, letterSpacing: '.09em', color: trip ? RED : AMBER, fontWeight: 800 }}>
               {trip ? 'DELIBERATELY RISKIER CALL · the agent is checking it' : 'YOUR DECISION · ARMED & LIVE'}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
+            <div style={{ fontSize: 21, fontWeight: 800, marginTop: 2 }}>
               {trip ? 'Route refunds → economy model' : 'Route simple tickets → economy model'}
             </div>
-            <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>
-              Accelerated eval · real replays through both models, scored by an LLM-judge · clock compressed to ~10s
+            <div style={{ fontSize: 13, color: DIM, marginTop: 3 }}>
+              Accelerated eval · real replays, LLM-judge scored · clock compressed to ~10s
             </div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
@@ -465,17 +494,17 @@ function EvalPopup({ view, onClose }) {
 
             <div style={{ border: '1px solid #eceae0', borderRadius: 10, overflow: 'hidden' }}>
               {shown.map((r, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-                  borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 13 }}>
-                  <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 56)}</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px',
+                  borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 14.5 }}>
+                  <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 50)}</span>
                   <span style={{ fontWeight: 700, color: qColor(r.baseline_quality, r.economy_quality) }}>
                     {r.baseline_quality} → {r.economy_quality}
                   </span>
                   {r.equivalent
-                    ? <span style={{ fontSize: 11, color: GREEN }}>● equivalent</span>
-                    : <span style={{ fontSize: 11, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
+                    ? <span style={{ fontSize: 12, color: GREEN }}>● equivalent</span>
+                    : <span style={{ fontSize: 12, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
                   {r.phoenix_url && <a href={r.phoenix_url} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 12, color: GREEN, textDecoration: 'none' }}>trace ↗</a>}
+                    style={{ fontSize: 13, color: GREEN, textDecoration: 'none' }}>trace ↗</a>}
                 </div>
               ))}
             </div>
@@ -483,14 +512,14 @@ function EvalPopup({ view, onClose }) {
             {done && (
               <div style={{ marginTop: 16, border: `1.5px solid ${accent}`,
                 background: hold ? '#eef7f1' : '#f9ede9', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800, color: accent }}>THE AGENT'S VERDICT</div>
-                <div style={{ fontSize: 16, color: INK, marginTop: 4 }}>
+                <div style={{ fontSize: 11.5, letterSpacing: '.08em', fontWeight: 800, color: accent }}>THE AGENT'S VERDICT</div>
+                <div style={{ fontSize: 18, color: INK, marginTop: 5, lineHeight: 1.4 }}>
                   {hold
-                    ? '✦ Quality held — the economy model resolves these as well as the baseline. Routing stays live, and I keep watching.'
-                    : '⚑ Quality collapses — the cheaper model fumbles refunds, asking for details it should look up or escalating. I recommend against this call.'}
+                    ? '✦ Quality held — keep it live, the agent keeps watching.'
+                    : '⚑ Quality collapses on refunds — the agent recommends against this call.'}
                 </div>
-                <div style={{ fontSize: 11.5, color: DIM, marginTop: 7 }}>
-                  My judgment over the signals above — Phoenix surfaces the evidence, I render the verdict.
+                <div style={{ fontSize: 12, color: DIM, marginTop: 7 }}>
+                  My judgment over the signals — Phoenix surfaces the evidence, I render the verdict.
                 </div>
                 {!hold && <div style={{ marginTop: 12 }}>
                   <Btn onClick={onClose} label="stand down — don't route refunds" color={RED} primary big />
@@ -505,12 +534,118 @@ function EvalPopup({ view, onClose }) {
 }
 function Tile({ label, main, sub, color }) {
   return (
-    <div style={{ flex: 1, border: '1px solid #eceae0', borderRadius: 10, padding: '9px 11px' }}>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 19, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
-      <div style={{ fontSize: 10.5, color: DIM }}>{sub}</div>
+    <div style={{ flex: 1, border: '1px solid #eceae0', borderRadius: 10, padding: '10px 12px' }}>
+      <div style={{ fontSize: 11, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
+      <div style={{ fontSize: 11, color: DIM }}>{sub}</div>
     </div>
   )
+}
+
+// ===========================================================================
+//  The debugger — a deliberate MODE; drop into any box. Per-call cost with its
+//  SOURCE (LLM measured by Phoenix vs tool at your editable rate), and real
+//  manual controls. Editing a rate recomputes $/message everywhere; manual
+//  actions keep the agent on watch (force-route runs the eval).
+// ===========================================================================
+function RateInput({ value, onCommit }) {
+  const [v, setV] = useState(String(value))
+  useEffect(() => { setV(String(value)) }, [value])
+  const commit = () => { const n = parseFloat(v); if (n >= 0 && n !== value) onCommit(n) }
+  return (
+    <input value={v} onChange={(e) => setV(e.target.value)} onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
+      style={{ width: 72, padding: '2px 6px', fontSize: 13, textAlign: 'right',
+        border: `1px solid ${AMBER}55`, borderRadius: 6, color: '#5a4815', background: '#fdfaf3' }} />
+  )
+}
+
+function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
+  const [d, setD] = useState(null)
+  const load = useCallback(() => fetch(`${API}/api/debug/${tc}`).then((r) => r.json()).then(setD).catch(() => {}), [tc])
+  useEffect(() => { load() }, [load])
+  const setRate = (tool, rate) =>
+    fetch(`${API}/api/tool_rate?tool=${encodeURIComponent(tool)}&rate=${rate}`, { method: 'POST' }).then(load)
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 55 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 14, padding: '22px 24px',
+        width: 640, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
+        {!d ? <div style={{ color: DIM, padding: 16 }}>Dropping into the box…</div> : <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: '#5a4815',
+                borderRadius: 9, padding: '3px 10px', letterSpacing: '.06em' }}>DEBUG MODE</span>
+              <div style={{ fontSize: 21, fontWeight: 700, marginTop: 10 }}>{d.title}</div>
+              <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 2 }}>
+                {Math.round(d.share * 100)}% of spend · ${d.cost_per_message.toFixed(4)} / message
+              </div>
+            </div>
+            <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+          </div>
+
+          {d.pattern && <>
+            <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>WHAT'S HAPPENING</div>
+            <div style={{ fontSize: 15, color: INK, marginTop: 5 }} dangerouslySetInnerHTML={{ __html: mdCode(d.pattern) }} />
+          </>}
+
+          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
+            <span style={{ flex: 1 }}>CALLS &amp; COST · this conversation</span>
+            <span style={{ width: 80, textAlign: 'right' }}>cost</span>
+            <span style={{ width: 168, textAlign: 'right' }}>source</span>
+          </div>
+          <div style={{ borderTop: '1px solid #e6e1d4', marginTop: 6 }}>
+            {/* LLM — measured by Phoenix */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #efe9da' }}>
+              <span style={{ flex: 1, fontSize: 14.5, color: INK }}>premium model · LLM</span>
+              <span style={{ width: 80, textAlign: 'right', fontSize: 14.5, color: INK }}>${d.llm_cost.toFixed(4)}</span>
+              <span style={{ width: 168, textAlign: 'right', fontSize: 12.5, color: GREEN }}>
+                measured · Phoenix {d.llm_url && <a href={d.llm_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a>}
+              </span>
+            </div>
+            {/* tools — your editable rates */}
+            {d.tool_rows.map((r) => (
+              <div key={r.tool} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #efe9da' }}>
+                <span style={{ flex: 1, fontSize: 14.5, color: INK }}>{r.tool} ×{r.count} · tool</span>
+                <span style={{ width: 80, textAlign: 'right', fontSize: 14.5, color: INK }}>${r.cost.toFixed(4)}</span>
+                <span style={{ width: 168, textAlign: 'right', fontSize: 12.5, color: AMBER,
+                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                  your rate <RateInput value={r.rate} onCommit={(n) => setRate(r.tool, n)} /> ✎
+                </span>
+              </div>
+            ))}
+            {/* total */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '10px 0' }}>
+              <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: INK }}>total</span>
+              <span style={{ width: 80, textAlign: 'right', fontSize: 15.5, fontWeight: 700, color: INK }}>${d.cost_per_message.toFixed(4)}</span>
+              <span style={{ width: 168, textAlign: 'right', fontSize: 11.5, color: DIM }}>LLM measured · tools your rate</span>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 16 }}>TAKE MANUAL CONTROL</div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+            {d.cache && (d.cache.active
+              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 13, color: GREEN, border: `1px solid ${GREEN}`,
+                  borderRadius: 8, padding: '8px 12px', background: '#eef7f1' }}>✓ repeated lookups cached</div>
+              : <button onClick={() => onForceCache(d.cache.sig)} style={mbtn(GREEN)}>force-cache repeated lookups</button>)}
+            <button onClick={() => onForceRoute(d.route)} style={mbtn(AMBER)}>route → economy model</button>
+          </div>
+          <div style={{ fontSize: 12.5, color: '#3b3b37', marginTop: 12 }}>
+            The agent keeps watching — it runs the eval and flags you if quality drops.
+          </div>
+        </>}
+      </div>
+    </div>
+  )
+}
+function mbtn(color) {
+  return { flex: 1, fontSize: 13, fontWeight: 600, cursor: 'pointer', color, background: '#fff',
+    border: `1px solid ${color}`, borderRadius: 8, padding: '8px 12px' }
+}
+function mdCode(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/`([^`]+)`/g, '<code style="background:#efe9da;border-radius:4px;padding:0 4px">$1</code>')
 }
 
 // ---- the trace drill-down (per node / per workload) -----------------------

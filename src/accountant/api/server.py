@@ -155,6 +155,60 @@ def eval_result(key: str) -> dict:
     return r
 
 
+_SIMPLE_ROUTE = {"password_reset", "account_question"}
+_CACHE_FOR = {"refund_handling": "cache_tool:web_search", "account_question": "cache_tool:kb_lookup"}
+
+
+@app.get("/api/debug/{tc}")
+def debug_box(tc: str) -> dict:
+    """The debugger's per-box view: the cost of one workload broken to each call,
+    with the SOURCE of every number — LLM measured by Phoenix (trace-linkable),
+    tools at the operator's editable rates. Plus the real levers to take manual
+    control. Cost uses the governor's live rates, so an edited rate is reflected."""
+    rates = governor.rates()
+    live = service.live_state()
+    recs = service.recommendations()
+    rows, _ = service.cost_breakdown(live, recs, rates)
+    row = next((r for r in rows if r["tc"] == tc), None)
+    if not row:
+        raise HTTPException(404, f"no workload '{tc}'")
+    by = live.get("by_task_class") or {}
+    counts = (by.get(tc) or {}).get("avg_tool_counts") or {}
+    llm = (by.get(tc) or {}).get("avg_llm_cost_usd", 0) or 0
+    tool_rows = sorted(
+        ({"tool": t, "count": round(counts.get(t, 0) or 0, 2), "rate": rate,
+          "cost": round((counts.get(t, 0) or 0) * rate, 6)}
+         for t, rate in rates.items() if (counts.get(t, 0) or 0) >= 0.05),
+        key=lambda x: -x["cost"])
+    gid = service.project_gid()
+    tr = service.class_trace_costs([tc], 1, 0)
+    llm_url = service.span_deeplink(gid, tr[0]["trace_id"], None) if tr else None
+    pattern = (service.class_reasons(recs).get(tc) or "").strip()
+    if not pattern and tool_rows:
+        top = max(tool_rows, key=lambda x: x["count"])
+        if top["count"] >= 1.5:
+            pattern = f"Repeated {top['tool']} ×{round(top['count'])} on the premium model — same lookup more than once."
+    active = {p["signature"] for p in service.active_policies()}
+    cache_sig = _CACHE_FOR.get(tc)
+    return {
+        "tc": tc, "title": _CLASS_TITLE.get(tc, tc.replace("_", " ")),
+        "share": round(row["share"], 3), "cost_per_message": round(row["cost"], 6),
+        "llm_cost": round(llm, 6), "tool_cost": round(row["tool"], 6),
+        "pattern": pattern, "llm_url": llm_url, "tool_rows": tool_rows,
+        "cache": ({"sig": cache_sig, "active": cache_sig in active} if cache_sig else None),
+        "route": {"risky": tc not in _SIMPLE_ROUTE,
+                  "sig": ("route_model:simple" if tc in _SIMPLE_ROUTE else None),
+                  "eval_key": ("hold" if tc in _SIMPLE_ROUTE else "trip")},
+    }
+
+
+@app.post("/api/tool_rate")
+async def tool_rate(tool: str, rate: float) -> dict:
+    """Edit an operator tool rate; the governor recomputes cost everywhere."""
+    await governor.set_tool_rate(tool, rate)
+    return {"ok": True, "state": governor.snapshot()}
+
+
 @app.get("/api/proof")
 def proof() -> dict:
     return _node_insight("tools")

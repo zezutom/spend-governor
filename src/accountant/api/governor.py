@@ -21,6 +21,7 @@ from accountant.optimizer import agent
 _MIN_PER_MONTH = 30 * 24 * 60
 _SEC_PER_MONTH = 30 * 24 * 60 * 60
 TICK_SECONDS = 5.0
+PHASE_DWELL = 1.2  # hold a real phase briefly so the loop indicator is legible
 
 # The visible mind: one cognitive loop the agent runs, current step lit in zone 1.
 # OBSERVE (read live Phoenix traffic) → DIAGNOSE (where money leaks) → DECIDE
@@ -54,6 +55,7 @@ class Governor:
         self.pushback: dict | None = None
         self.verify: dict | None = None  # last VERIFY result (Phoenix-measured delta)
         self.step = "OBSERVE"            # current position in the mind loop
+        self.rate_overrides: dict[str, float] = {}  # operator tool-rate edits (debugger)
         self.volume = volume
         self._seq = 0
         self._task: asyncio.Task | None = None
@@ -69,9 +71,20 @@ class Governor:
     def unsubscribe(self, q: asyncio.Queue) -> None:
         self.subscribers.discard(q)
 
+    def rates(self) -> dict:
+        """The tool rates in force = operator defaults (TOOL_PRICES) with any
+        debugger edits applied. Used everywhere cost is computed, so an edited
+        rate recomputes $/message globally — not just in the debugger."""
+        return {**service.default_tool_rates(), **self.rate_overrides}
+
+    async def set_tool_rate(self, tool: str, rate: float) -> None:
+        async with self._lock:
+            self.rate_overrides[tool] = max(0.0, float(rate))
+            await self._emit("user", f"You set the {tool} rate to ${float(rate):.4f}/call.")
+
     # --- snapshot (everything the canvas + counters render) ----------------
     def _ctx(self):
-        rates = service.default_tool_rates()
+        rates = self.rates()
         live = service.live_state()
         recs = service.recommendations()
         _, totals = service.cost_breakdown(live, recs, rates)
@@ -81,7 +94,7 @@ class Governor:
         return service.policy_monthly_saving(lever["issue"], rates, self.volume, totals["total_n"])
 
     def snapshot(self) -> dict:
-        rates = service.default_tool_rates()
+        rates = self.rates()
         live = service.live_state()
         recs = service.recommendations()
         rows, totals = service.cost_breakdown(live, recs, rates)
@@ -247,15 +260,20 @@ class Governor:
 
         # SAFE-FIRST: apply every safe (output-preserving) lever before deferring
         # any answer-affecting one — so the arc plays cache, cache, then the single
-        # pivot, never interleaved.
+        # pivot, never interleaved. The phase steps are REAL — DECIDE while judging,
+        # ACT while activating, VERIFY while re-measuring — held briefly apart only
+        # so each is legible in the loop indicator (not a timer cycling phases).
         for step in self.plan:
             lv = _ready(step)
             if lv and lv["safe"]:
-                await self._emit("thinking", None, step="DECIDE")  # judged safe → enact
+                await self._emit("thinking", None, step="DECIDE")          # deciding: judged safe
+                await asyncio.sleep(PHASE_DWELL)
+                await self._emit("thinking", None, step="ACT")             # acting: enact it
                 await asyncio.to_thread(service.activate_policy, step["lever"], lv["policy_type"], lv["params"])
                 self._held = False
                 await self._emit("applied", step["reason"], step="ACT")
-                await self._verify(step["lever"], lv)              # re-measure from Phoenix
+                await asyncio.sleep(PHASE_DWELL)
+                await self._verify(step["lever"], lv)                      # verifying: re-measure
                 return
         # then the pivot: escalate the first answer-affecting lever for a human call
         for step in self.plan:
