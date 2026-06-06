@@ -975,14 +975,30 @@ function FactGrid({ facts }) {
     </div>
   )
 }
+// Phoenix drops ?selectedSpanNodeId on a CLICKED link but honors it on a PASTED
+// URL — and no open mechanism (anchor / window.open / blank-tab) bypasses that.
+// So clicking copies the exact span URL; you paste it into a new tab (confirmed
+// to land on the exact span). Right-click → Open Link also still works.
+function SpanLink({ url, label }) {
+  const [copied, setCopied] = useState(false)
+  const copy = (e) => {
+    e.preventDefault(); e.stopPropagation()
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2400) }
+    try { navigator.clipboard.writeText(url).then(done, done) } catch { done() }
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" onClick={copy} title="copy the span link, then paste into a new tab"
+      style={{ fontSize: 12, color: copied ? '#1a4f40' : GREEN, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+      {copied ? '✓ link copied — paste in a new tab' : `⧉ copy ${label && label.includes('trace') ? 'trace' : 'span'} link`}
+    </a>
+  )
+}
 function InsShell({ title, accent, span, spanLabel, children }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
-        {span && <a href={span} target="_blank" rel="noreferrer"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(span, '_blank', 'noopener') }}
-          style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}>{spanLabel || 'open in Phoenix ↗'}</a>}
+        {span && <SpanLink url={span} label={spanLabel} />}
       </div>
       <div style={{ marginTop: 8 }}>{children}</div>
     </div>
