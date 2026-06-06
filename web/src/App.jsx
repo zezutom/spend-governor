@@ -755,9 +755,10 @@ function ReplayLab({ onClose }) {
     setSelConv(i); setCursorCall(0); setPlaying(false)
   }, [data])
 
-  // active dataset: the live run's rows once a run has produced any, else the
-  // pre-run (so the stepper works before the first run).
-  const rows = runRows.length ? runRows : (data?.rows || [])
+  // active dataset: the live run's rows during/after a run (so impact reflects the
+  // fresh run, not stale pre-run numbers), else the pre-run (so the stepper works
+  // before the first run).
+  const rows = (running || runRows.length) ? runRows : (data?.rows || [])
   const selRow = rows[Math.min(selConv, Math.max(0, rows.length - 1))]
   useEffect(() => {   // play walks the chosen conversation call-by-call
     if (!playing || !selRow) return
@@ -907,10 +908,23 @@ function ReplayLab({ onClose }) {
                   </select>
                 </div>
 
-                {!ran && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
+                {!ran && !running && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
+
+                {/* running banner — shows IMMEDIATELY on click, before the first row */}
+                {running && <div style={{ margin: '14px 0 6px', border: `1px solid ${GREEN}`, background: '#eef7f1', borderRadius: 10, padding: '11px 12px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: GREEN }}>
+                    <span style={{ animation: 'pulse 1s infinite' }}>●</span> running live — {runRows.length}/{N} {runSource === 'synthetic' ? 'synthetic' : 'real'} replays
+                  </div>
+                  <div style={{ height: 6, borderRadius: 4, background: '#dceee6', marginTop: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.round((runRows.length / N) * 100)}%`, background: GREEN, transition: 'width .3s' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>
+                    {runRows.length === 0 ? 'executing the first replays — each takes a few seconds, results stream in as they land' : 'impact updates as each replay lands'}
+                  </div>
+                  <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
+                </div>}
 
                 {ran && imp && <>
-                  {running && <div style={{ fontSize: 12, color: GREEN, margin: '12px 0 4px' }}>● running live — {runRows.length}/{N} replayed…</div>}
                   {/* COST IMPACT — measured vs estimated, visually distinct */}
                   <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
                   <div style={{ display: 'flex', gap: 10 }}>

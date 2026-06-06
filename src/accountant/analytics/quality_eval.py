@@ -571,6 +571,24 @@ def generate_synthetic_tickets(use_case: str, n: int) -> list[dict]:
              "sub_type": _subtype(use_case, l)} for l in lines]
 
 
+_lab_inited = False
+_lab_gid = None
+
+
+def _lab_setup():
+    """Init telemetry once and cache the project gid — so a load test's first
+    replay isn't held up re-registering OTEL + re-resolving the gid each run."""
+    global _lab_inited, _lab_gid
+    if not _lab_inited:
+        from observed.telemetry import init_telemetry
+        init_telemetry()
+        _lab_inited = True
+    if _lab_gid is None:
+        from accountant.pipeline import phoenix_cost
+        _lab_gid = phoenix_cost.project_gid()
+    return _lab_gid
+
+
 def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
                   baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
                   max_workers: int = 3):
@@ -579,11 +597,8 @@ def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
     plausible ones. Every span tagged 'test' (+ the source); sandbox, never touches
     live policies. Rows carry the call sequence + both model costs + judge verdict,
     so the UI derives any {cache, economy} config's impact from the run."""
-    from observed.telemetry import init_telemetry
-    from accountant.pipeline import phoenix_cost
     from accountant import service
-    init_telemetry()
-    gid = phoenix_cost.project_gid()
+    gid = _lab_setup()
     rates = service.default_tool_rates()
     tickets = (generate_synthetic_tickets(use_case, n) if source == "synthetic"
                else _sample_with_subtype(use_case, n))
