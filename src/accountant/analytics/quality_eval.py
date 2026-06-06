@@ -343,29 +343,54 @@ def _replay_full(ticket: str, model: str):
             thinking_config=types.ThinkingConfig(thinking_budget=0)))
 
 
+def _trim_obj(obj, n: int = 220) -> str:
+    try:
+        s = json.dumps(obj, default=str, ensure_ascii=False)
+    except Exception:
+        s = str(obj)
+    s = s.strip()
+    return s[:n] + ("…" if len(s) > n else "")
+
+
 def _calls_from_resp(resp, rates: dict) -> list[dict]:
     """The real tool-call sequence the agent ran, in order, with per-call tool
-    cost and a duplicate flag (the SAME tool fired again = the waste story)."""
-    calls, seen = [], set()
-    for content in (getattr(resp, "automatic_function_calling_history", None) or []):
+    cost, a duplicate flag (the SAME tool fired again = the waste story), and the
+    real input args + output result captured from the AFC history."""
+    hist = getattr(resp, "automatic_function_calling_history", None) or []
+    fcalls, fresps = [], []
+    for content in hist:
         for p in (content.parts or []):
             fc = getattr(p, "function_call", None)
-            if fc and fc.name and fc.name != "task_classifier":  # classifier is structural
-                dup = fc.name in seen
-                seen.add(fc.name)
-                calls.append({"kind": "tool", "tool": fc.name,
-                              "cost": round(rates.get(fc.name, 0.0), 5), "dup": dup})
+            fr = getattr(p, "function_response", None)
+            if fc and fc.name:
+                fcalls.append((fc.name, dict(fc.args or {})))
+            elif fr and fr.name:
+                fresps.append(dict(fr.response or {}))
+    calls, seen = [], set()
+    for i, (name, args) in enumerate(fcalls):
+        out = fresps[i] if i < len(fresps) else {}
+        if name == "task_classifier":  # structural classifier — not a billable step
+            continue
+        dup = name in seen
+        seen.add(name)
+        calls.append({"kind": "tool", "tool": name, "cost": round(rates.get(name, 0.0), 5),
+                      "dup": dup, "input": _trim_obj(args), "output": _trim_obj(out)})
     return calls
+
+
+def _tokens(resp) -> tuple[int, int]:
+    u = getattr(resp, "usage_metadata", None)
+    if not u:
+        return 0, 0
+    return (getattr(u, "prompt_token_count", 0) or 0, getattr(u, "candidates_token_count", 0) or 0)
 
 
 def _model_cost_of(resp, model: str) -> float:
     from accountant.pricing.gemini import MODELS
-    u = getattr(resp, "usage_metadata", None)
     mp = MODELS.get(model)
-    if not u or not mp:
+    if not mp:
         return 0.0
-    inp = getattr(u, "prompt_token_count", 0) or 0
-    out = getattr(u, "candidates_token_count", 0) or 0
+    inp, out = _tokens(resp)
     return round(inp / 1e6 * mp.input_uncached_per_1m_usd + out / 1e6 * mp.output_per_1m_usd, 6)
 
 
@@ -376,15 +401,18 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     from opentelemetry import trace as _ot
     from accountant.pipeline import phoenix_cost
     tracer = _ot.get_tracer("accountant.quality_eval")
-    # economy (the candidate under test) — capture its real path + trace
+    # economy (the candidate under test) — capture its real path + trace + latency
+    t_econ = time.monotonic()
     with tracer.start_as_current_span(f"eval.replay.{economy_model}") as span:
         for k, v in attrs.items():
             span.set_attribute(k, v)
         er = _replay_full(ticket, economy_model)
         etid = format(span.get_span_context().trace_id, "032x")
+    econ_latency_ms = round((time.monotonic() - t_econ) * 1000)
     econ = _final_answer(er)
     calls = _calls_from_resp(er, rates)
     econ_cost = _model_cost_of(er, economy_model)
+    econ_in, econ_out = _tokens(er)
     # baseline (premium) — answer only, for the judge + the diff
     with tracer.start_as_current_span(f"eval.replay.{baseline_model}") as span:
         for k, v in attrs.items():
@@ -396,7 +424,8 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     seq = ([{"kind": "user", "label": f'user: "{ticket[:90]}"'}]
            + calls
            + [{"kind": "model", "label": "model · respond", "cost": econ_cost,
-               "bites": v.economy_quality < v.baseline_quality},
+               "bites": v.economy_quality < v.baseline_quality, "model": economy_model,
+               "latency_ms": econ_latency_ms, "in_tokens": econ_in, "out_tokens": econ_out},
               {"kind": "reply", "label": "reply sent"}])
     return {
         "conv_id": conv_id, "ticket": ticket, "sub_type": sub_type,

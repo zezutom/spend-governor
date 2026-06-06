@@ -910,23 +910,29 @@ function tabBtn(active) {
 // is the payoff (premium vs economy side by side).
 function CallInspector({ call, row }) {
   if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
+  const span = row.phoenix_url
   if (call.kind === 'user')
-    return <InsShell title="user message" accent={DIM}>
-      <div style={{ fontSize: 14, color: INK }}>{row.ticket}</div></InsShell>
+    return <InsShell title="user message" accent={DIM} span={span}>
+      <div style={{ fontSize: 14.5, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
   if (call.kind === 'reply')
-    return <InsShell title="reply sent · economy answer" accent={DIM}>
+    return <InsShell title="reply sent · what the customer got" accent={DIM} span={span}>
       <div style={{ fontSize: 13.5, color: '#3b3b37', lineHeight: 1.45 }}>{row.economy_answer}</div></InsShell>
   if (call.kind === 'tool')
-    return <InsShell title={`${call.tool} · tool call`} accent={AMBER}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
-        <span style={{ color: INK }}>cost</span>
-        <span style={{ color: INK }}>${(call.cost || 0).toFixed(4)} <span style={{ color: AMBER, fontSize: 12 }}>your rate</span></span>
-      </div>
-      {call.dup && <div style={{ marginTop: 8, fontSize: 13, color: AMBER }}>⚠ duplicate — this same lookup already fired in this conversation. That's the waste the cache removes.</div>}
+    return <InsShell title={`${call.tool} · tool call`} accent={AMBER} span={span}>
+      <FactGrid facts={[
+        ['cost', <>${(call.cost || 0).toFixed(4)} <span style={{ color: AMBER }}>your rate</span></>],
+        ['source', 'configured rate · not Phoenix-priced'],
+        ['latency', 'served instantly (synthetic tool)'],
+        ['repeat', call.dup ? <span style={{ color: AMBER }}>⚠ duplicate this conversation</span> : 'first call'],
+      ]} />
+      <Field label="input — what the agent asked">{call.input}</Field>
+      <Field label="output — what came back (trimmed)">{call.output}</Field>
+      {call.dup && <div style={{ marginTop: 8, fontSize: 12.5, color: AMBER }}>
+        ⚠ the same lookup already fired earlier in this conversation — exactly the redundant call the cache removes.</div>}
     </InsShell>
-  // model call — the payoff: the candidate diff
+  // model call — the payoff: the candidate diff + the real model telemetry
   const bites = row.economy_quality < row.baseline_quality
-  return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN}>
+  return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN} span={span}>
     <div style={{ border: `1px solid ${GREEN}`, background: '#e1f5ee', borderRadius: 8, padding: '10px 12px' }}>
       <div style={{ fontSize: 12.5, fontWeight: 700 }}>premium (baseline) · judge quality {row.baseline_quality}/5</div>
       <div style={{ fontSize: 13, color: '#1a4f40', marginTop: 4, lineHeight: 1.4 }}>{row.baseline_answer}</div>
@@ -935,16 +941,46 @@ function CallInspector({ call, row }) {
       <div style={{ fontSize: 12.5, fontWeight: 700 }}>economy (candidate) · judge quality {row.economy_quality}/5 {bites ? '⚠' : ''}</div>
       <div style={{ fontSize: 13, color: '#85540b', marginTop: 4, lineHeight: 1.4 }}>{row.economy_answer}</div>
     </div>
+    <div style={{ marginTop: 10 }}><FactGrid facts={[
+      ['model', call.model || '—'],
+      ['round-trip', call.latency_ms != null ? `${call.latency_ms} ms` : '—'],
+      ['tokens', call.in_tokens != null ? `${call.in_tokens} in → ${call.out_tokens} out` : '—'],
+      ['cost', <>${(call.cost || 0).toFixed(5)} <span style={{ color: GREEN }}>Phoenix-measured</span></>],
+    ]} /></div>
     <div style={{ fontSize: 12.5, color: bites ? AMBER : GREEN, marginTop: 8 }}>
       → this replay {row.held ? 'holds' : 'degrades'} under the candidate
-      {row.phoenix_url && <> · <a href={row.phoenix_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a></>}
     </div>
   </InsShell>
 }
-function InsShell({ title, accent, children }) {
+function Field({ label, children }) {
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 12.5, fontFamily: 'monospace', color: '#3b3b37', background: '#f7f6f1',
+        border: '1px solid #eceae0', borderRadius: 7, padding: '7px 9px', marginTop: 3,
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.4 }}>{children || '—'}</div>
+    </div>
+  )
+}
+function FactGrid({ facts }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+      {facts.map(([k, v], i) => (
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13,
+          borderBottom: '1px solid #f1efe8', paddingBottom: 3 }}>
+          <span style={{ color: DIM }}>{k}</span><span style={{ color: INK, textAlign: 'right' }}>{v}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+function InsShell({ title, accent, span, children }) {
   return (
     <div>
-      <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
+        {span && <a href={span} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>open span in Phoenix ↗</a>}
+      </div>
       <div style={{ marginTop: 8 }}>{children}</div>
     </div>
   )
