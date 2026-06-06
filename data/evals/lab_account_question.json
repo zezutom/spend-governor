@@ -47,7 +47,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "11ee5d885fc4a0e7",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTkzNA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTkzNA%3D%3D"
         },
         {
           "kind": "tool",
@@ -57,7 +57,7 @@
           "input": "{\"customer_reply\": \"The ability to add a teammate to your account can be found under Settings \u2192 Account. Account owners can also transfer ownership and billing contacts can update payment methods there. If you have any f\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket t\u2026",
           "span_id": "65d8d05f160c5dc3",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0MQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0MQ%3D%3D"
         },
         {
           "kind": "model",
@@ -68,7 +68,7 @@
           "latency_ms": 6051,
           "in_tokens": 1872,
           "out_tokens": 19,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0NA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0NA%3D%3D"
         },
         {
           "kind": "reply",
@@ -104,7 +104,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "171081222c73b8a6",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNQ%3D%3D"
         },
         {
           "kind": "model",
@@ -115,7 +115,7 @@
           "latency_ms": 4298,
           "in_tokens": 1535,
           "out_tokens": 11,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNw%3D%3D"
         },
         {
           "kind": "reply",
@@ -151,7 +151,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "550b60d6055793bd",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzNg=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzNg%3D%3D"
         },
         {
           "kind": "model",
@@ -162,7 +162,7 @@
           "latency_ms": 4413,
           "in_tokens": 1543,
           "out_tokens": 14,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzOA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzOA%3D%3D"
         },
         {
           "kind": "reply",
@@ -198,7 +198,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "5978ae9800c261a7",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk1OA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk1OA%3D%3D"
         },
         {
           "kind": "tool",
@@ -208,7 +208,7 @@
           "input": "{\"internal_note\": \"Customer asked how to enable SSO. KB article /account/general provided the answer. Updated ticket status to resolved.\", \"status\": \"resolved\", \"customer_reply\": \"You can enable SSO under Settings \u2192 Acco\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to enable SSO. KB article /account/general provided the answer. Updated ticket statu\u2026",
           "span_id": "6bbd17c3c6a16244",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2Mw%3D%3D"
         },
         {
           "kind": "model",
@@ -219,7 +219,7 @@
           "latency_ms": 6850,
           "in_tokens": 1739,
           "out_tokens": 23,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2NQ%3D%3D"
         },
         {
           "kind": "reply",
@@ -255,7 +255,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "4edeb7a96f6797b0",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Mg=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Mg%3D%3D"
         },
         {
           "kind": "tool",
@@ -265,7 +265,7 @@
           "input": "{\"customer_reply\": \"You can find your invoice from last month in your account settings. Navigate to \\\"Settings\\\" and then \\\"Account\\\" to view your billing history and invoices.\", \"status\": \"resolved\", \"internal_note\": \"C\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked for last month\\\\'s invoice. Provided KB article on account settings, directing them to t\u2026",
           "span_id": "753de2a4df19c09e",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Nw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Nw%3D%3D"
         },
         {
           "kind": "model",
@@ -276,7 +276,7 @@
           "latency_ms": 7845,
           "in_tokens": 1811,
           "out_tokens": 37,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2OA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2OA%3D%3D"
         },
         {
           "kind": "reply",
@@ -312,7 +312,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "1bc5ff80637f58ab",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3Mw%3D%3D"
         },
         {
           "kind": "model",
@@ -323,7 +323,7 @@
           "latency_ms": 6639,
           "in_tokens": 1535,
           "out_tokens": 18,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3NQ%3D%3D"
         },
         {
           "kind": "reply",
@@ -359,7 +359,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "0e52d2020e6042ea",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Mw%3D%3D"
         },
         {
           "kind": "tool",
@@ -369,7 +369,7 @@
           "input": "{\"status\": \"resolved\", \"internal_note\": \"Customer asked for API key location. KB lookup for /account/general did not contain this information. Advised customer to check developer docs or contact technical support.\", \"cus\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked for API key location. KB lookup for /account/general did not contain this information. A\u2026",
           "span_id": "2e17e8b2a7c9bc42",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5NQ%3D%3D"
         },
         {
           "kind": "model",
@@ -380,7 +380,7 @@
           "latency_ms": 5632,
           "in_tokens": 1852,
           "out_tokens": 20,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Nw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Nw%3D%3D"
         },
         {
           "kind": "reply",
@@ -416,7 +416,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "b1d89844b0ec73b3",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMTk5OA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMTk5OA%3D%3D"
         },
         {
           "kind": "tool",
@@ -426,7 +426,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "912397c5c589d1cb",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwMQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwMQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -436,7 +436,7 @@
           "input": "{\"customer_reply\": \"Yes, you can export all of your form responses. You can find this option in your account settings. If you need further assistance, please let us know.\", \"internal_note\": \"Customer asked about exportin\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about exporting form responses. KB article /account/general was relevant for general acc\u2026",
           "span_id": "ed42aa305c9eeb04",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwNQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwNQ%3D%3D"
         },
         {
           "kind": "model",
@@ -447,7 +447,7 @@
           "latency_ms": 8188,
           "in_tokens": 1918,
           "out_tokens": 20,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwOA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwOA%3D%3D"
         },
         {
           "kind": "reply",
@@ -483,7 +483,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "8741e65e485f1d0e",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwMA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwMA%3D%3D"
         },
         {
           "kind": "tool",
@@ -493,7 +493,7 @@
           "input": "{\"status\": \"resolved\", \"internal_note\": \"Customer asked how to delete a form. KB article /account/general was relevant for general account management, but a more specific article on form management would be ideal. Provid\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to delete a form. KB article /account/general was relevant for general account manag\u2026",
           "span_id": "82ef93292a583b73",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNA%3D%3D"
         },
         {
           "kind": "model",
@@ -504,7 +504,7 @@
           "latency_ms": 4578,
           "in_tokens": 1912,
           "out_tokens": 62,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNw%3D%3D"
         },
         {
           "kind": "reply",
@@ -540,7 +540,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "067e3d854e732863",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAyOA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAyOA%3D%3D"
         },
         {
           "kind": "tool",
@@ -550,7 +550,7 @@
           "input": "{\"path\": \"/billing/plan-changes\"}",
           "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
           "span_id": "d44662761071343b",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzMA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzMA%3D%3D"
         },
         {
           "kind": "tool",
@@ -560,7 +560,7 @@
           "input": "{\"customer_reply\": \"The Pro and Enterprise plans offer different features and support levels. For a detailed comparison, please refer to our pricing page: [link to pricing page]. If you have specific questions about whic\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about Pro vs. Enterprise plans. Provided general info and link to pricing page. No speci\u2026",
           "span_id": "51ccc7475c0abd35",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzNA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzNA%3D%3D"
         },
         {
           "kind": "model",
@@ -571,7 +571,7 @@
           "latency_ms": 8266,
           "in_tokens": 1929,
           "out_tokens": 18,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzOA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzOA%3D%3D"
         },
         {
           "kind": "reply",
@@ -607,7 +607,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "0686a44cb8158a62",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzMw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzMw%3D%3D"
         },
         {
           "kind": "tool",
@@ -617,7 +617,7 @@
           "input": "{\"path\": \"/account/custom-domains\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "3074336a87839226",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzNg=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzNg%3D%3D"
         },
         {
           "kind": "tool",
@@ -627,7 +627,7 @@
           "input": "{\"path\": \"/features/custom-domains\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "ebe0a8117c4ca5f3",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzOQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzOQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -637,7 +637,7 @@
           "input": "{\"path\": \"/features/domains\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "d96135cd69c55815",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Mw%3D%3D"
         },
         {
           "kind": "tool",
@@ -647,7 +647,7 @@
           "input": "{\"path\": \"/features/branding\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "926051b51261225f",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Ng=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Ng%3D%3D"
         },
         {
           "kind": "tool",
@@ -657,7 +657,7 @@
           "input": "{\"query\": \"stratus forms custom domain support\"}",
           "output": "{\"result\": [{\"title\": \"stratus forms custom domain support \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_custom_domain_support\", \"snippet\": \"This article provides a general overview of stra\u2026",
           "span_id": "32fad9fc7115272e",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1MQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1MQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -667,7 +667,7 @@
           "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can use a custom domain for your forms with Stratus Forms. For more information on how to set this up, please refer to our documentation on custom domains. If you have any fu\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about custom domains. KB lookup for /account/custom-domains, /features/custom-domains, /\u2026",
           "span_id": "5e55c60fc64172d9",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1Mw%3D%3D"
         },
         {
           "kind": "model",
@@ -678,7 +678,7 @@
           "latency_ms": 14924,
           "in_tokens": 2211,
           "out_tokens": 91,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1NQ%3D%3D"
         },
         {
           "kind": "reply",
@@ -714,7 +714,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "b159d137a5e5579c",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -724,7 +724,7 @@
           "input": "{\"path\": \"/account/analytics\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "f8714ed78617e05a",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNw%3D%3D"
         },
         {
           "kind": "tool",
@@ -734,7 +734,7 @@
           "input": "{\"path\": \"/features/analytics\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "6a53b426ae0860a6",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0MQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0MQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -744,7 +744,7 @@
           "input": "{\"path\": \"/product/forms\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "c5b28d038d6c1fc5",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0NA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0NA%3D%3D"
         },
         {
           "kind": "tool",
@@ -754,7 +754,7 @@
           "input": "{\"path\": \"/product/analytics\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
           "span_id": "8a02812d4ee326fd",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0Nw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0Nw%3D%3D"
         },
         {
           "kind": "tool",
@@ -764,7 +764,7 @@
           "input": "{\"query\": \"Stratus Forms form analytics location\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms form analytics location \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_form_analytics_location\", \"snippet\": \"This article provides a general overview of \u2026",
           "span_id": "24334f76c52c4bac",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0OQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0OQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -774,7 +774,7 @@
           "input": "{\"internal_note\": \"Customer asked about form analytics location. KB articles for /account/general were found, but specific articles for analytics were not. Web search provided general guidance. Responded with dashboard l\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about form analytics location. KB articles for /account/general were found, but specific\u2026",
           "span_id": "9c056a2d77fd2757",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1NA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1NA%3D%3D"
         },
         {
           "kind": "model",
@@ -785,7 +785,7 @@
           "latency_ms": 14661,
           "in_tokens": 2132,
           "out_tokens": 18,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1Ng=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1Ng%3D%3D"
         },
         {
           "kind": "reply",
@@ -821,7 +821,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "bd5471ef116fb949",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3NQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -831,7 +831,7 @@
           "input": "{\"query\": \"Stratus Forms Zapier integration guide\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms Zapier integration guide \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_Zapier_integration_guide\", \"snippet\": \"This article provides a general overview o\u2026",
           "span_id": "c8e1e869ba90b0f9",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3OA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3OA%3D%3D"
         },
         {
           "kind": "tool",
@@ -841,7 +841,7 @@
           "input": "{\"internal_note\": \"Customer asked about Zapier integration. KB lookup for /account/general returned general account info. Web search provided several external resources. Provided both to customer and closed ticket.\", \"cu\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about Zapier integration. KB lookup for /account/general returned general account info. \u2026",
           "span_id": "51125e06f254e4ca",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Mg=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Mg%3D%3D"
         },
         {
           "kind": "model",
@@ -852,7 +852,7 @@
           "latency_ms": 5755,
           "in_tokens": 2432,
           "out_tokens": 19,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Ng=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Ng%3D%3D"
         },
         {
           "kind": "reply",
@@ -888,7 +888,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "d793ca92a8afe1ae",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4Mw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4Mw%3D%3D"
         },
         {
           "kind": "tool",
@@ -898,7 +898,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "b0cd1840bb9c119d",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4NQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4NQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -908,7 +908,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "cacfdc4ec3c905dc",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4OQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4OQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -918,7 +918,7 @@
           "input": "{\"internal_note\": \"Customer asked about embedding forms. KB article /account/general was relevant. Provided a customer-facing reply and updated ticket status.\", \"status\": \"resolved\", \"customer_reply\": \"Yes, you can embed\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about embedding forms. KB article /account/general was relevant. Provided a customer-fac\u2026",
           "span_id": "fecd4f90a02ef969",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Mg=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Mg%3D%3D"
         },
         {
           "kind": "model",
@@ -929,7 +929,7 @@
           "latency_ms": 5042,
           "in_tokens": 1897,
           "out_tokens": 16,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Nw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Nw%3D%3D"
         },
         {
           "kind": "reply",
@@ -965,7 +965,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "1b7d85ffb1f5e66f",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA4OA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA4OA%3D%3D"
         },
         {
           "kind": "tool",
@@ -975,7 +975,7 @@
           "input": "{\"internal_note\": \"Customer asked about accepted payment methods. KB article /account/general provided relevant information about updating payment methods. Marked ticket as resolved.\", \"customer_reply\": \"The article stat\u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about accepted payment methods. KB article /account/general provided relevant informatio\u2026",
           "span_id": "12e3a2d7c2492ee7",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5MQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5MQ%3D%3D"
         },
         {
           "kind": "model",
@@ -986,7 +986,7 @@
           "latency_ms": 4235,
           "in_tokens": 1798,
           "out_tokens": 16,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5NA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5NA%3D%3D"
         },
         {
           "kind": "reply",
@@ -1022,7 +1022,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "636251e74c64902c",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNQ%3D%3D"
         },
         {
           "kind": "tool",
@@ -1032,7 +1032,7 @@
           "input": "{\"internal_note\": \"Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket to resolved.\", \"customer_reply\": \"The ability to add a teammate to your account can be found under \u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket t\u2026",
           "span_id": "0a09d2bb26f53137",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNw%3D%3D"
         },
         {
           "kind": "model",
@@ -1043,7 +1043,7 @@
           "latency_ms": 6284,
           "in_tokens": 1871,
           "out_tokens": 19,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjEyMQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjEyMQ%3D%3D"
         },
         {
           "kind": "reply",
@@ -1079,7 +1079,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "1df1b8a67e3653ef",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMA=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMA%3D%3D"
         },
         {
           "kind": "model",
@@ -1090,7 +1090,7 @@
           "latency_ms": 5103,
           "in_tokens": 1535,
           "out_tokens": 11,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMw%3D%3D"
         },
         {
           "kind": "reply",
@@ -1126,7 +1126,7 @@
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
           "span_id": "bfea1a945c9218e5",
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEyNw=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEyNw%3D%3D"
         },
         {
           "kind": "model",
@@ -1137,7 +1137,7 @@
           "latency_ms": 5536,
           "in_tokens": 1543,
           "out_tokens": 14,
-          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEzMQ=="
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEzMQ%3D%3D"
         },
         {
           "kind": "reply",
