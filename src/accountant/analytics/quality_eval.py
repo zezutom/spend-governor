@@ -21,6 +21,8 @@ the verdict.
 """
 
 import concurrent.futures as cf
+import json
+import os
 import threading
 import time
 
@@ -50,13 +52,52 @@ def _instruction() -> str:
     return load_instruction()
 
 
+import functools
+import threading
+
+# Per-thread accumulator of the OTEL span_id for every tool call the current
+# replay makes, in order — so each stepped tool call links to its OWN span.
+_tool_rec = threading.local()
+
+
+def _traced_tool(fn):
+    """Wrap an observed tool so each invocation emits its own real Phoenix span
+    (a child of the model call). AFC introspects the signature via __wrapped__,
+    so the function declaration is unchanged."""
+    @functools.wraps(fn)
+    def w(*args, **kwargs):
+        from opentelemetry import trace as _ot
+        tr = _ot.get_tracer("accountant.quality_eval")
+        with tr.start_as_current_span(fn.__name__) as sp:
+            # record the span id FIRST, so it's captured even if the tool raises
+            # (a tool erroring on bad args is itself a real, inspectable signal)
+            sid = format(sp.get_span_context().span_id, "016x")
+            rec = getattr(_tool_rec, "ids", None)
+            if rec is not None:
+                rec.append(sid)
+            try:
+                sp.set_attribute("openinference.span.kind", "TOOL")
+                sp.set_attribute("tool.name", fn.__name__)
+                sp.set_attribute("input.value", json.dumps(kwargs, default=str)[:1500])
+            except Exception:
+                pass
+            out = fn(*args, **kwargs)
+            try:
+                sp.set_attribute("output.value", json.dumps(out, default=str)[:1500])
+            except Exception:
+                pass
+        return out
+    return w
+
+
 def _tools() -> list:
-    """The real observed-agent tools, handed to genai's automatic function
-    calling so the replay runs the agent's actual tool loop (classify → look up
-    → resolve) — a faithful replay, just without the ADK runtime's overhead."""
+    """The real observed-agent tools, each wrapped to emit its own Phoenix span,
+    handed to genai's automatic function calling so the replay runs the agent's
+    actual tool loop (classify → look up → resolve)."""
     from observed import tools as T
-    return [T.task_classifier, T.kb_lookup, T.web_search, T.customer_lookup,
-            T.refund_api, T.ticket_update, T.escalate_human]
+    fns = [T.task_classifier, T.kb_lookup, T.web_search, T.customer_lookup,
+           T.refund_api, T.ticket_update, T.escalate_human]
+    return [_traced_tool(f) for f in fns]
 
 
 def _final_answer(resp) -> str:
@@ -352,11 +393,13 @@ def _trim_obj(obj, n: int = 220) -> str:
     return s[:n] + ("…" if len(s) > n else "")
 
 
-def _calls_from_resp(resp, rates: dict) -> list[dict]:
+def _calls_from_resp(resp, rates: dict, span_ids: list[str] | None = None) -> list[dict]:
     """The real tool-call sequence the agent ran, in order, with per-call tool
-    cost, a duplicate flag (the SAME tool fired again = the waste story), and the
-    real input args + output result captured from the AFC history."""
+    cost, a duplicate flag (the SAME tool fired again = the waste story), the
+    real input args + output result from the AFC history, and the OTEL span_id
+    of that exact tool span (so stepping it links to its own Phoenix span)."""
     hist = getattr(resp, "automatic_function_calling_history", None) or []
+    span_ids = span_ids or []
     fcalls, fresps = [], []
     for content in hist:
         for p in (content.parts or []):
@@ -369,12 +412,13 @@ def _calls_from_resp(resp, rates: dict) -> list[dict]:
     calls, seen = [], set()
     for i, (name, args) in enumerate(fcalls):
         out = fresps[i] if i < len(fresps) else {}
+        sid = span_ids[i] if i < len(span_ids) else None  # aligned: AFC call i ↔ tool span i
         if name == "task_classifier":  # structural classifier — not a billable step
             continue
         dup = name in seen
         seen.add(name)
         calls.append({"kind": "tool", "tool": name, "cost": round(rates.get(name, 0.0), 5),
-                      "dup": dup, "input": _trim_obj(args), "output": _trim_obj(out)})
+                      "dup": dup, "input": _trim_obj(args), "output": _trim_obj(out), "span_id": sid})
     return calls
 
 
@@ -401,16 +445,19 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     from opentelemetry import trace as _ot
     from accountant.pipeline import phoenix_cost
     tracer = _ot.get_tracer("accountant.quality_eval")
-    # economy (the candidate under test) — capture its real path + trace + latency
+    # economy (the candidate under test) — capture its real path + trace + latency;
+    # _tool_rec collects each tool span's id in execution order during this replay.
     t_econ = time.monotonic()
+    _tool_rec.ids = []
     with tracer.start_as_current_span(f"eval.replay.{economy_model}") as span:
         for k, v in attrs.items():
             span.set_attribute(k, v)
         er = _replay_full(ticket, economy_model)
         etid = format(span.get_span_context().trace_id, "032x")
+    tool_span_ids = list(_tool_rec.ids)
     econ_latency_ms = round((time.monotonic() - t_econ) * 1000)
     econ = _final_answer(er)
-    calls = _calls_from_resp(er, rates)
+    calls = _calls_from_resp(er, rates, tool_span_ids)
     econ_cost = _model_cost_of(er, economy_model)
     econ_in, econ_out = _tokens(er)
     # baseline (premium) — answer only, for the judge + the diff
@@ -439,6 +486,63 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     }
 
 
+def _fetch_recent_spans(max_spans: int = 3000) -> list[tuple]:
+    """(trace_id, span_id_hex, span_kind, phoenix_node_id) for recent project
+    spans, cursor-paginated (Phoenix caps `first` per page, so a big single
+    request returns nothing — page at 500)."""
+    from accountant.pipeline.phoenix_cost import _endpoint_and_key
+    import httpx
+    ep, key = _endpoint_and_key()
+    q = ("query($p:String!,$f:Int!,$a:String){getProjectByName(name:$p){spans(first:$f,after:$a,"
+         "sort:{col:startTime,dir:desc}){pageInfo{hasNextPage endCursor} edges{node{id spanId spanKind trace{traceId}}}}}}")
+    out, after = [], None
+    try:
+        with httpx.Client(timeout=90) as cl:
+            while len(out) < max_spans:
+                r = cl.post(ep, json={"query": q, "variables": {"p": os.environ["PHOENIX_PROJECT_NAME"], "f": 500, "a": after}},
+                            headers={"authorization": f"Bearer {key}", "content-type": "application/json"})
+                conn = (((r.json().get("data") or {}).get("getProjectByName") or {}).get("spans") or {})
+                for e in conn.get("edges") or []:
+                    n = e["node"]
+                    out.append(((n.get("trace") or {}).get("traceId"), n.get("spanId"),
+                                n.get("spanKind"), n.get("id")))
+                pi = conn.get("pageInfo") or {}
+                if not pi.get("hasNextPage"):
+                    break
+                after = pi.get("endCursor")
+    except Exception:
+        return out
+    return out
+
+
+def _resolve_span_urls(rows: list[dict], gid: str | None) -> None:
+    """After the batch, map each captured tool span (and the model's LLM span) to
+    its Phoenix node id, so every stepped call links to its OWN exact span."""
+    import time as _t
+    from accountant.pipeline.phoenix_cost import span_deeplink
+    if not gid:
+        return
+    _t.sleep(10)  # let Phoenix ingest the batch's spans
+    spans = _fetch_recent_spans(2500)
+    by_span, llm_by_trace = {}, {}
+    for tid, sid, kind, node in spans:
+        if tid and sid and node:
+            by_span[(tid, sid)] = node
+        if tid and kind == "llm" and node and tid not in llm_by_trace:
+            llm_by_trace[tid] = node
+    for row in rows:
+        tid = row["phoenix_url"].rsplit("/spans/", 1)[1].split("?")[0]
+        for c in row["calls"]:
+            if c.get("span_id"):
+                node = by_span.get((tid, c["span_id"]))
+                if node:
+                    c["span_url"] = span_deeplink(gid, tid, node)
+            elif c["kind"] == "model":
+                node = llm_by_trace.get(tid)
+                if node:
+                    c["span_url"] = span_deeplink(gid, tid, node)
+
+
 def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
                    baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
                    max_workers: int = 3) -> dict:
@@ -464,6 +568,7 @@ def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
         for f in cf.as_completed(futs):
             rows.append(f.result())
     rows.sort(key=lambda r: int(r["conv_id"]))
+    _resolve_span_urls(rows, gid)  # attach each call's exact Phoenix span deep-link
     return {
         **_lab_aggregate(rows, use_case),
         "use_case": use_case, "candidate": candidate, "n": len(rows),

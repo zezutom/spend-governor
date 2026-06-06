@@ -910,15 +910,17 @@ function tabBtn(active) {
 // is the payoff (premium vs economy side by side).
 function CallInspector({ call, row }) {
   if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
-  const span = row.phoenix_url
+  // each call links to its OWN span; user/reply (not spans) fall back to the trace
+  const span = call.span_url || row.phoenix_url
+  const spanLabel = call.span_url ? 'open this span in Phoenix ↗' : 'open the trace in Phoenix ↗'
   if (call.kind === 'user')
-    return <InsShell title="user message" accent={DIM} span={span}>
+    return <InsShell title="user message" accent={DIM} span={span} spanLabel={spanLabel}>
       <div style={{ fontSize: 14.5, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
   if (call.kind === 'reply')
-    return <InsShell title="reply sent · what the customer got" accent={DIM} span={span}>
+    return <InsShell title="reply sent · what the customer got" accent={DIM} span={span} spanLabel={spanLabel}>
       <div style={{ fontSize: 13.5, color: '#3b3b37', lineHeight: 1.45 }}>{row.economy_answer}</div></InsShell>
   if (call.kind === 'tool')
-    return <InsShell title={`${call.tool} · tool call`} accent={AMBER} span={span}>
+    return <InsShell title={`${call.tool} · tool call`} accent={AMBER} span={span} spanLabel={spanLabel}>
       <FactGrid facts={[
         ['cost', <>${(call.cost || 0).toFixed(4)} <span style={{ color: AMBER }}>your rate</span></>],
         ['source', 'configured rate · not Phoenix-priced'],
@@ -932,7 +934,7 @@ function CallInspector({ call, row }) {
     </InsShell>
   // model call — the payoff: the candidate diff + the real model telemetry
   const bites = row.economy_quality < row.baseline_quality
-  return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN} span={span}>
+  return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN} span={span} spanLabel={spanLabel}>
     <div style={{ border: `1px solid ${GREEN}`, background: '#e1f5ee', borderRadius: 8, padding: '10px 12px' }}>
       <div style={{ fontSize: 12.5, fontWeight: 700 }}>premium (baseline) · judge quality {row.baseline_quality}/5</div>
       <div style={{ fontSize: 13, color: '#1a4f40', marginTop: 4, lineHeight: 1.4 }}>{row.baseline_answer}</div>
@@ -974,12 +976,12 @@ function FactGrid({ facts }) {
     </div>
   )
 }
-function InsShell({ title, accent, span, children }) {
+function InsShell({ title, accent, span, spanLabel, children }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
-        {span && <a href={span} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>open span in Phoenix ↗</a>}
+        {span && <a href={span} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>{spanLabel || 'open in Phoenix ↗'}</a>}
       </div>
       <div style={{ marginTop: 8 }}>{children}</div>
     </div>
