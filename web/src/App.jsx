@@ -755,10 +755,10 @@ function ReplayLab({ onClose }) {
     setSelConv(i); setCursorCall(0); setPlaying(false)
   }, [data])
 
-  // active dataset: the live run's rows during/after a run (so impact reflects the
-  // fresh run, not stale pre-run numbers), else the pre-run (so the stepper works
-  // before the first run).
-  const rows = (running || runRows.length) ? runRows : (data?.rows || [])
+  // active dataset for the STEPPER — never empty once data loads (the live run's
+  // rows once it produces any, else the pre-run), so selRow is always valid. The
+  // impact panel guards separately on the run state to avoid showing stale numbers.
+  const rows = runRows.length ? runRows : (data?.rows || [])
   const selRow = rows[Math.min(selConv, Math.max(0, rows.length - 1))]
   useEffect(() => {   // play walks the chosen conversation call-by-call
     if (!playing || !selRow) return
@@ -924,7 +924,7 @@ function ReplayLab({ onClose }) {
                   <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
                 </div>}
 
-                {ran && imp && <>
+                {ran && imp && (runRows.length > 0 || !running) && <>
                   {/* COST IMPACT — measured vs estimated, visually distinct */}
                   <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
                   <div style={{ display: 'flex', gap: 10 }}>
