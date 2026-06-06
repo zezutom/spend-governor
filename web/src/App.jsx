@@ -82,6 +82,7 @@ export default function App() {
   const [evalView, setEvalView] = useState(null)   // consequence popup (arm / trip)
   const [inspectTc, setInspectTc] = useState(null) // per-box inspector — DEFAULT click
   const [lab, setLab] = useState(false)            // the replay-at-scale debugger (sandbox)
+  const [sessionId, setSessionId] = useState(null) // debug-session metadata popup (#DS-…)
   // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
 
@@ -122,7 +123,7 @@ export default function App() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
       <TopBar state={state} onLab={() => setLab(true)} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <MindRail feed={feed} step={state?.step} />
+        <MindRail feed={feed} step={state?.step} onOpenSession={setSessionId} />
         <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, filter: dimMap ? 'saturate(.5)' : 'none',
             opacity: dimMap ? 0.32 : 1, transition: 'opacity .5s, filter .5s', pointerEvents: dimMap ? 'none' : 'auto' }}>
@@ -146,23 +147,69 @@ export default function App() {
         onForceCache={onForceCache} onForceRoute={onForceRoute} />}
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
       {lab && <ReplayLab onClose={() => setLab(false)} />}
+      {sessionId && <SessionPopup id={sessionId} onClose={() => setSessionId(null)} />}
     </div>
   )
 }
 
-// ---- scene derivation: what the agent is attending to right now ------------
+// the debug-session record — the agent's memory of an applied decision. A
+// lightweight metadata popup (NOT the debugger, NOT a re-run).
+function SessionPopup({ id, onClose }) {
+  const [s, setS] = useState(null)
+  useEffect(() => {
+    fetch(`${API}/api/session/${id}`).then((r) => (r.ok ? r.json() : null)).then(setS).catch(() => {})
+  }, [id])
+  const pct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '20px 22px',
+        width: 460, boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div><b style={{ fontSize: 16 }}>#{id}</b> <span style={{ color: DIM, fontSize: 12.5 }}>· debug session</span></div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 22, cursor: 'pointer', color: DIM }}>×</button>
+        </div>
+        {!s ? <div style={{ color: DIM, padding: 14 }}>loading…</div> : <>
+          <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 10 }}>{s.use_case}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginTop: 12 }}>
+            <Stat2 k="levers applied" v={(s.levers || []).join(', ') || 'none'} />
+            <Stat2 k="source" v={`${s.source} · N=${s.n ?? '—'}`} />
+            <Stat2 k="saved vs baseline" v={pct(s.saved_pct)} color={GREEN} />
+            <Stat2 k="projected (est.)" v={s.projected_monthly != null ? `~$${Number(s.projected_monthly).toLocaleString()}/mo` : '—'} color="#85540b" />
+            <Stat2 k="quality held" v={pct(s.held_pct)} color={GREEN} />
+            <Stat2 k="degraded" v={pct(s.degraded_pct)} color={AMBER} />
+          </div>
+          {s.advice_against && <div style={{ fontSize: 12.5, color: '#85540b', background: '#faeeda',
+            border: `1px solid ${AMBER}`, borderRadius: 9, padding: '9px 11px', marginTop: 12 }}>
+            ⚑ I advised against the economy lever; applied at your direction — <b>watching live</b>, I'll flag if quality slips.
+          </div>}
+          {!s.advice_against && <div style={{ fontSize: 12.5, color: '#1a4f40', marginTop: 12 }}>● status: watching live.</div>}
+          <div style={{ marginTop: 14, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
+            <a href={phoenixTestUrl(s.project_gid)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>this session's 'test' traces in Phoenix ↗</a>
+          </div>
+        </>}
+      </div>
+    </div>
+  )
+}
+function Stat2({ k, v, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{k}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: color || INK }}>{v}</div>
+    </div>
+  )
+}
+
+// ---- scene derivation: ONLY a decision takes the screen --------------------
+// The agent narrates every ambient beat (observe/diagnose/act/verify/hold) in the
+// inbox — non-blocking, its own channel. The screen is only stolen for a DECISION
+// the user must make (the deferred risky lever). So the cockpit is interactive
+// from the first frame; no startup cutscene of focal cards dimming the map.
 function sceneFor(state, feed) {
   if (!state) return { kind: 'idle' }
   const route = state.levers && state.levers.find((l) => l.sig && l.sig.startsWith('route_model'))
-  // the pivot: a deferred decision waits for the human — it PERSISTS until acted
   if (route && route.escalated && !route.active && !route.vetoed) return { kind: 'defer', route }
-  const n = feed[0]
-  if (!n) return { kind: 'idle' }
-  if (n.kind === 'thinking') return { kind: 'diagnose', text: n.text }
-  if (n.kind === 'applied') return { kind: 'act', text: n.text }
-  if (n.kind === 'verified') return { kind: 'verify', text: n.text }
-  // 'holding' raises NO focal card — the settled state lives in the inbox only
-  // (one voice, one place). The map simply returns to its calm governed state.
   return { kind: 'idle' }
 }
 
@@ -354,7 +401,12 @@ function railStyle(kind) {
   return { accent: GREEN, bg: '#f3faf6', icon: '' }
 }
 // The mind rail shows NOW big and readable; the past collapses behind search.
-function MindRail({ feed, step }) {
+function DsLink({ id, onOpenSession }) {
+  if (!id) return null
+  return <button onClick={() => onOpenSession && onOpenSession(id)} style={{ marginLeft: 6, fontSize: 12.5,
+    fontWeight: 700, color: GREEN, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>#{id} ›</button>
+}
+function MindRail({ feed, step, onOpenSession }) {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const now = feed[0]
@@ -376,6 +428,7 @@ function MindRail({ feed, step }) {
               fontWeight: 800, color: s.accent }}>{now.kind === 'user' ? 'your move' : 'now'}</div>
             <div style={{ fontSize: 19, lineHeight: 1.42, color: INK, marginTop: 5 }}>
               {now.kind === 'user' ? <b>You: </b> : s.icon}{now.text}
+              <DsLink id={now.session} onOpenSession={onOpenSession} />
             </div>
           </div>
         ) : <div style={{ color: DIM, fontSize: 17, padding: '10px 0' }}>Reading the live traffic…</div>}
@@ -394,6 +447,7 @@ function MindRail({ feed, step }) {
           <div key={c.seq} style={{ padding: '8px 0', borderTop: '1px solid #f4f2ea' }}>
             <div style={{ fontSize: 15, color: '#3b3b37', lineHeight: 1.42 }}>
               {c.kind === 'user' ? <b>You: </b> : railStyle(c.kind).icon}{c.text}
+              <DsLink id={c.session} onOpenSession={onOpenSession} />
             </div>
           </div>
         ))}
@@ -799,7 +853,13 @@ function ReplayLab({ onClose }) {
   const anyOn = config.cache || config.economy
   const tryClose = () => { if (anyOn) setConfirm(true); else onClose() }
   const apply = () => {
-    const q = `use_case=${uc}&cache=${config.cache}&economy=${config.economy}&held_pct=${imp ? imp.heldPct : ''}&n=${rows.length || data?.n || ''}`
+    const e = imp || {}
+    const q = new URLSearchParams({
+      use_case: uc, cache: config.cache, economy: config.economy,
+      held_pct: e.heldPct ?? '', degraded_pct: e.degradedPct ?? '', saved_pct: e.savedPct ?? '',
+      projected_monthly: proj != null ? Math.round(proj) : '',
+      source: ran ? runSource : source, n: rows.length || data?.n || '',
+    }).toString()
     fetch(`${API}/api/lab/apply?${q}`, { method: 'POST' }).catch(() => {}).finally(onClose)
   }
   const openDegraded = (i) => { setSelConv(i); setCursorCall(0); setPlaying(false) }
@@ -993,28 +1053,31 @@ function ReplayLab({ onClose }) {
           </div>
         )}
 
-        {/* CLOSE-TO-APPLY confirmation */}
-        {confirm && data && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,.86)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}>
-          <div style={{ width: 460, background: '#fff', border: '1px solid #e0ded3', borderRadius: 14, padding: 22, boxShadow: '0 12px 44px rgba(0,0,0,.2)' }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>Apply your changes to real data?</div>
-            <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 10 }}>
-              Applying to <b>{LAB_USE_CASES.find((u) => u.key === uc)?.label}</b>:
-            </div>
-            <ul style={{ fontSize: 13.5, color: INK, margin: '6px 0 0 18px' }}>
-              {config.cache && <li>cache repeated calls <span style={{ color: GREEN }}>· safe</span></li>}
-              {config.economy && <li>economy model <span style={{ color: AMBER }}>· affects answers</span></li>}
-            </ul>
-            {config.economy && imp && <div style={{ fontSize: 12.5, color: '#85540b', background: '#faeeda',
-              border: `1px solid ${AMBER}`, borderRadius: 9, padding: '10px 12px', marginTop: 12 }}>
-              ⚑ economy held {Math.round(imp.heldPct * 100)}% / {rows.length || data.n} replays — I'd keep premium. You can apply anyway; I'll watch live and flag if quality slips.
-            </div>}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-              <button onClick={onClose} style={{ fontSize: 13, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>close without applying</button>
-              <button onClick={apply} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: GREEN, color: '#fff', borderRadius: 8, padding: '7px 16px' }}>apply to production</button>
+        {/* CLOSE-TO-APPLY — the agent narrates the change it's about to make */}
+        {confirm && data && (() => {
+          const label = LAB_USE_CASES.find((u) => u.key === uc)?.label
+          const lab = (label || uc).toLowerCase()
+          const both = config.cache && config.economy
+          const nRun = rows.length || data.n
+          return <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,.9)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}>
+            <div style={{ width: 500, background: '#fff', border: `1px solid ${config.economy ? AMBER : GREEN}`, borderRadius: 14, padding: 22, boxShadow: '0 12px 44px rgba(0,0,0,.2)' }}>
+              <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800, color: config.economy ? AMBER : GREEN }}>THE AGENT</div>
+              <div style={{ fontSize: 15, color: INK, lineHeight: 1.5, marginTop: 8 }}>
+                I'll apply {both ? 'two changes' : 'one change'} to production for {lab}:
+                {config.cache && <> caching repeated lookups <span style={{ color: GREEN }}>(safe, output-preserving)</span></>}
+                {both && ', and'}
+                {config.economy && <> routing this class to the <span style={{ color: AMBER }}>economy model</span></>}.
+                {config.economy && imp && ` Economy held ${Math.round(imp.heldPct * 100)}% across your ${nRun} replays — I'd keep premium, but I'll apply at your direction and watch live.`}
+                {' '}Confirm and I'll enact, log the session, and flag you the moment quality slips.
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button onClick={onClose} style={{ fontSize: 13, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>not now — close</button>
+                <button onClick={apply} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: GREEN, color: '#fff', borderRadius: 8, padding: '7px 16px' }}>confirm — enact &amp; log</button>
+              </div>
             </div>
           </div>
-        </div>}
+        })()}
       </div>
     </div>
   )

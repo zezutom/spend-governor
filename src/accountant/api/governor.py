@@ -53,6 +53,8 @@ class Governor:
         self.plan: list[dict] = []
         self.observations: list[str] = []
         self.pushback: dict | None = None
+        self.sessions: dict[str, dict] = {}   # debug-session records, by id (#DS-…)
+        self._ds_seq = 0
         self.verify: dict | None = None  # last VERIFY result (Phoenix-measured delta)
         self.step = "OBSERVE"            # current position in the mind loop
         self.rate_overrides: dict[str, float] = {}  # operator tool-rate edits (debugger)
@@ -185,13 +187,14 @@ class Governor:
         return True
 
     async def _emit(self, kind: str | None, text: str | None = None,
-                    step: str | None = None) -> None:
+                    step: str | None = None, session: str | None = None) -> None:
         if step:
             self.step = step
         self._seq += 1
-        ev = {"seq": self._seq, "ts": time.time(),
-              "narration": ({"text": text, "kind": kind} if text else None),
-              "state": self.snapshot()}
+        narration = {"text": text, "kind": kind} if text else None
+        if narration and session:
+            narration["session"] = session  # inbox renders a clickable #DS-… link
+        ev = {"seq": self._seq, "ts": time.time(), "narration": narration, "state": self.snapshot()}
         for q in list(self.subscribers):
             await q.put(ev)
 
@@ -438,23 +441,37 @@ class Governor:
                     await asyncio.to_thread(service.deactivate_policy, sig)
                     removed.append(lv["title"])
             label = _CLASS_LABEL.get(use_case, use_case)
-            await self._emit("user", f"You applied a debug-session config to {label}.")
+            ev = evidence or {}
+            # the agent's session record — the through-line: apply creates it, the
+            # inbox links it, the metadata popup is its record, a live trip can cite it.
+            self._ds_seq += 1
+            sid = f"DS-{self._ds_seq:03d}"
+            self.sessions[sid] = {
+                "id": sid, "use_case": label,
+                "source": ev.get("source") or "replay", "n": ev.get("n"),
+                "levers": applied, "removed": removed,
+                "saved_pct": ev.get("saved_pct"), "projected_monthly": ev.get("projected_monthly"),
+                "held_pct": ev.get("held_pct"), "degraded_pct": ev.get("degraded_pct"),
+                "advice_against": bool(economy), "applied_at_direction": bool(economy),
+                "status": "watching", "applied_ts": time.time(),
+                "project_gid": service.project_gid(),
+            }
             parts = []
             if applied:
                 parts.append("now running " + " + ".join(t.lower() for t in applied))
             if removed:
                 parts.append("turned off " + " + ".join(t.lower() for t in removed))
             ack = f"Applied from your debug session on {label.lower()}: {('; '.join(parts)) or 'no change'}."
-            ev = evidence or {}
             if economy and ev.get("held_pct") is not None:
-                ack += (f" Load test held {round(ev['held_pct'] * 100)}% on {ev.get('n', '?')} replays — "
+                ack += (f" Economy held {round(ev['held_pct'] * 100)}% on {ev.get('n', '?')} replays — "
                         f"I'd keep premium, but it's your call. Applied; I'm watching live and I'll flag "
                         f"the moment quality slips.")
             elif applied:
                 ack += " Output-preserving — safe; I'll keep watching the traffic."
-            await self._emit("applied", ack)
+            await self._emit("user", f"You applied debug session {sid} to {label}.")
+            await self._emit("applied", ack, session=sid)
         asyncio.create_task(self._reason_async())
-        return {"applied": applied, "removed": removed}
+        return {"applied": applied, "removed": removed, "session": sid}
 
 
 governor = Governor()

@@ -275,13 +275,26 @@ async def lab_run(use_case: str, n: int = 12, source: str = "replay"):
 
 @app.post("/api/lab/apply")
 async def lab_apply(use_case: str, cache: bool = False, economy: bool = False,
-                    held_pct: float | None = None, n: int | None = None) -> dict:
+                    held_pct: float | None = None, degraded_pct: float | None = None,
+                    saved_pct: float | None = None, projected_monthly: float | None = None,
+                    source: str = "replay", n: int | None = None) -> dict:
     """Promote a debug-session config to production: the agent activates the chosen
-    real levers, deactivates the rest, and writes the decision (+ advisory) to the
-    inbox. The debugger's one sanctioned sandbox→production crossing."""
-    res = await governor.apply_from_debug(use_case, cache, economy,
-                                          evidence={"held_pct": held_pct, "n": n})
+    real levers, deactivates the rest, logs a session record, and writes the
+    decision (+ advisory, + #DS link) to the inbox. The one sanctioned crossing."""
+    res = await governor.apply_from_debug(use_case, cache, economy, evidence={
+        "held_pct": held_pct, "degraded_pct": degraded_pct, "saved_pct": saved_pct,
+        "projected_monthly": projected_monthly, "source": source, "n": n})
     return {"ok": True, "applied": res, "state": governor.snapshot()}
+
+
+@app.get("/api/session/{sid}")
+def session_record(sid: str) -> dict:
+    """A debug session's record — for the inbox link's metadata popup. The agent's
+    memory of a decision: levers, evidence, advice-against, watching status."""
+    r = governor.sessions.get(sid)
+    if r is None:
+        raise HTTPException(404, f"no session {sid}")
+    return r
 
 
 @app.get("/api/proof")
