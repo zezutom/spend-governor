@@ -245,7 +245,10 @@ async def lab_run(use_case: str, n: int = 12, source: str = "replay"):
     displayed count = what actually ran. Sandbox, spans tagged 'test'."""
     import threading
     from accountant.analytics import quality_eval
-    n = max(1, min(int(n), 30))
+    # replay is bounded by real history; synthetic can generate any volume (capped
+    # only to keep a single live run sane — the narrative 'unlimited' is real, you
+    # just wouldn't run thousands live on stage).
+    n = max(1, min(int(n), 60 if source == "synthetic" else 24))
     loop = asyncio.get_event_loop()
     q: asyncio.Queue = asyncio.Queue()
 

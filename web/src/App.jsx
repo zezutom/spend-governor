@@ -899,13 +899,18 @@ function ReplayLab({ onClose }) {
                   <span style={{ fontSize: 12, color: DIM }}>N</span>
                   <select value={N} onChange={(e) => setN(+e.target.value)} disabled={running}
                     style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
-                    {[6, 12, 18, 24].map((v) => <option key={v} value={v}>{v}</option>)}
+                    {(source === 'synthetic' ? [6, 12, 24, 48] : [6, 12, 18]).map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
-                  <select value={source} onChange={(e) => setSource(e.target.value)} disabled={running}
+                  <select value={source} onChange={(e) => { setSource(e.target.value); setN(6) }} disabled={running}
                     style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: `1px solid ${source === 'synthetic' ? AMBER : '#d8d6cc'}`, color: source === 'synthetic' ? AMBER : INK }}>
                     <option value="replay">replay real</option>
                     <option value="synthetic">synthetic</option>
                   </select>
+                </div>
+                <div style={{ fontSize: 11, color: source === 'synthetic' ? AMBER : DIM, marginTop: 6 }}>
+                  {source === 'synthetic'
+                    ? 'synthetic — fresh generated cases, any volume, beyond your history (exploration, not real-traffic proof)'
+                    : 'replay — your real past conversations (evidence on actual traffic)'}
                 </div>
 
                 {!ran && !running && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
