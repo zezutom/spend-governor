@@ -1,0 +1,221 @@
+{
+  "use_case": "account_question",
+  "candidate": "economy",
+  "n": 18,
+  "held_pct": 0.556,
+  "degraded_pct": 0.444,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "complex": 0.6,
+    "simple": 0.54
+  },
+  "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
+  "cost": {
+    "baseline": 0.0044,
+    "projected": 0.002,
+    "pct": 55
+  },
+  "elapsed_sec": 51.6,
+  "project_gid": "UHJvamVjdDo0",
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/25b7e649b8218d3644700188282a6e95",
+      "sub_type": "complex",
+      "held": true
+    },
+    {
+      "ticket": "Where do I update my billing address?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c36d7c798f591d57d43a4d57290ddb37",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "How do I add a teammate to my account?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0e54188bec432cb75f4d2e2ddeaa27f5",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "How do I enable SSO?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bc8b393a96d2fad48bb5343a681edd0d",
+      "sub_type": "complex",
+      "held": true
+    },
+    {
+      "ticket": "Where's my invoice from last month?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 4,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/da18669794fe956a092e92ee1c323776",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "How do I change my email address?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5a96a0a89baa7e795fbcac171877ef3a",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Where do I find my API key?",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/73526c1e1bc2502a938322608a05d3d4",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "How do I delete a form?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d317dc7b30a34af0acfac25c7d8c68c6",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Can I export all my form responses?",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/576c7e4b61b98027a0d454720f109516",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "What's the difference between Pro and Enterprise?",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 4,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4d2f400ddb4109695b113598d2661d54",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Can I use a custom domain for my forms?",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/afabeabf76af1a77046d5820f08fe701",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Where do I see analytics for my forms?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/62670da7e9d4eaa40943f14f27653bcd",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "How do I integrate Stratus Forms with Zapier?",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/683e0b7c512193f70ea1869c3e4183d9",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Can I embed forms in my website?",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f3d371411f2f32234aee78b70d12e50d",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "What payment methods do you accept?",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/96983ef4882b8572776b37d61c392b32",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Where do I update my billing address?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7cf224646a42fed2291fc3f7e8f7d0f4",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "How do I add a teammate to my account?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/cccef31d627e16611266ad481f975d70",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/869b3ead28da7d35232b42821efc69f7",
+      "sub_type": "complex",
+      "held": true
+    }
+  ]
+}

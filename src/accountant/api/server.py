@@ -209,6 +209,27 @@ async def tool_rate(tool: str, rate: float) -> dict:
     return {"ok": True, "state": governor.snapshot()}
 
 
+@app.get("/api/lab/{use_case}")
+def lab_result(use_case: str) -> dict:
+    """The replay-at-scale lab result, PRE-RUN and stored: N real past
+    conversations replayed through the candidate in a sandbox (spans tagged
+    'test', live untouched), returning the quality DISTRIBUTION + cost projection
+    + the agent's recommendation. Displayed N == what actually ran."""
+    from accountant.analytics import quality_eval
+    r = quality_eval.load_eval(f"lab_{use_case}")
+    if r is None:
+        raise HTTPException(404, f"lab '{use_case}' not pre-run")
+    return r
+
+
+@app.get("/api/lab/{use_case}/trickle")
+async def lab_trickle(use_case: str, idx: int = 0) -> dict:
+    """One REAL replay run live — the visible trickle so the pre-run batch
+    doesn't feel canned. Sandbox + tagged 'test'; never touches live policies."""
+    from accountant.analytics import quality_eval
+    return await asyncio.to_thread(quality_eval.replay_one_live, use_case, idx=idx)
+
+
 @app.get("/api/proof")
 def proof() -> dict:
     return _node_insight("tools")

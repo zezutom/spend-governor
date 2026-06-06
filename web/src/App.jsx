@@ -80,9 +80,9 @@ export default function App() {
   const [feed, setFeed] = useState([])
   const [proof, setProof] = useState(null)
   const [evalView, setEvalView] = useState(null)   // consequence popup (arm / trip)
-  const [debug, setDebug] = useState(false)        // a deliberate MODE you enter
-  const [debugTc, setDebugTc] = useState(null)     // the box dropped into
-  // Ending B is reached deliberately via the debugger's force-route on refunds —
+  const [inspectTc, setInspectTc] = useState(null) // per-box inspector — DEFAULT click
+  const [lab, setLab] = useState(false)            // the replay-at-scale debugger (sandbox)
+  // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
 
   useEffect(() => {
@@ -108,20 +108,19 @@ export default function App() {
   // manual control from inside a box — REAL levers, agent stays on watch
   const onForceCache = useCallback((sig) => { act('enable', sig) }, [act])
   const onForceRoute = useCallback((rt) => {
-    setDebugTc(null)
+    setInspectTc(null)
     if (rt.risky) setEvalView({ key: rt.eval_key, mode: 'trip' })  // catches it on the real eval
     else act('accept', rt.sig)                                     // arms + opens the hold eval
   }, [act])
 
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
   const scene = useMemo(() => sceneFor(state, feed), [state, feed])
-  // the map dims whenever a focal card commands attention — but in debug mode the
-  // arc steps aside so you can inspect and click into any box
-  const dimMap = !debug && scene && scene.kind !== 'idle'
+  // the map dims whenever a focal card commands attention
+  const dimMap = scene && scene.kind !== 'idle'
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <TopBar state={state} debug={debug} onDebug={() => { setDebug((d) => !d); setDebugTc(null) }} />
+      <TopBar state={state} onLab={() => setLab(true)} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} />
         <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
@@ -131,26 +130,22 @@ export default function App() {
               ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
               : <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   style={{ width: '100%', height: '100%' }}
-                  onNodeClick={(e, node) => (debug ? setDebugTc(node.data.proofNode || node.id)
-                    : openProof(node.data.proofNode || node.id))}
+                  onNodeClick={(e, node) => setInspectTc(node.data.proofNode || node.id)}
                   proOptions={{ hideAttribution: true }} nodesDraggable={false}
                   nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
                   zoomOnScroll={false} zoomOnDoubleClick={false}>
                   <Background color="#e7e7e0" gap={22} />
                 </ReactFlow>}
           </div>
-          {/* the arc's focal cards — only when NOT inspecting in debug mode */}
-          {!debug && <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />}
-          {debug && <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-            background: '#5a4815', color: '#fff', fontSize: 12.5, padding: '6px 14px', borderRadius: 999 }}>
-            🐞 debug mode — click any box to drop in
-          </div>}
+          {/* the arc's focal cards rise over the dimmed map, one at a time */}
+          <FocalLayer scene={scene} state={state} act={act} openProof={openProof} />
         </div>
       </div>
       {proof && <ProofPanel proof={proof} onClose={() => setProof(null)} />}
-      {debugTc && <DebuggerPanel tc={debugTc} onClose={() => setDebugTc(null)}
+      {inspectTc && <DebuggerPanel tc={inspectTc} onClose={() => setInspectTc(null)}
         onForceCache={onForceCache} onForceRoute={onForceRoute} />}
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
+      {lab && <ReplayLab onClose={() => setLab(false)} />}
     </div>
   )
 }
@@ -166,7 +161,8 @@ function sceneFor(state, feed) {
   if (n.kind === 'thinking') return { kind: 'diagnose', text: n.text }
   if (n.kind === 'applied') return { kind: 'act', text: n.text }
   if (n.kind === 'verified') return { kind: 'verify', text: n.text }
-  if (n.kind === 'holding') return { kind: 'hold', text: n.text }
+  // 'holding' raises NO focal card — the settled state lives in the inbox only
+  // (one voice, one place). The map simply returns to its calm governed state.
   return { kind: 'idle' }
 }
 
@@ -182,7 +178,6 @@ function FocalLayer({ scene, state, act, openProof }) {
         {scene.kind === 'act' && <ActCard text={scene.text} openProof={openProof} />}
         {scene.kind === 'verify' && <VerifyCard text={scene.text} state={state} />}
         {scene.kind === 'defer' && <DeferCard text={null} route={scene.route} act={act} />}
-        {scene.kind === 'hold' && <HoldCard text={scene.text} />}
       </div>
       <style>{`@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}`}</style>
     </div>
@@ -269,14 +264,6 @@ function DeferCard({ route, act }) {
   )
 }
 
-function HoldCard({ text }) {
-  return (
-    <Card accent={GREEN} kicker="● Holding · the agent is watching">
-      <div style={{ fontSize: 19, lineHeight: 1.36, color: INK, marginTop: 7 }}>{text}</div>
-    </Card>
-  )
-}
-
 function Stat({ label, main, sub, color }) {
   return (
     <div>
@@ -313,7 +300,7 @@ function MindLoop({ step, steps }) {
   )
 }
 
-function TopBar({ state, debug, onDebug }) {
+function TopBar({ state, onLab }) {
   const dpm = useTween(state?.dollars_per_message)
   const base = state?.baseline_dollars_per_message
   const down = state && state.dollars_per_message < base - 1e-9
@@ -336,10 +323,10 @@ function TopBar({ state, debug, onDebug }) {
         <Metric label="burn" main={`$${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(3) : state.burn_per_min.toFixed(2)) : '—'}`} unit="/min" color={DIM} small />
         <Metric label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`} unit="live" color={GREEN} />
       </div>
-      <button onClick={onDebug} style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-        border: `1px solid ${debug ? '#5a4815' : '#d8d6cc'}`, borderRadius: 8, padding: '6px 12px',
-        color: debug ? '#fff' : '#5a5852', background: debug ? '#5a4815' : '#fff' }}>
-        🐞 debug{debug ? ' · on' : ''}
+      <button onClick={onLab} style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+        border: '1px solid #d8d6cc', borderRadius: 8, padding: '6px 12px',
+        color: '#5a5852', background: '#fff' }}>
+        🔬 debugger
       </button>
     </div>
   )
@@ -576,7 +563,7 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: '#5a4815',
-                borderRadius: 9, padding: '3px 10px', letterSpacing: '.06em' }}>DEBUG MODE</span>
+                borderRadius: 9, padding: '3px 10px', letterSpacing: '.06em' }}>INSPECT</span>
               <div style={{ fontSize: 21, fontWeight: 700, marginTop: 10 }}>{d.title}</div>
               <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 2 }}>
                 {Math.round(d.share * 100)}% of spend · ${d.cost_per_message.toFixed(4)} / message
@@ -646,6 +633,165 @@ function mbtn(color) {
 function mdCode(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/`([^`]+)`/g, '<code style="background:#efe9da;border-radius:4px;padding:0 4px">$1</code>')
+}
+
+// ===========================================================================
+//  The replay-at-scale lab — a sandbox modal OVER the live system (which keeps
+//  running underneath). Same connected-box canvas; the candidate is highlighted
+//  in place (model node "TESTING"). Replays REAL past conversations at scale,
+//  shows the held/degraded DISTRIBUTION + conditional cost + the agent's
+//  recommendation. Real 'test'-tagged Phoenix traces; never touches production.
+// ===========================================================================
+const LAB_USE_CASES = [
+  { key: 'account_question', label: 'Account questions' },
+  { key: 'refund_handling', label: 'Refund tickets' },
+]
+
+function buildLabGraph(uc, data) {
+  const base = data?.cost?.baseline
+  const title = uc === 'refund_handling' ? 'Refund tickets' : 'Account questions'
+  const ops = uc === 'refund_handling'
+    ? [['web_search ×3', 'cached · $0'], ['kb_lookup', 'cached · $0']]
+    : [['kb_lookup', 'cached · $0']]
+  const nodes = [nd('lane', 8, 54, { kind: 'class', label: title,
+    sub: base ? `$${base.toFixed(4)}/msg` : '—', state: 'struct' })]
+  const edges = []
+  let prev = 'lane', x = 230
+  ops.forEach(([l, s], i) => {
+    const id = 'op' + i
+    nodes.push(nd(id, x, 58, { kind: 'op', label: l, sub: s, state: 'green' }))
+    edges.push(ed('e' + id, prev, id, '#c8c7c0')); prev = id; x += 168
+  })
+  nodes.push(nd('model', x, 50, { kind: 'op', label: 'model · TESTING', sub: 'premium → economy', state: 'escalate' }))
+  edges.push(ed('emodel', prev, 'model', AMBER))
+  return { nodes, edges }
+}
+
+function ReplayLab({ onClose }) {
+  const [uc, setUc] = useState('account_question')
+  const [data, setData] = useState(null)
+  const [ran, setRan] = useState(false)
+  const [trickle, setTrickle] = useState(null)
+  const [waiting, setWaiting] = useState(false)
+
+  const load = useCallback((u) => {
+    setData(null); setRan(false); setTrickle(null)
+    fetch(`${API}/api/lab/${u}`).then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {})
+  }, [])
+  useEffect(() => { load(uc) }, [uc, load])
+
+  const run = () => {
+    setRan(true); setTrickle(null); setWaiting(true)
+    fetch(`${API}/api/lab/${uc}/trickle?idx=${Math.floor((data?.n || 4) / 2)}`)
+      .then((r) => (r.ok ? r.json() : null)).then((t) => { setTrickle(t); setWaiting(false) })
+      .catch(() => setWaiting(false))
+  }
+
+  const { nodes, edges } = useMemo(() => buildLabGraph(uc, data), [uc, data])
+  const held = data ? Math.round(data.held_pct * 100) : 0
+  const deg = data ? Math.round(data.degraded_pct * 100) : 0
+  const c = data?.cost
+  const projUrl = 'https://app.phoenix.arize.com/s/tomas'
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 65 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '20px 24px',
+        width: 720, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div><b style={{ fontSize: 16 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 13 }}>· sandbox</span></div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+        </div>
+
+        {/* lab setup — same canvas, candidate highlighted in place */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12.5, color: DIM }}>use case</span>
+          <select value={uc} onChange={(e) => setUc(e.target.value)}
+            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc' }}>
+            {LAB_USE_CASES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
+          </select>
+          <span style={labChip(false)}>replay {data ? data.n : '…'} real</span>
+          <span style={labChip(true)}>candidate: → economy</span>
+          <button onClick={run} disabled={!data} style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700,
+            cursor: data ? 'pointer' : 'default', color: '#fff', background: GREEN, border: 'none',
+            borderRadius: 8, padding: '7px 16px', opacity: data ? 1 : 0.5 }}>▶ run</button>
+        </div>
+        <div style={{ fontSize: 12, color: DIM, marginTop: 8 }}>
+          replaying real past conversations · live system untouched · every trace tagged 'test'
+        </div>
+
+        {/* the same connected-box canvas, candidate node TESTING */}
+        <div style={{ height: 130, marginTop: 8, borderTop: '1px solid #eceae0', borderBottom: '1px solid #eceae0' }}>
+          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
+            proOptions={{ hideAttribution: true }} nodesDraggable={false} nodesConnectable={false}
+            elementsSelectable={false} panOnDrag={false} zoomOnScroll={false} zoomOnDoubleClick={false}>
+            <Background color="#eeede6" gap={20} />
+          </ReactFlow>
+        </div>
+
+        {!ran && <div style={{ color: DIM, fontSize: 14, padding: '20px 0', textAlign: 'center' }}>
+          {data ? `Press ▶ run to replay ${data.n} real ${LAB_USE_CASES.find((u) => u.key === uc)?.label.toLowerCase()} through the candidate.`
+            : 'No pre-run batch for this use case yet.'}
+        </div>}
+
+        {ran && data && <>
+          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 16 }}>
+            RESULT — does it hold across volume &amp; variety?
+          </div>
+          <div style={{ display: 'flex', gap: 28, marginTop: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: INK, marginBottom: 7 }}>answer quality across {data.n} real replays</div>
+              <div style={{ display: 'flex', height: 16, borderRadius: 5, overflow: 'hidden', background: '#f0eee6' }}>
+                <div style={{ width: `${held}%`, background: GREEN, opacity: 0.65, transition: 'width 1.1s ease-out' }} />
+                <div style={{ width: `${deg}%`, background: AMBER, opacity: 0.6, transition: 'width 1.1s ease-out' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, fontSize: 12.5 }}>
+                <span style={{ color: GREEN }}>held {held}%</span>
+                <span style={{ color: AMBER }}>degraded {deg}%{data.degraded_dominant_sub ? ` · ${data.degraded_dominant_sub} cases` : ''}</span>
+              </div>
+            </div>
+            {c && <div style={{ minWidth: 170 }}>
+              <div style={{ fontSize: 13, color: INK }}>$ / message</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: GREEN, marginTop: 4 }}>
+                ${c.baseline.toFixed(4)} → ${c.projected.toFixed(4)}
+              </div>
+              <div style={{ fontSize: 12, color: GREEN }}>−{c.pct}% (if it shipped)</div>
+            </div>}
+          </div>
+
+          {/* the agent's recommendation — judgment over the evidence, no Phoenix link */}
+          <div style={{ marginTop: 16, border: `1px solid ${AMBER}`, background: '#faeeda', borderRadius: 10, padding: '13px 15px' }}>
+            <div style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>⚑ The agent: {data.recommendation}</div>
+            <div style={{ fontSize: 12, color: '#85540b', marginTop: 5 }}>
+              my judgment over the replayed evidence — found safely, before anything touched live traffic
+            </div>
+          </div>
+
+          {/* a small LIVE trickle so it doesn't feel canned */}
+          <div style={{ marginTop: 12, fontSize: 12.5, color: DIM }}>
+            {waiting && <span>● running one more replay live…</span>}
+            {trickle && <span>● live replay just landed: <b style={{ color: trickle.held ? GREEN : AMBER }}>
+              {trickle.held ? 'held' : 'degraded'}</b> (economy quality {trickle.economy_quality}/5)
+              {trickle.phoenix_url && <> · <a href={trickle.phoenix_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a></>}</span>}
+          </div>
+
+          {/* facts → Phoenix; the 'test' traces are real and filterable */}
+          <div style={{ marginTop: 14, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
+            <a href={projUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, color: GREEN, fontWeight: 600 }}>
+              {data.n} 'test' traces in Phoenix ↗
+            </a>
+            <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>
+              tagged <code style={{ background: '#efe9da', borderRadius: 4, padding: '0 4px' }}>{data.test_tag}</code> · filter them out of production in one click · pre-run batch, real result (not generated live)
+            </div>
+          </div>
+        </>}
+      </div>
+    </div>
+  )
+}
+function labChip(amber) {
+  return { fontSize: 12.5, padding: '5px 11px', borderRadius: 999,
+    border: `1px solid ${amber ? AMBER : '#d8d6cc'}`, color: amber ? AMBER : '#5a5852' }
 }
 
 // ---- the trace drill-down (per node / per workload) -----------------------

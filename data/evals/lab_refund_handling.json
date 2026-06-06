@@ -1,0 +1,221 @@
+{
+  "use_case": "refund_handling",
+  "candidate": "economy",
+  "n": 18,
+  "held_pct": 0.167,
+  "degraded_pct": 0.833,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "simple": 0.25,
+    "complex": 0.0
+  },
+  "recommendation": "Breaks across the variety \u2014 keep the premium model here. The small eval looked fine; at scale it doesn't hold.",
+  "cost": {
+    "baseline": 0.0192,
+    "projected": 0.016,
+    "pct": 17
+  },
+  "elapsed_sec": 67.6,
+  "project_gid": "UHJvamVjdDo0",
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "ticket": "Please refund me. Account GLOBEX-001, charged $49 last month.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ad63124152f670da28ed3b2459539c90",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1970691d93523de487d13523a3970386",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Refund $49 from my Pro subscription. Account INITECH-001.",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8469a70808bd6010f4d1b6ef2957522f",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Please reverse the May 1 charge of $49 on WAYNE-001.",
+      "equivalent": false,
+      "baseline_quality": 2,
+      "economy_quality": 2,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c39166b0de032edd231776fa5447728d",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/662ab926148b4a4be5e0c1f672f13402",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Account STARK-001, refund the $49 charge from last month.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/24f4fa466ddb5a3d2bc70219d7929302",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Can you refund my last charge? My account is ACME-001.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b0767849693641ffcd8b227ba799bc6d",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "Reverse the charge from last month.",
+      "equivalent": true,
+      "baseline_quality": 3,
+      "economy_quality": 3,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a223f812b6427f24fcdec4d95b72b960",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "I want my money back.",
+      "equivalent": true,
+      "baseline_quality": 3,
+      "economy_quality": 3,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/f2a20ac43c617f372f16cd4ddcb7dcb8",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "Refund the charge from last week.",
+      "equivalent": true,
+      "baseline_quality": 3,
+      "economy_quality": 3,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c5d8adb0a657f6625441eb3c378dc95c",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "Got double-charged, need a refund.",
+      "equivalent": true,
+      "baseline_quality": 3,
+      "economy_quality": 3,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c0d59c0cb85f00700cf177bc62c94cff",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "Refund please. Account STARK-001.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/06d057ec2a528feb736ff11356d91fe2",
+      "sub_type": "complex",
+      "held": false
+    },
+    {
+      "ticket": "Please refund me. Account GLOBEX-001, charged $49 last month.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3c9785a81bda061fd7b8bd8f2b0d5600",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/94e396b8ad8a1decd9edecb27ff8de01",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Refund $49 from my Pro subscription. Account INITECH-001.",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5d9be45a30d2276d73dfbdec89776785",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "I need a refund. WONKA-001, $499 on April 15.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/68eabd62cb372244a81649054f79a6df",
+      "sub_type": "simple",
+      "held": false
+    },
+    {
+      "ticket": "Account STARK-001, refund the $49 charge from last month.",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e1a21fd0a3543f2877f84eb81e9e0aec",
+      "sub_type": "simple",
+      "held": true
+    },
+    {
+      "ticket": "Please reverse the May 1 charge of $49 on WAYNE-001.",
+      "equivalent": false,
+      "baseline_quality": 2,
+      "economy_quality": 2,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/372a432231f599c60ea90e5bb22693bd",
+      "sub_type": "simple",
+      "held": false
+    }
+  ]
+}
