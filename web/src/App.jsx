@@ -980,7 +980,9 @@ function InsShell({ title, accent, span, spanLabel, children }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
-        {span && <a href={span} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>{spanLabel || 'open in Phoenix ↗'}</a>}
+        {span && <a href={span} target="_blank" rel="noreferrer"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(span, '_blank', 'noopener') }}
+          style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}>{spanLabel || 'open in Phoenix ↗'}</a>}
       </div>
       <div style={{ marginTop: 8 }}>{children}</div>
     </div>
