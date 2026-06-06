@@ -909,9 +909,10 @@ function tabBtn(active) {
 // is the payoff (premium vs economy side by side).
 function CallInspector({ call, row }) {
   if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
-  // each call links to its OWN span; user/reply (not spans) fall back to the trace
-  const span = call.span_url || row.phoenix_url
-  const spanLabel = call.span_url ? 'open this span in Phoenix ↗' : 'open the trace in Phoenix ↗'
+  // each call links to its OWN span via Phoenix's /redirects/spans/<otel-id> route;
+  // user/reply and the model call (no captured span id) open the trace.
+  const span = redirectUrl(call, row)
+  const spanLabel = call.span_id ? 'open this span in Phoenix ↗' : 'open the trace in Phoenix ↗'
   if (call.kind === 'user')
     return <InsShell title="user message" accent={DIM} span={span} spanLabel={spanLabel}>
       <div style={{ fontSize: 14.5, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
@@ -975,22 +976,22 @@ function FactGrid({ facts }) {
     </div>
   )
 }
-// Phoenix drops ?selectedSpanNodeId on a CLICKED link but honors it on a PASTED
-// URL — and no open mechanism (anchor / window.open / blank-tab) bypasses that.
-// So clicking copies the exact span URL; you paste it into a new tab (confirmed
-// to land on the exact span). Right-click → Open Link also still works.
+// Phoenix's supported deeplink route: /redirects/spans/<otel-span-id> resolves a
+// span by its standard OTel id server-side (and /redirects/traces/<otel-trace-id>
+// for a trace). Unlike the ?selectedSpanNodeId= deeplink — which Phoenix drops on
+// a clicked link — the redirect route survives a click. We already capture the
+// OTel span_id per tool call, so we point straight at it.
+function redirectUrl(call, row) {
+  const base = (row.phoenix_url || '').split('/projects/')[0]   // …/s/tomas
+  if (!base) return null
+  if (call.span_id) return `${base}/redirects/spans/${call.span_id}`
+  const tid = (row.phoenix_url || '').split('/spans/')[1]?.split('?')[0]
+  return tid ? `${base}/redirects/traces/${tid}` : null
+}
 function SpanLink({ url, label }) {
-  const [copied, setCopied] = useState(false)
-  const copy = (e) => {
-    e.preventDefault(); e.stopPropagation()
-    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2400) }
-    try { navigator.clipboard.writeText(url).then(done, done) } catch { done() }
-  }
   return (
-    <a href={url} target="_blank" rel="noreferrer" onClick={copy} title="copy the span link, then paste into a new tab"
-      style={{ fontSize: 12, color: copied ? '#1a4f40' : GREEN, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}>
-      {copied ? '✓ link copied — paste in a new tab' : `⧉ copy ${label && label.includes('trace') ? 'trace' : 'span'} link`}
-    </a>
+    <a href={url} target="_blank" rel="noreferrer"
+      style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>{label || 'open in Phoenix ↗'}</a>
   )
 }
 function InsShell({ title, accent, span, spanLabel, children }) {
