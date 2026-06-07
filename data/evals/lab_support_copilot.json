@@ -1,0 +1,670 @@
+{
+  "held_pct": 0.5,
+  "degraded_pct": 0.5,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "simple": 0.5
+  },
+  "use_case": "support_copilot",
+  "candidate": "economy",
+  "n": 8,
+  "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
+  "cost": {
+    "baseline": 0.014,
+    "projected": 0.013,
+    "pct": 7
+  },
+  "elapsed_sec": 33.3,
+  "project_gid": null,
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "conv_id": "1200",
+      "ticket": "How do I add a teammate to my account?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": null,
+      "baseline_answer": "To add a teammate to your Stratus Forms account, navigate to **Settings \u2192 Account**. From there, you will find options for team member management.",
+      "economy_answer": "I can help with that! You can add teammates to your account by navigating to Settings \u2192 Account. There you'll find options for managing your team members.",
+      "baseline_model_cost": 0.000661,
+      "economy_model_cost": 0.000224,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I add a teammate to my account?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "ce9e93ec945925a1"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"add teammate to stratus forms account\"}",
+          "output": "{\"result\": [{\"title\": \"add teammate to stratus forms account \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/add_teammate_to_stratus_forms_account\", \"snippet\": \"This article provides a general overview of \u2026",
+          "span_id": "4d76c1e8a24e0ff3"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms team management settings\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms team management settings \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_team_management_settings\", \"snippet\": \"This article provides a general overview o\u2026",
+          "span_id": "1106771b2c533717"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms invite user to account\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms invite user to account \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_invite_user_to_account\", \"snippet\": \"This article provides a general overview of st\u2026",
+          "span_id": "ba47c28a4ad47beb"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can add teammates to your account by going to Settings \u2192 Account. From there, you should see options for managing team members.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can add teammates to your account by going to Settings \u2192 Account. From there, you should see optio\u2026",
+          "span_id": "a1e0e41b2cc78789"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000224,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6167,
+          "in_tokens": 2108,
+          "out_tokens": 32
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1201",
+      "ticket": "Where do I update my billing address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": null,
+      "baseline_answer": "To update your billing address, navigate to **Settings \u2192 Account** within your Stratus Forms account. Billing contacts can update payment methods there.\n\nI hope this helps! Let me know if you have any other questions.",
+      "economy_answer": "I can help with that. You can update your billing address in Stratus Forms under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000689,
+      "economy_model_cost": 0.000216,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I update my billing address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "b0a1d05707a8ea0e"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms update billing address\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms update billing address \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_update_billing_address\", \"snippet\": \"This article provides a general overview of St\u2026",
+          "span_id": "8b88c5592660ec92"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"SaaS billing address update best practices\"}",
+          "output": "{\"result\": [{\"title\": \"SaaS billing address update best practices \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/SaaS_billing_address_update_best_practices\", \"snippet\": \"This article provides a general ov\u2026",
+          "span_id": "7834b15b8a71b899"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"change billing address stratus forms account settings\"}",
+          "output": "{\"result\": [{\"title\": \"change billing address stratus forms account settings \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/change_billing_address_stratus_forms_account_settings\", \"snippet\": \"This article\u2026",
+          "span_id": "c51e403989e8fa4b"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"You can update your billing address in Stratus Forms under Settings \u2192 Account.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can update your billing address in Stratus Forms under Settings \u2192 Account.'} from model returned f\u2026",
+          "span_id": "b637c899f13c1ead"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000216,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6253,
+          "in_tokens": 2074,
+          "out_tokens": 21
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1202",
+      "ticket": "How do I enable SSO?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 4,
+      "economy_quality": 4,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": null,
+      "baseline_answer": "To enable SSO, navigate to Settings \u2192 Account in your Stratus Forms account. You'll find the SSO configuration options there. For general best practices on SSO, you can refer to resources like Wikipedia's overview on SSO, Stack Exchange dis",
+      "economy_answer": "I can help with that! You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to configure SSO. For more detailed instructions, please refer to our knowledge base article on account settings.",
+      "baseline_model_cost": 0.000705,
+      "economy_model_cost": 0.000233,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I enable SSO?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "06c29b4c8faffb3b"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms SSO setup guide\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms SSO setup guide \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_SSO_setup_guide\", \"snippet\": \"This article provides a general overview of Stratus Forms SS\u2026",
+          "span_id": "6a41a744d88d7e63"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"SAML SSO configuration Stratus Forms\"}",
+          "output": "{\"result\": [{\"title\": \"SAML SSO configuration Stratus Forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/SAML_SSO_configuration_Stratus_Forms\", \"snippet\": \"This article provides a general overview of SA\u2026",
+          "span_id": "188036c5c99d69f3"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"configure single sign-on Stratus Forms\"}",
+          "output": "{\"result\": [{\"title\": \"configure single sign-on Stratus Forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/configure_single_sign-on_Stratus_Forms\", \"snippet\": \"This article provides a general overview o\u2026",
+          "span_id": "f012999cfb7bc532"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to configure SSO. For more detailed instructions, please refer to our knowledge base article on account set\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to config\u2026",
+          "span_id": "7e6b088adbd7b4b7"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000233,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 7173,
+          "in_tokens": 2146,
+          "out_tokens": 46
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1203",
+      "ticket": "How do I change my email address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": null,
+      "baseline_answer": "To change your email address, navigate to Settings \u2192 Account within your Stratus Forms account. You should be able to update your contact information there. If you encounter any issues, please let us know!",
+      "economy_answer": "I can help with that! You can change your email address in your account settings. Navigate to Settings \u2192 Account to update your email address.",
+      "baseline_model_cost": 0.000685,
+      "economy_model_cost": 0.000219,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I change my email address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "257f5e7891c9c5f1"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"change email address stratus forms\"}",
+          "output": "{\"result\": [{\"title\": \"change email address stratus forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/change_email_address_stratus_forms\", \"snippet\": \"This article provides a general overview of change\u2026",
+          "span_id": "cafda45a454447e1"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms account settings email update\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms account settings email update \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_account_settings_email_update\", \"snippet\": \"This article provides a general \u2026",
+          "span_id": "0f0cdf63142cb736"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms change login email\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms change login email \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_change_login_email\", \"snippet\": \"This article provides a general overview of stratus fo\u2026",
+          "span_id": "dcbbe322928bb17e"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can change your email address in your account settings. Navigate to Settings \u2192 Account to update your email address.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can change your email address in your account settings. Navigate to Settings \u2192 Account to update y\u2026",
+          "span_id": "c8aea36ddab3e555"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000219,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5233,
+          "in_tokens": 2079,
+          "out_tokens": 28
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1204",
+      "ticket": "Where do I find my API key?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": null,
+      "baseline_answer": "You can find your API key under Settings \u2192 Account in your Stratus Forms dashboard. If you have trouble locating it, please let us know!",
+      "economy_answer": "I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.000603,
+      "economy_model_cost": 0.000212,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I find my API key?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "d65e570e0733adc3"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"find stratus forms api key\"}",
+          "output": "{\"result\": [{\"title\": \"find stratus forms api key \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/find_stratus_forms_api_key\", \"snippet\": \"This article provides a general overview of find stratus forms api\u2026",
+          "span_id": "210d59e4419a642e"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms api key location\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms api key location \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_api_key_location\", \"snippet\": \"This article provides a general overview of stratus forms \u2026",
+          "span_id": "bb4bd5dd21110423"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms developer api key\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms developer api key \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_developer_api_key\", \"snippet\": \"This article provides a general overview of stratus form\u2026",
+          "span_id": "0693e79906acb1b1"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"You can find your API key in your account settings. Navigate to Settings > Account to access it.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can find your API key in your account settings. Navigate to Settings > Account to access it.'} fro\u2026",
+          "span_id": "c2c2a1eaf40ed591"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000212,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4403,
+          "in_tokens": 2061,
+          "out_tokens": 16
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1205",
+      "ticket": "Can I export all my form responses?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 2,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": null,
+      "baseline_answer": "I understand you're asking about exporting your form responses. While the Stratus Forms knowledge base article on general account settings doesn't specifically mention exporting form responses, many SaaS platforms offer this functionality. ",
+      "economy_answer": "I can help with that. You can export all your form responses from your account settings.",
+      "baseline_model_cost": 0.000844,
+      "economy_model_cost": 0.000214,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I export all my form responses?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "5fac509ab4cc3b52"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms export form data\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms export form data \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_export_form_data\", \"snippet\": \"This article provides a general overview of Stratus Forms \u2026",
+          "span_id": "04fa10cca077fea6"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"Stratus Forms data export options\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms data export options \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_data_export_options\", \"snippet\": \"This article provides a general overview of Stratus \u2026",
+          "span_id": "27c2f6c2fc89f3a3"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"exporting form responses Stratus Forms\"}",
+          "output": "{\"result\": [{\"title\": \"exporting form responses Stratus Forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/exporting_form_responses_Stratus_Forms\", \"snippet\": \"This article provides a general overview o\u2026",
+          "span_id": "b85ad59c730b2f9b"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"Yes, you can export all your form responses. You can find this option within your account settings.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Yes, you can export all your form responses. You can find this option within your account settings.'} \u2026",
+          "span_id": "99d18e99183e3d59"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000214,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4599,
+          "in_tokens": 2067,
+          "out_tokens": 19
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1206",
+      "ticket": "How do I delete a form?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": null,
+      "baseline_answer": "To delete a form in Stratus Forms, navigate to the 'Forms' section of your dashboard. Select the form you wish to delete, then click on the 'Settings' or 'Options' menu for that form. You should find a 'Delete Form' option there. Please be ",
+      "economy_answer": "The `ticket_update` function is missing the `ticket_id` argument. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000599,
+      "economy_model_cost": 0.000219,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I delete a form?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "91a621cb67a7e55a"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"delete stratus forms form\"}",
+          "output": "{\"result\": [{\"title\": \"delete stratus forms form \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/delete_stratus_forms_form\", \"snippet\": \"This article provides a general overview of delete stratus forms for\u2026",
+          "span_id": "b4468c3cb4408e02"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms delete form feature\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms delete form feature \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_delete_form_feature\", \"snippet\": \"This article provides a general overview of stratus \u2026",
+          "span_id": "657abf8fc868bace"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"stratus forms manage forms\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms manage forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_manage_forms\", \"snippet\": \"This article provides a general overview of stratus forms manage f\u2026",
+          "span_id": "3d3b9216b72a6d17"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"To delete a form, navigate to the \\\"Forms\\\" tab, select the form you wish to delete, and click the \\\"Delete\\\" button. Please note that this action is irreversible.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'To delete a form, navigate to the \\\"Forms\\\" tab, select the form you wish to delete, and click the \\\"D\u2026",
+          "span_id": "3e0344f18d41471d"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000219,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4898,
+          "in_tokens": 2088,
+          "out_tokens": 25
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1207",
+      "ticket": "Can I use a custom domain for my forms?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": null,
+      "baseline_answer": "Yes, Stratus Forms supports custom domains for your forms. You can configure this in your account settings.",
+      "economy_answer": "I need a ticket ID to update the ticket. Could you please provide it?",
+      "baseline_model_cost": 0.000645,
+      "economy_model_cost": 0.000218,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I use a custom domain for my forms?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "cc7c29fdaf8c776d"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms custom domain forms\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms custom domain forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_custom_domain_forms\", \"snippet\": \"This article provides a general overview of Stratus \u2026",
+          "span_id": "7ac6f6d505dea724"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"custom domain for form builder\"}",
+          "output": "{\"result\": [{\"title\": \"custom domain for form builder \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/custom_domain_for_form_builder\", \"snippet\": \"This article provides a general overview of custom domain \u2026",
+          "span_id": "44e431669902277e"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": true,
+          "input": "{\"query\": \"use custom domain with forms\"}",
+          "output": "{\"result\": [{\"title\": \"use custom domain with forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/use_custom_domain_with_forms\", \"snippet\": \"This article provides a general overview of use custom domain \u2026",
+          "span_id": "0da7c4a0a9aac0b0"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"Yes, you can use a custom domain for your forms. This feature allows you to brand your forms with your own domain name, enhancing your professional image and user trust. You can typically configure th\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Yes, you can use a custom domain for your forms. This feature allows you to brand your forms with your\u2026",
+          "span_id": "0dbc5b50c7927fec"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000218,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4522,
+          "in_tokens": 2117,
+          "out_tokens": 16
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    }
+  ]
+}

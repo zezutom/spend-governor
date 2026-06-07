@@ -25,45 +25,98 @@ function Btn({ onClick, label, color, primary, big }) {
 // Color grammar (no legend): GREEN = resolved/safe (cached), AMBER = costly-but-fine
 // (cost-heat), LIGHT RED = the specific node a decision is about. Plus a cost-heat
 // ramp on lanes (warm = more spend) and an "agent here" spotlight.
-const _STC = { green: GREEN, amber: AMBER, escalate: AMBER, vetoed: '#8f8f86', struct: '#b7b6ae', problem: '#dc2626' }
-const _STF = { green: '#e6f5ef', amber: '#fbf0db', escalate: '#fbf0db', vetoed: '#efeee8', struct: '#fff', problem: '#fef2f2' }
+// Live status grammar for a fleet agent.
+const _STATUS = {
+  governed: { label: 'governed', color: GREEN, bg: '#e6f5ef', icon: '✓' },
+  your_call: { label: 'your call', color: RED, bg: '#fdecea', icon: '⚑' },
+  problem: { label: 'fixing…', color: AMBER, bg: '#fbf0db', icon: '⚡' },
+  off: { label: 'off', color: '#8f8f86', bg: '#efeee8', icon: '○' },
+  watching: { label: 'watching', color: DIM, bg: '#f5f4ef', icon: '◔' },
+}
+const _FIXNAME = { cache_tool: 'cache', limit_tool_calls: 'cap', suppress_tool: 'suppress', route_model: 'route' }
 
-function CtrlNode({ data }) {
-  let c = _STC[data.state] || '#b7b6ae'
-  let fill = _STF[data.state] || '#fff'
-  const isClass = data.kind === 'class', isOp = data.kind === 'op'
-  // cost-heat fill for lanes: cool → amber by spend intensity (always on)
-  if (isClass && data.heat != null && data.state !== 'green') {
-    fill = `rgba(181,121,26,${(0.05 + data.heat * 0.32).toFixed(3)})`
-    c = data.heat > 0.45 ? AMBER : '#cbb78a'
-  }
-  const lit = data.spotlight
+function RootNode({ data }) {
   return (
-    <div style={{ position: 'relative', border: `1.5px solid ${lit ? '#5a4815' : c}`, background: fill, borderRadius: isOp ? 9 : 12,
-      padding: isOp ? '7px 10px' : '10px 13px', minWidth: isClass ? 188 : isOp ? 124 : 150,
-      opacity: data.dimmed ? 0.5 : 1, transition: 'opacity .4s',
-      boxShadow: lit ? '0 0 0 3px rgba(90,72,21,.25)' : (isClass ? '0 1px 6px rgba(0,0,0,.08)' : '0 1px 3px rgba(0,0,0,.05)') }}>
-      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
-      {lit && <div style={{ position: 'absolute', top: -9, left: 10, fontSize: 9.5, fontWeight: 800,
-        color: '#fff', background: '#5a4815', borderRadius: 999, padding: '1px 7px', letterSpacing: '.04em' }}>● AGENT HERE</div>}
-      <div style={{ fontWeight: isClass ? 800 : 600, fontSize: isClass ? 14.5 : 12.5,
-        color: INK, fontFamily: isOp ? 'monospace' : 'inherit' }}>{data.label}</div>
-      <div style={{ fontSize: isClass ? 12 : 10.5, color: data.state === 'problem' ? '#dc2626' : c, marginTop: 1 }}>{data.sub}</div>
-      {data.kind === 'lever' && (
-        <div style={{ marginTop: 6, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {data.escalated && <>
-            <Btn onClick={() => data.act('accept', data.sig)} label="arm it" color={AMBER} primary />
-            <Btn onClick={() => data.act('reject', data.sig)} label="not now" color={AMBER} />
-          </>}
-          {data.active && <Btn onClick={() => data.act('veto', data.sig)} label="veto" color={GREEN} />}
-          {data.vetoed && <Btn onClick={() => data.act('enable', data.sig)} label="re-enable" color={AMBER} primary />}
+    <div style={{ position: 'relative', border: `2px solid ${INK}`, background: INK, color: '#fff',
+      borderRadius: 16, padding: '14px 22px', minWidth: 230, textAlign: 'center',
+      boxShadow: '0 10px 30px rgba(0,0,0,.22)' }}>
+      <div style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the accountant</div>
+      <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>Cost Governor</div>
+      <div style={{ fontSize: 12.5, color: '#cfece3', marginTop: 3 }}>{data.sub}</div>
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+    </div>
+  )
+}
+
+function AgentNode({ data }) {
+  const a = data.agent, act = data.act
+  const st = _STATUS[a.status] || _STATUS.watching
+  const fix = a.fix || {}
+  const lit = a.status === 'your_call'
+  return (
+    <div onClick={() => data.onInspect && data.onInspect(a.id)}
+      style={{ position: 'relative', width: 246, border: `2px solid ${lit ? RED : st.color + '55'}`,
+        background: '#fff', borderRadius: 15, padding: '13px 15px', cursor: 'pointer',
+        boxShadow: lit ? `0 0 0 4px ${RED}22, 0 10px 26px rgba(0,0,0,.14)` : '0 6px 18px rgba(0,0,0,.10)',
+        transition: 'box-shadow .3s, border-color .3s' }}>
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      {/* header: status pill + cost */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: st.color, background: st.bg,
+          border: `1px solid ${st.color}33`, borderRadius: 999, padding: '2px 9px',
+          display: 'inline-flex', alignItems: 'center', gap: 4 }}>{st.icon} {st.label}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 800, color: INK }}>
+          ${a.cost_per_message.toFixed(4)}<span style={{ fontSize: 10.5, fontWeight: 600, color: DIM }}>/msg</span></span>
+      </div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginTop: 8 }}>{a.label}</div>
+      <div style={{ fontSize: 12.5, color: DIM, marginTop: 1 }}>{a.purpose}</div>
+      {/* waste line */}
+      <div style={{ fontSize: 12.5, marginTop: 9, color: a.status === 'governed' ? GREEN : AMBER,
+        fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span>{a.status === 'governed' ? '✓' : '⚠'}</span>{a.waste}
+      </div>
+      {/* fix block */}
+      <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid #f0eee6' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', textTransform: 'uppercase',
+            color: fix.safe ? GREEN : AMBER }}>{_FIXNAME[fix.type] || 'fix'}</span>
+          <span style={{ fontSize: 12.5, color: '#3b3b37' }}>{fix.title}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 13.5, fontWeight: 800, color: GREEN }}>
+            ${Math.round(fix.monthly || 0).toLocaleString()}<span style={{ fontSize: 10, color: DIM, fontWeight: 600 }}>/mo</span></span>
         </div>
-      )}
+        <div style={{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {fix.escalated && <>
+            <Btn onClick={() => act('accept', fix.sig)} label="arm it" color={AMBER} primary />
+            <Btn onClick={() => act('reject', fix.sig)} label="not now" color={DIM} />
+          </>}
+          {fix.active && <Btn onClick={() => act('veto', fix.sig)} label="revert" color={DIM} />}
+          {fix.vetoed && <Btn onClick={() => act('enable', fix.sig)} label="re-enable" color={AMBER} primary />}
+          {!fix.escalated && !fix.active && !fix.vetoed &&
+            <span style={{ fontSize: 11.5, color: DIM }}>{a.status === 'problem' ? 'agent acting…' : 'watching the traffic'}</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+// Compact op/step node for the debugger's call-by-call step graph.
+const _SC = { escalate: AMBER, amber: AMBER, struct: '#b7b6ae', green: GREEN, vetoed: '#8f8f86', problem: '#dc2626' }
+const _SF = { escalate: '#fbf0db', amber: '#fbf0db', struct: '#fff', green: '#e6f5ef', vetoed: '#efeee8', problem: '#fef2f2' }
+function StepNode({ data }) {
+  const c = _SC[data.state] || '#b7b6ae', fill = _SF[data.state] || '#fff'
+  const lit = data.state === 'escalate'
+  return (
+    <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: 9, padding: '8px 11px', minWidth: 128,
+      boxShadow: lit ? `0 0 0 3px ${AMBER}22` : '0 1px 3px rgba(0,0,0,.05)' }}>
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <div style={{ fontWeight: 700, fontSize: 13, fontFamily: 'monospace', color: INK }}>{data.label}</div>
+      <div style={{ fontSize: 11, color: c, marginTop: 1 }}>{data.sub}</div>
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
     </div>
   )
 }
-const nodeTypes = { ctrl: CtrlNode }
+const nodeTypes = { root: RootNode, agent: AgentNode, ctrl: StepNode }
+function nd(id, x, y, data) { return { id, type: 'ctrl', position: { x, y }, data, draggable: false } }
+function ed(id, s, t, color) { return { id, source: s, target: t, animated: true, style: { stroke: color, strokeWidth: 2 } } }
 
 // ---- a number that eases to its new value (semantic motion) ----------------
 function useTween(target, dur = 1100) {
@@ -137,13 +190,14 @@ export default function App() {
     else act('accept', rt.sig)                                        // account: lab is the evidence
   }, [act])
 
-  const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
+  const openDebugger = useCallback((id) => setLab({ uc: id }), [])  // full replay lab for an agent
+  const { nodes, edges } = useMemo(() => buildGraph(state, act, openDebugger), [state, act, openDebugger])
   const scene = useMemo(() => sceneFor(state, feed), [state, feed])
   const decision = scene.kind === 'defer' ? scene : null
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <TopBar state={state} onLab={() => setLab({ uc: 'account_question' })} onPin={onPin} onFF={onFF} />
+      <TopBar state={state} onLab={() => setLab({ uc: state?.agents?.[0]?.id || 'support_copilot' })} onPin={onPin} onFF={onFF} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} onOpenSession={setSessionId} />
         {/* stage: the decision docks at the TOP (so it never covers the box it's
@@ -166,7 +220,7 @@ export default function App() {
               ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
               : <ReactFlow key={decision ? 'decide' : 'idle'} nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   style={{ width: '100%', height: '100%' }}
-                  onNodeClick={(e, node) => setInspectTc(node.data.proofNode || node.id)}
+                  onNodeClick={(e, node) => node.data.agent && setLab({ uc: node.data.agent.id })}
                   proOptions={{ hideAttribution: true }} nodesDraggable={false}
                   nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
                   zoomOnScroll={false} zoomOnDoubleClick={false}>
@@ -243,8 +297,9 @@ function Stat2({ k, v, color }) {
 // from the first frame; no startup cutscene of focal cards dimming the map.
 function sceneFor(state, feed) {
   if (!state) return { kind: 'idle' }
-  const route = state.levers && state.levers.find((l) => l.sig && l.sig.startsWith('route_model'))
-  if (route && route.escalated && !route.active && !route.vetoed) return { kind: 'defer', route }
+  // any escalated RISKY fix (suppress or route) the agent has deferred to you
+  const route = (state.levers || []).find((l) => !l.safe && l.escalated && !l.active && !l.vetoed)
+  if (route) return { kind: 'defer', route }
   return { kind: 'idle' }
 }
 
@@ -329,45 +384,43 @@ function VerifyCard({ text, state }) {
   )
 }
 
-// The defer card is class-aware: it names the SPECIFIC workload the agent stopped
-// on, and frames the ask by that route's real pre-run verdict (holds / wide variety
-// / breaks). Each of the three defers reads differently because the situation is.
-const _ROUTE_FRAME = {
-  hold: { color: AMBER, line: "the quick check looked clean — but it's answer-affecting, so test it at scale in the lab before you trust it." },
-  trip: { color: RED, line: "I don't think it holds — the replay had it degrading. I'd keep premium, but it's your call." },
-  none: { color: AMBER, line: "the variety is wide — I can't prove economy holds across it. Test it in the lab first." },
-}
+// The defer card names the SPECIFIC agent the Accountant stopped on, and frames
+// the ask by the fix type + (for routing) its real pre-run verdict.
 function DeferCard({ route, act, state, onExperiment, openProof }) {
-  const classes = state?.classes || []
-  const uc = route.tc || 'account_question'
-  const cls = classes.find((c) => c.tc === uc)
-  const label = (cls?.label || 'this path')
-  const vol = state && cls ? Math.round(state.volume * (cls.share || 0)) : null
+  const agents = state?.agents || []
+  const uc = route.tc || route.agent
+  const ag = agents.find((a) => a.id === uc)
+  const label = ag?.label || 'this agent'
+  const vol = state && ag ? Math.round(state.volume * (ag.share || 0)) : null
   const saving = route.monthly
-  const frame = _ROUTE_FRAME[route.eval_key || 'none'] || _ROUTE_FRAME.none
+  const isRoute = route.type === 'route_model'
+  const verb = isRoute ? 'routing it to the economy model' : 'suppressing that call'
+  const line = isRoute
+    ? "the replay shows economy degrading here — I'd keep premium, but it's your call."
+    : "the KB likely covers it, but dropping it could still change a quote — your call."
   return (
-    <Card accent={RED} kicker="⚑ Decide · the agent stops — your call" glow>
-      <div style={{ fontSize: 22, lineHeight: 1.38, color: INK, marginTop: 8 }}>
-        The <b>model</b> is the cost on <b>{label.toLowerCase()}</b> now, and routing it to economy
-        could <b style={{ color: RED }}>change the answers</b> — {frame.line}
+    <Card accent={RED} kicker={`⚑ Decide · ${label} — your call`} glow>
+      <div style={{ fontSize: 23, lineHeight: 1.36, color: INK, marginTop: 8 }}>
+        On <b>{label}</b>, {verb} could <b style={{ color: RED }}>change the answers</b> — {line}
       </div>
       {/* evidence line — grounds the ask */}
-      <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
-        display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <span><b>{label.toLowerCase()}</b></span>
-        <span style={{ color: DIM }}>~{vol != null ? vol.toLocaleString() : '—'} msgs/mo on this path</span>
-        <span style={{ color: GREEN }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 11 }}>(est.)</span></span>
+      <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
+        display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <span style={{ color: DIM }}>~{vol != null ? vol.toLocaleString() : '—'} msgs/mo on this agent</span>
+        <span style={{ color: GREEN, fontWeight: 700 }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 11, fontWeight: 400 }}>(est.)</span></span>
         <Btn onClick={() => openProof(uc)} label="sample traces ↗" color={DIM} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
         <Btn onClick={() => act('reject', route.sig)} label="not now" color={DIM} />
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 9, alignItems: 'center' }}>
-          <Btn onClick={() => act('accept', route.sig)} label="arm it" color={AMBER} />
-          <Btn onClick={() => onExperiment(uc, route.eval_key)} label="experiment →" color={GREEN} primary big />
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Btn onClick={() => act('accept', route.sig)} label="arm it anyway" color={AMBER} />
+          {route.eval_key
+            ? <Btn onClick={() => onExperiment(uc, route.eval_key)} label="see the eval →" color={GREEN} primary big />
+            : <Btn onClick={() => openProof(uc)} label="see the traces →" color={GREEN} primary big />}
         </div>
       </div>
-      <div style={{ fontSize: 11.5, color: DIM, marginTop: 8, textAlign: 'right' }}>
-        can't prove it yet? test it first — that's the honest move.
+      <div style={{ fontSize: 12, color: DIM, marginTop: 9, textAlign: 'right' }}>
+        can't prove it yet? check the evidence first — that's the honest move.
       </div>
     </Card>
   )
@@ -419,24 +472,25 @@ function TopBar({ state, onLab, onPin, onFF }) {
   const start = state?.summary?.start_dpm ?? state?.baseline_dollars_per_message
   const down = start && state && state.dollars_per_message < start - 1e-9
   const pct = down ? Math.round((1 - state.dollars_per_message / start) * 100) : 0
+  const projSaved = state ? Math.max(0, (start - dpm) * state.volume) : 0  // animates as fixes land
   const clock = state?.clock
   return (
     <div style={{ borderBottom: '1px solid #eceae0', background: '#fff' }}>
       <div style={{ padding: '12px 24px 6px', display: 'flex', alignItems: 'baseline', gap: 16 }}>
         <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: '-.01em', color: INK }}>
           AI cost governance
-          <span style={{ fontSize: 15.5, fontWeight: 500, color: DIM }}> · an agent governing another agent</span>
+          <span style={{ fontSize: 15.5, fontWeight: 500, color: DIM }}> · one Accountant governing a fleet</span>
         </div>
         <div style={{ marginLeft: 'auto' }}><MindLoop step={state?.step} steps={state?.steps} /></div>
       </div>
       <div style={{ padding: '2px 24px 14px', display: 'flex', gap: 26, alignItems: 'stretch' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 196, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200, justifyContent: 'center' }}>
           <BigReadout label="$ / message now" main={`$${(dpm || 0).toFixed(4)}`}
             sub={down ? `▼ ${pct}% vs start` : 'baseline'} color={down ? GREEN : INK}
             subColor={down ? GREEN : DIM} big />
-          <BigReadout label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`}
-            sub={`${state ? state.throughput_per_sec.toFixed(2) : '—'} msgs/sec · live`}
-            color={INK} subColor={DIM} />
+          <BigReadout label="saved / mo (est.)" main={`$${Math.round(projSaved).toLocaleString()}`}
+            sub={`$${state ? state.realized_savings.toFixed(2) : '—'} measured live`}
+            color={GREEN} subColor={DIM} big />
         </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
@@ -876,16 +930,17 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 55 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 14, padding: '22px 24px',
-        width: 640, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 16, padding: '24px 28px',
+        width: 700, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
         {!d ? <div style={{ color: DIM, padding: 16 }}>Dropping into the box…</div> : <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: '#5a4815',
                 borderRadius: 9, padding: '3px 10px', letterSpacing: '.06em' }}>INSPECT</span>
-              <div style={{ fontSize: 21, fontWeight: 700, marginTop: 10 }}>{d.title}</div>
-              <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 2 }}>
-                {Math.round(d.share * 100)}% of spend · ${d.cost_per_message.toFixed(4)} / message
+              <div style={{ fontSize: 23, fontWeight: 800, marginTop: 10 }}>{d.title}</div>
+              {d.purpose && <div style={{ fontSize: 13.5, color: DIM, marginTop: 1 }}>{d.purpose}</div>}
+              <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 3 }}>
+                {Math.round(d.share * 100)}% of fleet spend · <b>${d.cost_per_message.toFixed(4)}</b> / message
               </div>
             </div>
             <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
@@ -930,16 +985,21 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
             </div>
           </div>
 
-          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 16 }}>TAKE MANUAL CONTROL</div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>TAKE MANUAL CONTROL</div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 9 }}>
+            {/* the agent's ONE fix — safe (force-on) or risky (eval-gated) */}
             {d.cache && (d.cache.active
-              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 13, color: GREEN, border: `1px solid ${GREEN}`,
-                  borderRadius: 8, padding: '8px 12px', background: '#eef7f1' }}>✓ repeated lookups cached</div>
-              : <button onClick={() => onForceCache(d.cache.sig)} style={mbtn(GREEN)}>force-cache repeated lookups</button>)}
-            <button onClick={() => onForceRoute(d.route)} style={mbtn(AMBER)}>route → economy model</button>
+              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: GREEN, border: `1.5px solid ${GREEN}`,
+                  borderRadius: 9, padding: '11px 14px', background: '#eef7f1' }}>✓ {d.cache.label} — active</div>
+              : <button onClick={() => onForceCache(d.cache.sig)} style={mbtn(GREEN)}>{d.cache.label}</button>)}
+            {d.route && (d.route.active
+              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: AMBER, border: `1.5px solid ${AMBER}`,
+                  borderRadius: 9, padding: '11px 14px', background: '#fbf0db' }}>✓ {d.route.label} — live</div>
+              : <button onClick={() => onForceRoute(d.route)} style={mbtn(d.route.eval_key ? RED : AMBER)}>
+                  {d.route.label}{d.route.eval_key ? ' — see the eval →' : ' →'}</button>)}
           </div>
-          <div style={{ fontSize: 12.5, color: '#3b3b37', marginTop: 12 }}>
-            The agent keeps watching — it runs the eval and flags you if quality drops.
+          <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 12 }}>
+            The agent keeps watching — it re-measures from the traffic and flags you if quality drops.
           </div>
         </>}
       </div>
@@ -947,8 +1007,8 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
   )
 }
 function mbtn(color) {
-  return { flex: 1, fontSize: 13, fontWeight: 600, cursor: 'pointer', color, background: '#fff',
-    border: `1px solid ${color}`, borderRadius: 8, padding: '8px 12px' }
+  return { flex: 1, fontSize: 14.5, fontWeight: 700, cursor: 'pointer', color, background: '#fff',
+    border: `1.5px solid ${color}`, borderRadius: 9, padding: '11px 14px' }
 }
 function mdCode(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -964,9 +1024,10 @@ function mdCode(s) {
 //  Real 'test'-tagged Phoenix traces; never touches production.
 // ===========================================================================
 const LAB_USE_CASES = [
-  { key: 'account_question', label: 'Account questions' },
-  { key: 'refund_handling', label: 'Refund tickets' },
-  { key: 'password_reset', label: 'Password resets' },
+  { key: 'support_copilot', label: 'Support Co-Pilot' },
+  { key: 'refund_auditor', label: 'Refund Auditor' },
+  { key: 'sales_assistant', label: 'Sales Assistant' },
+  { key: 'docs_bot', label: 'Docs Bot' },
 ]
 
 // group a conversation's calls into canvas boxes (consecutive same-tool → ×N),
@@ -1537,46 +1598,22 @@ function opSub(op, lever) {
   if (op.kind === 'model') return lever ? 'premium · routable' : 'premium model'
   return lever ? 'paying — the agent will cache' : 'paying'
 }
-function buildGraph(state, act) {
-  if (!state || !state.classes) return { nodes: [], edges: [] }
-  const leverBySig = Object.fromEntries((state.levers || []).map((l) => [l.sig, l]))
+// The FLEET TREE: the Accountant on top, each observed agent a node below it.
+function buildGraph(state, act, onInspect) {
+  const agents = state?.agents || []
+  if (!agents.length) return { nodes: [], edges: [] }
   const nodes = [], edges = []
-  const laneH = 92
-  const maxShare = Math.max(0.0001, ...state.classes.map((c) => c.share || 0))
-  // the agent's attention: the lane with a pending decision, else the hottest lane
-  const decisionTc = state.classes.find((c) => (c.ops || []).some((o) => leverBySig[o.lever]?.escalated))?.tc
-  const focusTc = decisionTc || state.classes.slice().sort((a, b) => b.share - a.share)[0]?.tc
-  const anyDecision = !!decisionTc
-  state.classes.forEach((cls, i) => {
-    const y = 22 + i * laneH
-    const cid = 'cls_' + cls.tc
-    const isFocus = cls.tc === focusTc
-    nodes.push(nd(cid, 12, y, {
-      kind: 'class', label: cls.label, proofNode: cls.tc,
-      sub: `$${cls.cost_per_ticket.toFixed(4)}/ticket · ${Math.round(cls.share * 100)}% of spend`,
-      state: cls.governed === true ? 'green' : 'amber',
-      heat: (cls.share || 0) / maxShare,          // cost-heat ramp (always on)
-      spotlight: isFocus, dimmed: anyDecision && !isFocus,
-    }))
-    let prev = cid
-    cls.ops.forEach((op, j) => {
-      const oid = cid + '_' + op.op
-      const lever = op.lever ? leverBySig[op.lever] : null
-      // LIGHT RED = the specific node a decision is about (an escalated lever)
-      const isProblem = !!lever?.escalated
-      nodes.push(nd(oid, 250 + j * 168, y, {
-        kind: lever ? 'lever' : 'op', label: opLabel(op), sub: opSub(op, lever),
-        state: op.governed ? 'green' : isProblem ? 'problem' : lever ? leverState(lever) : (op.kind === 'model' ? 'struct' : 'amber'),
-        sig: op.lever, active: lever?.active, vetoed: lever?.vetoed, escalated: lever?.escalated,
-        act, proofNode: cls.tc, dimmed: anyDecision && !isFocus && !isProblem,
-      }))
-      edges.push(ed(oid + '_e', prev, oid, op.governed ? GREEN : isProblem ? '#dc2626' : '#c8c7c0'))
-      prev = oid
-    })
+  const colW = 280, cardW = 246, startX = 30
+  const rootX = startX + ((agents.length - 1) * colW) / 2 + (cardW - 230) / 2
+  nodes.push({ id: 'root', type: 'root', position: { x: rootX, y: 0 }, draggable: false,
+    data: { sub: `governing ${agents.length} agents · live` } })
+  agents.forEach((a, i) => {
+    const aid = 'agent_' + a.id
+    nodes.push({ id: aid, type: 'agent', position: { x: startX + i * colW, y: 188 }, draggable: false,
+      data: { agent: a, act, onInspect } })
+    const col = a.status === 'governed' ? GREEN : a.status === 'your_call' ? RED : '#c8c7c0'
+    edges.push({ id: 'e_' + aid, source: 'root', target: aid, animated: a.status !== 'watching',
+      style: { stroke: col, strokeWidth: a.status === 'your_call' ? 2.5 : 2 } })
   })
   return { nodes, edges }
-}
-function nd(id, x, y, data) { return { id, type: 'ctrl', position: { x, y }, data, draggable: false } }
-function ed(id, s, t, color) {
-  return { id, source: s, target: t, animated: true, style: { stroke: color, strokeWidth: 2 } }
 }

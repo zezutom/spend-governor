@@ -193,12 +193,14 @@ class Governor:
             self._eval_cache[key] = quality_eval.load_eval(key)
         return self._eval_cache[key]
 
-    def _quality_now(self, rows) -> float:
+    def _quality_now(self, by) -> float:
         """Quality retention (0..1), eval-measured. Dips ONLY while a ROUTE fix
         whose pre-run verdict is 'revert' (the Docs Bot trap) is active — by that
-        eval's measured economy/baseline quality × the agent's share. Recovers on
+        eval's measured economy/baseline quality × the agent's VOLUME share (quality
+        degradation hits a fraction of conversations, not of dollars). Recovers on
         revert. Suppress/cap/cache never depress it (output-preserving / precautionary)."""
         active = {p["signature"] for p in service.active_policies()}
+        total_n = sum((by.get(a) or {}).get("n", 0) or 0 for a in _FLEET_ORDER) or 1
         ret = 1.0
         for aid in _FLEET_ORDER:
             fx = _FLEET[aid]
@@ -209,9 +211,9 @@ class Governor:
                 continue
             base_q = ev.get("mean_quality_baseline") or 5.0
             econ_q = ev.get("mean_quality_economy") or base_q
-            share = next((r["share"] for r in rows if r["tc"] == aid), 0.0)
+            vshare = ((by.get(aid) or {}).get("n", 0) or 0) / total_n
             if base_q > 0:
-                ret -= (1 - econ_q / base_q) * share
+                ret -= (1 - econ_q / base_q) * vshare
         return round(max(min(ret, 1.0), 0.0), 4)
 
     # --- snapshot ----------------------------------------------------------
@@ -326,7 +328,7 @@ class Governor:
             "wall": round(self.scenario.elapsed(now), 1),
             "label": self.scenario.label(now),
             "dollars_per_message": round(dpm, 6),
-            "quality": self._quality_now(rows),
+            "quality": self._quality_now(by),
             "volume": round(self.scenario.arrival_volume(now, base=base_rate), 1),
         })
         if len(self.history) > 160:

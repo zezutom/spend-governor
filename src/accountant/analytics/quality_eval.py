@@ -52,6 +52,30 @@ def _instruction() -> str:
     return load_instruction()
 
 
+def _fleet_instruction(use_case: str) -> str:
+    """The system instruction to replay a use case under. For a fleet agent it's
+    that agent's own instruction (so the replay reproduces its real waste); else
+    the default observed instruction."""
+    try:
+        from observed.fleet import FLEET
+        if use_case in FLEET:
+            return FLEET[use_case]["instruction"]
+    except Exception:
+        pass
+    return _instruction()
+
+
+def _pool_for(use_case: str) -> list[str]:
+    """The message pool for a use case — the fleet agent's own messages."""
+    try:
+        from observed.fleet import FLEET
+        if use_case in FLEET:
+            return list(FLEET[use_case]["messages"])
+    except Exception:
+        pass
+    return []
+
+
 import functools
 import threading
 
@@ -123,7 +147,7 @@ def _replay(ticket: str, model: str) -> str:
         model=model,
         contents=ticket,
         config=types.GenerateContentConfig(
-            system_instruction=_instruction(),
+            system_instruction=getattr(_local, "instr", None) or _instruction(),
             temperature=0.0,
             tools=_tools(),
             thinking_config=types.ThinkingConfig(thinking_budget=0),
@@ -193,7 +217,9 @@ def _traced_replay(ticket: str, model: str, gid: str | None, attrs: dict | None 
 
 
 def _eval_ticket(ticket: str, baseline_model: str, economy_model: str,
-                 gid: str | None = None, attrs: dict | None = None) -> dict:
+                 gid: str | None = None, attrs: dict | None = None,
+                 instruction: str | None = None) -> dict:
+    _local.instr = instruction  # replay under the agent's own instruction (or default)
     if gid is not None:
         base, _ = _traced_replay(ticket, baseline_model, gid, attrs)
         econ, econ_url = _traced_replay(ticket, economy_model, gid, attrs)
@@ -289,13 +315,13 @@ def load_eval(key: str) -> dict | None:
 
 
 def sample_tickets(classes: tuple[str, ...], per_class: int = 2) -> list[str]:
-    """Real tickets from the observed pool, for a given set of task classes."""
-    from observed.generate_dataset import MESSAGE_POOLS, CUSTOMER_POOL
+    """Real tickets from the fleet agents' message pools."""
+    from observed.generate_dataset import CUSTOMER_POOL
     import itertools
     cust = itertools.cycle(CUSTOMER_POOL)
     out: list[str] = []
     for cls in classes:
-        pool = MESSAGE_POOLS[cls]
+        pool = _pool_for(cls)
         for i in range(per_class):
             out.append(pool[i % len(pool)].replace("{customer_id}", next(cust)))
     return out
@@ -322,9 +348,9 @@ def _subtype(use_case: str, ticket: str) -> str:
 
 
 def _sample_with_subtype(use_case: str, n: int) -> list[dict]:
-    from observed.generate_dataset import MESSAGE_POOLS, CUSTOMER_POOL
+    from observed.generate_dataset import CUSTOMER_POOL
     import itertools
-    pool = MESSAGE_POOLS[use_case]
+    pool = _pool_for(use_case)
     cust = itertools.cycle(CUSTOMER_POOL)
     out = []
     for i in range(n):
@@ -368,7 +394,8 @@ def replay_one_live(use_case: str, *, idx: int = 0, baseline_model: str = BASELI
     sample = _sample_with_subtype(use_case, idx + 1)[idx]
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
            "accountant.lab.candidate": "route_economy"}
-    r = _eval_ticket(sample["ticket"], baseline_model, economy_model, gid, tag)
+    r = _eval_ticket(sample["ticket"], baseline_model, economy_model, gid, tag,
+                     instruction=_fleet_instruction(use_case))
     r["sub_type"] = sample["sub_type"]
     r["held"] = bool(r["equivalent"]) and not r["refused_escalated"]
     return r
@@ -380,7 +407,8 @@ def _replay_full(ticket: str, model: str):
     return _genai().models.generate_content(
         model=model, contents=ticket,
         config=types.GenerateContentConfig(
-            system_instruction=_instruction(), temperature=0.0, tools=_tools(),
+            system_instruction=getattr(_local, "instr", None) or _instruction(),
+            temperature=0.0, tools=_tools(),
             thinking_config=types.ThinkingConfig(thinking_budget=0)))
 
 
@@ -439,9 +467,10 @@ def _model_cost_of(resp, model: str) -> float:
 
 
 def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict, rates: dict,
-                     baseline_model: str, economy_model: str) -> dict:
+                     baseline_model: str, economy_model: str, instruction: str | None = None) -> dict:
     """One replayed conversation, captured for stepping: the call sequence, the
     per-call cost, the model diff (premium vs economy answer + judge quality)."""
+    _local.instr = instruction  # replay under the agent's own instruction (reproduces its waste)
     from opentelemetry import trace as _ot
     from accountant.pipeline import phoenix_cost
     tracer = _ot.get_tracer("accountant.quality_eval")
@@ -617,11 +646,12 @@ def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
                 _baseline_cache[key] = (row["baseline_answer"], row.get("baseline_model_cost", 0.0))
     tickets = (generate_synthetic_tickets(use_case, n) if source == "synthetic"
                else _sample_with_subtype(use_case, n))
+    instr = _fleet_instruction(use_case)
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
            "accountant.lab.candidate": "route_economy", "accountant.lab.source": source}
     with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = [ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
-                          gid, tag, rates, baseline_model, economy_model)
+                          gid, tag, rates, baseline_model, economy_model, instr)
                 for i, t in enumerate(tickets)]
         for f in cf.as_completed(futs):
             try:
@@ -644,13 +674,14 @@ def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
     gid = phoenix_cost.project_gid()
     rates = service.default_tool_rates()
     tickets = _sample_with_subtype(use_case, n)
+    instr = _fleet_instruction(use_case)
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
            "accountant.lab.candidate": f"route_{candidate}"}
     t0 = time.monotonic()
     rows: list[dict] = []
     with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
-                          gid, tag, rates, baseline_model, economy_model): i
+                          gid, tag, rates, baseline_model, economy_model, instr): i
                 for i, t in enumerate(tickets)}
         for f in cf.as_completed(futs):
             rows.append(f.result())
