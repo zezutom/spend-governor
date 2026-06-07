@@ -15,8 +15,8 @@ const GREEN = '#0f6e56', AMBER = '#b5791a', RED = '#a3402f', DIM = '#9ca3af', IN
 
 function Btn({ onClick, label, color, primary, big }) {
   return <button className="nodrag nopan" onClick={(e) => { e.stopPropagation(); onClick() }}
-    style={{ fontSize: big ? 14 : 11.5, borderRadius: 7, padding: big ? '8px 18px' : '3px 10px',
-      cursor: 'pointer', fontWeight: primary ? 700 : 500,
+    style={{ fontSize: big ? 15 : 13, borderRadius: 8, padding: big ? '10px 22px' : '6px 13px',
+      cursor: 'pointer', fontWeight: primary ? 800 : 600,
       border: `1px solid ${color}`, color: primary ? '#fff' : color,
       background: primary ? color : '#fff' }}>{label}</button>
 }
@@ -96,15 +96,17 @@ export default function App() {
   const [inspectTc, setInspectTc] = useState(null) // per-box inspector — DEFAULT click
   const [lab, setLab] = useState(null)             // {uc} when the debugger is open (sandbox)
   const [sessionId, setSessionId] = useState(null) // debug-session metadata popup (#DS-…)
+  const [hideSummary, setHideSummary] = useState(false)  // dismiss the closing takeaway
   // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
 
+  const stateRef = useRef(null)
   useEffect(() => {
     const es = new EventSource(`${API}/api/stream`)
     es.onmessage = (e) => {
       const ev = JSON.parse(e.data)
-      if (ev.state) setState(ev.state)
-      if (ev.narration) setFeed((f) => [{ ...ev.narration, seq: ev.seq }, ...f].slice(0, 120))
+      if (ev.state) { setState(ev.state); stateRef.current = ev.state }
+      if (ev.narration) setFeed((f) => [{ ...ev.narration, seq: ev.seq, ts: ev.ts }, ...f].slice(0, 120))
     }
     es.onerror = () => {}
     // Open mid-crisis: restart ungoverned so each visit plays the full arc.
@@ -114,17 +116,25 @@ export default function App() {
 
   const act = useCallback((kind, sig) => {
     fetch(`${API}/api/action/${kind}/${encodeURIComponent(sig)}`, { method: 'POST' })
-    if (kind === 'accept' && sig && sig.startsWith('route_model')) setEvalView({ key: 'hold', mode: 'arm' })
+    // arming a route reveals its REAL pre-run eval (when there is a quick eval;
+    // account routing has none — its evidence is the replay lab via 'experiment').
+    if (kind === 'accept' && sig && sig.startsWith('route_model')) {
+      const lv = (stateRef.current?.levers || []).find((l) => l.sig === sig)
+      if (lv?.eval_key) setEvalView({ key: lv.eval_key, mode: 'arm' })
+    }
   }, [])
   const openProof = useCallback((node) => {
     fetch(`${API}/api/proof/${node || 'requests'}`).then((r) => r.json()).then(setProof).catch(() => {})
   }, [])
+  const onFF = useCallback(() => { fetch(`${API}/api/clock/ff?hours=2`, { method: 'POST' }).catch(() => {}) }, [])
+  // a chart pin links to its decision: open the session record (same target as the inbox card)
+  const onPin = useCallback((p) => { if (p?.session) setSessionId(p.session) }, [])
   // manual control from inside a box — REAL levers, agent stays on watch
   const onForceCache = useCallback((sig) => { act('enable', sig) }, [act])
   const onForceRoute = useCallback((rt) => {
     setInspectTc(null)
-    if (rt.risky) setEvalView({ key: rt.eval_key, mode: 'trip' })  // catches it on the real eval
-    else act('accept', rt.sig)                                     // arms + opens the hold eval
+    if (rt.eval_key) setEvalView({ key: rt.eval_key, mode: 'trip' })  // quick eval (hold/trip)
+    else act('accept', rt.sig)                                        // account: lab is the evidence
   }, [act])
 
   const { nodes, edges } = useMemo(() => buildGraph(state, act), [state, act])
@@ -133,7 +143,7 @@ export default function App() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: PAPER }}>
-      <TopBar state={state} onLab={() => setLab({ uc: 'account_question' })} />
+      <TopBar state={state} onLab={() => setLab({ uc: 'account_question' })} onPin={onPin} onFF={onFF} />
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <MindRail feed={feed} step={state?.step} onOpenSession={setSessionId} />
         {/* stage: the decision docks at the TOP (so it never covers the box it's
@@ -156,6 +166,8 @@ export default function App() {
                   zoomOnScroll={false} zoomOnDoubleClick={false}>
                   <Background color="#e7e7e0" gap={22} />
                 </ReactFlow>}
+            {state?.summary?.ready && !hideSummary &&
+              <ClosingCard summary={state.summary} onClose={() => setHideSummary(true)} onOpenSession={setSessionId} />}
           </div>
         </div>
       </div>
@@ -311,34 +323,41 @@ function VerifyCard({ text, state }) {
   )
 }
 
-const _SIMPLE_CLASSES = ['account_question', 'password_reset']
+// The defer card is class-aware: it names the SPECIFIC workload the agent stopped
+// on, and frames the ask by that route's real pre-run verdict (holds / wide variety
+// / breaks). Each of the three defers reads differently because the situation is.
+const _ROUTE_FRAME = {
+  hold: { color: AMBER, line: "the replay says it holds — but it's still answer-affecting, so the call's yours." },
+  trip: { color: RED, line: "I don't think it holds — the replay had it degrading. I'd keep premium, but it's your call." },
+  none: { color: AMBER, line: "the variety is wide — I can't prove economy holds across it. Test it in the lab first." },
+}
 function DeferCard({ route, act, state, onExperiment, openProof }) {
   const classes = state?.classes || []
-  const simpleShare = classes.filter((c) => _SIMPLE_CLASSES.includes(c.tc)).reduce((s, c) => s + (c.share || 0), 0)
-  const vol = state ? Math.round(state.volume * simpleShare) : null
-  const lever = (state?.levers || []).find((l) => l.sig === route.sig)
-  const saving = lever ? lever.monthly : null
-  const expUc = classes.find((c) => c.tc === 'account_question') ? 'account_question' : _SIMPLE_CLASSES[0]
+  const uc = route.tc || 'account_question'
+  const cls = classes.find((c) => c.tc === uc)
+  const label = (cls?.label || 'this path')
+  const vol = state && cls ? Math.round(state.volume * (cls.share || 0)) : null
+  const saving = route.monthly
+  const frame = _ROUTE_FRAME[route.eval_key || 'none'] || _ROUTE_FRAME.none
   return (
     <Card accent={RED} kicker="⚑ Decide · the agent stops — your call" glow>
       <div style={{ fontSize: 22, lineHeight: 1.38, color: INK, marginTop: 8 }}>
-        Caching was safe — applied. The <b>model</b> is the cost now on simple tickets,
-        and routing it to economy could <b style={{ color: RED }}>change the answers</b> —
-        I can't prove it won't. So I've stopped here.
+        The <b>model</b> is the cost on <b>{label.toLowerCase()}</b> now, and routing it to economy
+        could <b style={{ color: RED }}>change the answers</b> — {frame.line}
       </div>
       {/* evidence line — grounds the ask */}
       <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
         display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <span><b>simple tickets</b></span>
+        <span><b>{label.toLowerCase()}</b></span>
         <span style={{ color: DIM }}>~{vol != null ? vol.toLocaleString() : '—'} msgs/mo on this path</span>
         <span style={{ color: GREEN }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 11 }}>(est.)</span></span>
-        <Btn onClick={() => openProof(expUc)} label="sample traces ↗" color={DIM} />
+        <Btn onClick={() => openProof(uc)} label="sample traces ↗" color={DIM} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
         <Btn onClick={() => act('reject', route.sig)} label="not now" color={DIM} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 9, alignItems: 'center' }}>
           <Btn onClick={() => act('accept', route.sig)} label="arm it" color={AMBER} />
-          <Btn onClick={() => onExperiment(expUc)} label="experiment →" color={GREEN} primary big />
+          <Btn onClick={() => onExperiment(uc)} label="experiment →" color={GREEN} primary big />
         </div>
       </div>
       <div style={{ fontSize: 11.5, color: DIM, marginTop: 8, textAlign: 'right' }}>
@@ -384,34 +403,196 @@ function MindLoop({ step, steps }) {
   )
 }
 
-function TopBar({ state, onLab }) {
+// The top bar is the VALUE SPINE: a real time-series of what governance moved.
+// $/message is a measured descending staircase (solid), each step pinned to the
+// decision that caused it; quality is eval-measured (dashed), flat but for the one
+// dip under the trap pin; volume is the seeded traffic behind. The clock is the
+// only artifice, disclosed.
+function TopBar({ state, onLab, onPin, onFF }) {
   const dpm = useTween(state?.dollars_per_message)
-  const base = state?.baseline_dollars_per_message
-  const down = state && state.dollars_per_message < base - 1e-9
-  const pct = down ? Math.round((1 - state.dollars_per_message / base) * 100) : 0
+  const start = state?.summary?.start_dpm ?? state?.baseline_dollars_per_message
+  const down = start && state && state.dollars_per_message < start - 1e-9
+  const pct = down ? Math.round((1 - state.dollars_per_message / start) * 100) : 0
+  const clock = state?.clock
   return (
-    <div style={{ padding: '10px 22px', borderBottom: '1px solid #eceae0', display: 'flex',
-      alignItems: 'center', gap: 26, background: '#fff' }}>
-      <div>
-        <div style={{ fontSize: 11, color: DIM, letterSpacing: '.04em' }}>AI COST GOVERNANCE</div>
-        <div style={{ fontSize: 14.5, fontWeight: 700 }}>An agent governing another agent</div>
+    <div style={{ borderBottom: '1px solid #eceae0', background: '#fff' }}>
+      <div style={{ padding: '12px 24px 6px', display: 'flex', alignItems: 'baseline', gap: 16 }}>
+        <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: '-.01em', color: INK }}>
+          AI cost governance
+          <span style={{ fontSize: 15.5, fontWeight: 500, color: DIM }}> · an agent governing another agent</span>
+        </div>
+        <div style={{ marginLeft: 'auto' }}><MindLoop step={state?.step} steps={state?.steps} /></div>
       </div>
-      <div style={{ borderLeft: '1px solid #eceae0', paddingLeft: 22 }}>
-        <div style={{ fontSize: 10.5, color: DIM, marginBottom: 4 }}>the agent's loop</div>
-        <MindLoop step={state?.step} steps={state?.steps} />
+      <div style={{ padding: '2px 24px 14px', display: 'flex', gap: 26, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 196, justifyContent: 'center' }}>
+          <BigReadout label="$ / message now" main={`$${(dpm || 0).toFixed(4)}`}
+            sub={down ? `▼ ${pct}% vs start` : 'baseline'} color={down ? GREEN : INK}
+            subColor={down ? GREEN : DIM} big />
+          <BigReadout label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`}
+            sub={`${state ? state.throughput_per_sec.toFixed(2) : '—'} msgs/sec · live`}
+            color={INK} subColor={DIM} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
+            <Legend />
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12.5, color: DIM }}>
+                {clock ? `${clock.disclosure} · ${clock.label}` : 'time-compressed'}
+              </span>
+              <button onClick={onFF} title="advance the clock ~2h"
+                style={{ fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid #d8d6cc',
+                  borderRadius: 8, padding: '5px 11px', color: '#5a5852', background: '#fff' }}>⏩ +2h</button>
+              <button onClick={onLab}
+                style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: `1px solid ${GREEN}`,
+                  borderRadius: 8, padding: '6px 14px', color: '#fff', background: GREEN }}>🔬 debugger</button>
+            </div>
+          </div>
+          <Spine state={state} onPin={onPin} />
+        </div>
       </div>
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: 26, alignItems: 'flex-end' }}>
-        <Metric label="throughput" main={state ? state.throughput_per_sec.toFixed(2) : '—'} unit="msgs/sec" color={INK} />
-        <Metric label="$ / message" main={`$${dpm.toFixed(4)}`} unit={down ? `▼${pct}%` : 'baseline'}
-          color={down ? GREEN : INK} unitColor={down ? GREEN : DIM} />
-        <Metric label="burn" main={`$${state ? (state.burn_per_min < 0.1 ? state.burn_per_min.toFixed(3) : state.burn_per_min.toFixed(2)) : '—'}`} unit="/min" color={DIM} small />
-        <Metric label="measured saved" main={`$${state ? state.realized_savings.toFixed(4) : '—'}`} unit="live" color={GREEN} />
+    </div>
+  )
+}
+
+// The closing takeaway — the demo's last 10 seconds, read straight off the series.
+function ClosingCard({ summary, onClose, onOpenSession }) {
+  if (!summary) return null
+  const { start_dpm, now_dpm, pct_down, quality_note, decisions } = summary
+  return (
+    <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16, zIndex: 6, background: '#fff',
+      border: `2px solid ${GREEN}`, borderRadius: 18, padding: '18px 22px',
+      boxShadow: '0 16px 50px rgba(0,0,0,.18)', animation: 'rise .5s ease-out' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: GREEN }}>
+          ✦ the run, end to end
+        </div>
+        <button onClick={onClose} style={{ marginLeft: 'auto', fontSize: 12.5, color: DIM, cursor: 'pointer',
+          border: '1px solid #e6e4da', borderRadius: 8, padding: '5px 11px', background: '#fff' }}>dismiss</button>
       </div>
-      <button onClick={onLab} style={{ fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-        border: '1px solid #d8d6cc', borderRadius: 8, padding: '6px 12px',
-        color: '#5a5852', background: '#fff' }}>
-        🔬 debugger
-      </button>
+      <div style={{ fontSize: 23, lineHeight: 1.42, color: INK, marginTop: 9, fontWeight: 500 }}>
+        Started at <b>${(start_dpm || 0).toFixed(4)}</b>/msg, now <b style={{ color: GREEN }}>${(now_dpm || 0).toFixed(4)}</b>
+        {' '}— <b style={{ color: GREEN }}>down {pct_down}%</b>. Quality {quality_note}. Every step proven safe and <b>reversible</b>.
+      </div>
+      {decisions && decisions.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 12.5, color: DIM }}>your decisions:</span>
+          {decisions.map((d, i) => (
+            <DsLink key={i} id={d.session} onOpenSession={onOpenSession} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BigReadout({ label, main, sub, color, subColor, big }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: big ? 34 : 26, fontWeight: 800, lineHeight: 1.0, color, letterSpacing: '-.02em' }}>{main}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: subColor }}>{sub}</div>
+    </div>
+  )
+}
+
+function Legend() {
+  const Item = ({ children, dash, sq }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#54524c', fontWeight: 600 }}>
+      {sq ? <span style={{ width: 11, height: 11, background: 'rgba(181,121,26,.32)', borderRadius: 2 }} />
+        : <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke={dash ? DIM : GREEN}
+            strokeWidth="2.5" strokeDasharray={dash ? '4 3' : '0'} /></svg>}
+      {children}
+    </span>
+  )
+  return (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+      <Item>$/message</Item><Item dash>quality</Item><Item sq>volume</Item>
+    </div>
+  )
+}
+
+// --- the value-spine chart (hand-rolled SVG, no chart dep) -----------------
+const _W = 1000, _H = 150, _PADL = 0.03, _PADR = 0.012, _PADT = 12, _PADB = 16
+const _xpct = (t) => (_PADL + t * (1 - _PADL - _PADR)) * 100
+function _pinColor(k) { return k === 'reverted' ? RED : GREEN }
+function _pinBg(k) { return k === 'reverted' ? '#fbeeec' : '#eaf6f0' }
+function _pinIcon(k) { return k === 'reverted' ? '⚠' : k === 'you_decided' ? '◆' : '🤖' }
+function _pinText(p) {
+  if (p.kind === 'reverted') return 'reverted'
+  if (p.kind === 'you_decided') return 'you applied'
+  const l = (p.label || '').toLowerCase()
+  if (l.includes('refund')) return 'cached refunds'
+  if (l.includes('account')) return 'cached account'
+  return 'agent cached'
+}
+
+function Spine({ state, onPin }) {
+  const history = state?.history || []
+  const pins = state?.pins || []
+  if (history.length < 2) {
+    return <div style={{ height: _H, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: DIM, fontSize: 14, border: '1px dashed #e6e4da', borderRadius: 10 }}>
+      watching the live traffic — the value line builds as the agent works…</div>
+  }
+  const start = state?.summary?.start_dpm ?? history[0].dollars_per_message
+  const ymax = Math.max(start * 1.08, ...history.map((h) => h.dollars_per_message)) || 1
+  const vmax = Math.max(1, ...history.map((h) => h.volume || 0))
+  const X = (t) => (_PADL + (t || 0) * (1 - _PADL - _PADR)) * _W
+  const plotH = _H - _PADT - _PADB
+  const costY = (v) => _PADT + (1 - v / ymax) * plotH
+  const qY = (q) => _PADT + (1 - (q == null ? 1 : q)) * (plotH * 0.6)  // quality rides the upper band
+  const volY = (v) => _H - _PADB - (v / vmax) * (plotH * 0.42)
+
+  // cost: a descending STAIRCASE (hold, then step down at each lever change)
+  let cost = ''
+  history.forEach((h, i) => {
+    const x = X(h.t), y = costY(h.dollars_per_message)
+    if (i === 0) cost = `M ${x} ${y}`
+    else cost += ` L ${x} ${costY(history[i - 1].dollars_per_message)} L ${x} ${y}`
+  })
+  // quality: dashed line, flat but for the trap dip
+  const qual = history.map((h, i) => `${i ? 'L' : 'M'} ${X(h.t)} ${qY(h.quality)}`).join(' ')
+  // volume: faint area behind
+  let vol = `M ${X(history[0].t)} ${_H - _PADB}`
+  history.forEach((h) => { vol += ` L ${X(h.t)} ${volY(h.volume || 0)}` })
+  vol += ` L ${X(history[history.length - 1].t)} ${_H - _PADB} Z`
+  const nowX = X(history[history.length - 1].t)
+
+  return (
+    <div>
+      <div style={{ position: 'relative', height: _H }}>
+        <svg viewBox={`0 0 ${_W} ${_H}`} preserveAspectRatio="none"
+          style={{ width: '100%', height: _H, display: 'block', overflow: 'visible' }}>
+          <path d={vol} fill="rgba(181,121,26,.13)" stroke="none" />
+          <line x1={X(0)} y1={costY(start)} x2={_W} y2={costY(start)} stroke="#d8d6cc"
+            strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+          <path d={qual} fill="none" stroke={DIM} strokeWidth="2" strokeDasharray="5 4"
+            vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          <path d={cost} fill="none" stroke={GREEN} strokeWidth="2.75"
+            vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+          <circle cx={nowX} cy={costY(history[history.length - 1].dollars_per_message)} r="3.5" fill={GREEN} />
+        </svg>
+        {pins.map((p, i) => (
+          <div key={i} style={{ position: 'absolute', left: `${_xpct(p.t)}%`, top: 0, bottom: 0, width: 0,
+            borderLeft: `1.5px dashed ${_pinColor(p.kind)}55` }} />
+        ))}
+      </div>
+      <div style={{ position: 'relative', height: 26, marginTop: 3 }}>
+        {pins.map((p, i) => {
+          const c = _pinColor(p.kind)
+          return (
+            <button key={i} onClick={() => onPin && onPin(p)}
+              title={`${p.label_time || ''} — ${p.label || ''}${p.trigger ? ' · ' + p.trigger : ''}`}
+              style={{ position: 'absolute', left: `${_xpct(p.t)}%`, transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: c, background: _pinBg(p.kind),
+                border: `1px solid ${c}44`, borderRadius: 999, padding: '3px 9px',
+                cursor: p.session ? 'pointer' : 'default', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
+              <span style={{ fontSize: 10 }}>{_pinIcon(p.kind)}</span>{_pinText(p)}
+              {p.session ? <span style={{ opacity: .6 }}>›</span> : null}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -429,65 +610,107 @@ function Metric({ label, main, unit, color, unitColor, small }) {
 // ===========================================================================
 //  Mind rail — the agent thinking, receded to a quiet column
 // ===========================================================================
+// The inbox is a TYPED activity timeline — not a wall of text. Each event carries
+// a kind (icon-chip + colour), a one-line summary, the TRIGGER that set it off,
+// a timestamp, and a reopen-session link when a debug session backs it.
 function railStyle(kind) {
-  if (kind === 'user') return { accent: '#3b3b37', bg: '#efece2', icon: '' }
-  if (kind === 'applied') return { accent: GREEN, bg: '#eaf6f0', icon: '✓ ' }
-  if (kind === 'verified') return { accent: GREEN, bg: '#eef7f1', icon: '✦ ' }
-  if (kind === 'escalate') return { accent: AMBER, bg: '#fbf0db', icon: '⚑ ' }
-  if (kind === 'holding') return { accent: DIM, bg: '#f6f6f1', icon: '' }
-  return { accent: GREEN, bg: '#f3faf6', icon: '' }
+  switch (kind) {
+    case 'acted': return { accent: GREEN, bg: '#eaf6f0', icon: '🤖', tag: 'acted alone' }
+    case 'decided': return { accent: GREEN, bg: '#eaf6f0', icon: '◆', tag: 'you decided' }
+    case 'applied': return { accent: GREEN, bg: '#eaf6f0', icon: '✓', tag: 'applied' }
+    case 'escalate': return { accent: AMBER, bg: '#fbf0db', icon: '⚑', tag: 'deferred to you' }
+    case 'reverted': return { accent: RED, bg: '#fbeeec', icon: '⚠', tag: 'reverted' }
+    case 'verified': return { accent: GREEN, bg: '#eef7f1', icon: '✦', tag: 'verified' }
+    case 'holding': return { accent: DIM, bg: '#f6f6f1', icon: '○', tag: 'watching' }
+    case 'user': return { accent: '#3b3b37', bg: '#efece2', icon: '◐', tag: 'you' }
+    case 'reaction': return { accent: GREEN, bg: '#f3faf6', icon: '·', tag: '' }
+    default: return { accent: GREEN, bg: '#f3faf6', icon: '◇', tag: 'reasoning' }  // thinking / reasoned
+  }
 }
-// The mind rail shows NOW big and readable; the past collapses behind search.
-function DsLink({ id, onOpenSession }) {
+function relTime(ts) {
+  if (!ts) return ''
+  const s = Math.max(0, Math.round(Date.now() / 1000 - ts))
+  if (s < 5) return 'now'
+  if (s < 60) return `${s}s ago`
+  return `${Math.round(s / 60)}m ago`
+}
+function DsLink({ id, onOpenSession, label }) {
   if (!id) return null
-  return <button onClick={() => onOpenSession && onOpenSession(id)} style={{ marginLeft: 6, fontSize: 12.5,
-    fontWeight: 700, color: GREEN, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>#{id} ›</button>
+  return <button onClick={() => onOpenSession && onOpenSession(id)}
+    style={{ marginTop: 4, fontSize: 12.5, fontWeight: 700, color: GREEN, background: 'none',
+      border: 'none', cursor: 'pointer', padding: 0, display: 'block' }}>
+    {label ? `${label} ` : ''}#{id} ›</button>
 }
+
+function TimelineCard({ c, onOpenSession }) {
+  const s = railStyle(c.kind)
+  return (
+    <div style={{ display: 'flex', gap: 11, padding: '12px 0', borderTop: '1px solid #f1efe7' }}>
+      <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: s.bg,
+        border: `1px solid ${s.accent}33`, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontSize: 14, color: s.accent }}>{s.icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          {s.tag && <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.06em',
+            textTransform: 'uppercase', color: s.accent }}>{s.tag}</span>}
+          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: DIM }}>{relTime(c.ts)}</span>
+        </div>
+        <div style={{ fontSize: 14.5, color: '#2e2e2b', lineHeight: 1.4, marginTop: 2 }}>
+          {c.kind === 'user' ? <b>You: </b> : null}{c.text}
+        </div>
+        {c.trigger && <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>↳ {c.trigger}</div>}
+        <DsLink id={c.session} onOpenSession={onOpenSession} label="reopen session" />
+      </div>
+    </div>
+  )
+}
+
 function MindRail({ feed, step, onOpenSession }) {
   const [q, setQ] = useState('')
-  const [open, setOpen] = useState(false)
   const now = feed[0]
   const rest = feed.slice(1)
-  const shown = q ? rest.filter((c) => c.text.toLowerCase().includes(q.toLowerCase())) : (open ? rest : [])
+  const shown = q ? rest.filter((c) => (c.text || '').toLowerCase().includes(q.toLowerCase())) : rest
   const s = now ? railStyle(now.kind) : null
+  const applied = feed.filter((c) => c.kind === 'acted' || c.kind === 'decided' || c.kind === 'applied').length
+  const reverted = feed.filter((c) => c.kind === 'reverted').length
   return (
-    <div style={{ width: 380, borderRight: '1px solid #eceae0', background: '#fff',
+    <div style={{ width: 396, borderRight: '1px solid #eceae0', background: '#fff',
       display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ padding: '15px 18px 6px' }}>
-        <div style={{ fontWeight: 800, fontSize: 18 }}>The agent's mind</div>
-        <div style={{ fontSize: 13, color: GREEN }}>● reasoning live · {(step || 'observe').toLowerCase()}</div>
+      <div style={{ padding: '16px 18px 8px' }}>
+        <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: '-.01em' }}>The agent's mind</div>
+        <div style={{ fontSize: 12.5, color: DIM, marginTop: 2 }}>
+          today · {feed.length} events · {applied} applied · {reverted} reverted ·
+          <span style={{ color: GREEN, fontWeight: 700 }}> watching live</span>
+        </div>
       </div>
-      {/* NOW — the current thought, large and prominent */}
-      <div style={{ padding: '8px 18px 4px' }}>
+      {/* NOW — the current thought, the hero */}
+      <div style={{ padding: '4px 18px 8px' }}>
         {now ? (
-          <div style={{ border: `2px solid ${s.accent}`, background: s.bg, borderRadius: 13, padding: '15px 16px' }}>
-            <div style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase',
-              fontWeight: 800, color: s.accent }}>{now.kind === 'user' ? 'your move' : 'now'}</div>
-            <div style={{ fontSize: 19, lineHeight: 1.42, color: INK, marginTop: 5 }}>
-              {now.kind === 'user' ? <b>You: </b> : s.icon}{now.text}
-              <DsLink id={now.session} onOpenSession={onOpenSession} />
+          <div style={{ border: `2px solid ${s.accent}`, background: s.bg, borderRadius: 14, padding: '14px 16px' }}>
+            <div style={{ fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 800,
+              color: s.accent, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 13 }}>{s.icon}</span>
+              reasoning live · {(step || 'observe').toLowerCase()}
             </div>
+            <div style={{ fontSize: 18.5, lineHeight: 1.4, color: INK, marginTop: 7, fontWeight: 500 }}>
+              {now.kind === 'user' ? <b>You: </b> : null}{now.text}
+            </div>
+            {now.trigger && <div style={{ fontSize: 13, color: '#6b6962', marginTop: 6 }}>↳ {now.trigger}</div>}
+            <DsLink id={now.session} onOpenSession={onOpenSession} label="reopen session" />
           </div>
         ) : <div style={{ color: DIM, fontSize: 17, padding: '10px 0' }}>Reading the live traffic…</div>}
       </div>
-      {/* history, collapsed behind search */}
-      <div style={{ padding: '8px 18px 4px', display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search the agent's history…"
-          style={{ flex: 1, padding: '7px 11px', border: '1px solid #e0ded3', borderRadius: 8, fontSize: 13.5 }} />
-        {!q && rest.length > 0 &&
-          <button onClick={() => setOpen((o) => !o)} style={{ fontSize: 12.5, color: DIM, cursor: 'pointer',
-            border: '1px solid #e6e4da', borderRadius: 8, padding: '6px 9px', background: '#fff', whiteSpace: 'nowrap' }}>
-            {open ? 'hide' : `${rest.length} earlier`}</button>}
+      {/* the timeline rail */}
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 18px 8px' }}>
+        {shown.map((c) => <TimelineCard key={c.seq} c={c} onOpenSession={onOpenSession} />)}
+        {!shown.length && <div style={{ color: DIM, fontSize: 13, padding: '14px 0' }}>
+          {q ? 'nothing matches.' : 'the timeline fills as the agent works…'}</div>}
       </div>
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '4px 18px 16px' }}>
-        {shown.map((c) => (
-          <div key={c.seq} style={{ padding: '8px 0', borderTop: '1px solid #f4f2ea' }}>
-            <div style={{ fontSize: 15, color: '#3b3b37', lineHeight: 1.42 }}>
-              {c.kind === 'user' ? <b>You: </b> : railStyle(c.kind).icon}{c.text}
-              <DsLink id={c.session} onOpenSession={onOpenSession} />
-            </div>
-          </div>
-        ))}
+      {/* search — a quiet line at the bottom */}
+      <div style={{ padding: '8px 18px 14px', borderTop: '1px solid #f1efe7' }}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  search the agent's history…"
+          style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', border: '1px solid #e6e4da',
+            borderRadius: 9, fontSize: 13, color: '#54524c', background: '#fcfcfa' }} />
       </div>
     </div>
   )
@@ -581,8 +804,7 @@ function EvalPopup({ view, onClose }) {
                   {r.equivalent
                     ? <span style={{ fontSize: 12, color: GREEN }}>● equivalent</span>
                     : <span style={{ fontSize: 12, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
-                  {r.phoenix_url && <a href={r.phoenix_url} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 13, color: GREEN, textDecoration: 'none' }}>trace ↗</a>}
+                  {r.phoenix_url && <SpanLink url={r.phoenix_url} label="trace" />}
                 </div>
               ))}
             </div>
@@ -678,8 +900,9 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
             <div style={{ display: 'flex', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #efe9da' }}>
               <span style={{ flex: 1, fontSize: 14.5, color: INK }}>premium model · LLM</span>
               <span style={{ width: 80, textAlign: 'right', fontSize: 14.5, color: INK }}>${d.llm_cost.toFixed(4)}</span>
-              <span style={{ width: 168, textAlign: 'right', fontSize: 12.5, color: GREEN }}>
-                measured · Phoenix {d.llm_url && <a href={d.llm_url} target="_blank" rel="noreferrer" style={{ color: GREEN }}>trace ↗</a>}
+              <span style={{ width: 184, textAlign: 'right', fontSize: 12, color: DIM,
+                display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'flex-end' }}>
+                measured {d.llm_url && <SpanLink url={d.llm_url} label="Phoenix" />}
               </span>
             </div>
             {/* tools — your editable rates */}
@@ -1202,10 +1425,15 @@ function redirectUrl(call, row) {
   const tid = (row.phoenix_url || '').split('/spans/')[1]?.split('?')[0]
   return tid ? `${base}/redirects/traces/${tid}` : null
 }
+// Phoenix links are EVIDENCE — obvious but secondary. One consistent treatment
+// everywhere they appear: a quiet green pill you never have to hunt for.
 function SpanLink({ url, label }) {
   return (
     <a href={url} target="_blank" rel="noreferrer"
-      style={{ fontSize: 12, color: GREEN, fontWeight: 600, whiteSpace: 'nowrap' }}>{label || 'open in Phoenix ↗'}</a>
+      style={{ fontSize: 12.5, color: GREEN, fontWeight: 700, whiteSpace: 'nowrap',
+        textDecoration: 'none', background: '#eef7f1', border: `1px solid ${GREEN}33`,
+        borderRadius: 999, padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      {label || 'open in Phoenix'} <span style={{ fontSize: 11 }}>↗</span></a>
   )
 }
 function InsShell({ title, accent, span, spanLabel, children }) {

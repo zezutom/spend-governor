@@ -85,6 +85,34 @@ async def reset() -> dict:
     return {"ok": True, "state": governor.snapshot()}
 
 
+@app.post("/api/clock/ff")
+async def clock_ff(hours: float = 2.0) -> dict:
+    """Advance the compressed scenario clock on cue (the presenter's fast-forward)."""
+    await governor.fast_forward(hours)
+    return {"ok": True, "state": governor.snapshot()}
+
+
+@app.get("/api/series")
+def series() -> dict:
+    """The value-spine time-series: the compressed clock, the metrics history
+    ($/message measured, quality eval-measured, volume seeded), the decision pins,
+    and the closing summary. Cheap chart refetch (the same data also rides every
+    snapshot on /api/stream)."""
+    snap = governor.snapshot()
+    return {k: snap.get(k) for k in ("clock", "history", "pins", "summary",
+                                     "baseline_dollars_per_message", "dollars_per_message")}
+
+
+@app.get("/api/summary")
+def summary() -> dict:
+    """The closing takeaway: started at $X, now $Y (▼N%), quality held except the
+    one dip you reverted, every step reversible — read straight off the series."""
+    s = governor.snapshot().get("summary")
+    if s is None:
+        raise HTTPException(404, "no summary yet — the series is still warming up")
+    return s
+
+
 # Each canvas node maps to the task classes that flow through it — so its proof
 # is scoped to THAT node, not one global pair.
 _NODE_CLASSES = {
@@ -155,7 +183,6 @@ def eval_result(key: str) -> dict:
     return r
 
 
-_SIMPLE_ROUTE = {"password_reset", "account_question"}
 _CACHE_FOR = {"refund_handling": "cache_tool:web_search", "account_question": "cache_tool:kb_lookup"}
 
 
@@ -190,15 +217,22 @@ def debug_box(tc: str) -> dict:
             pattern = f"Repeated {top['tool']} ×{round(top['count'])} on the premium model — same lookup more than once."
     active = {p["signature"] for p in service.active_policies()}
     cache_sig = _CACHE_FOR.get(tc)
+    # The route control + its real eval come from the scenario beat for this
+    # workload: password→'hold' (quick eval), refund→'trip' (quick eval),
+    # account→None (the evidence is the replay lab). risky=True for every route.
+    rt = governor.route_for_tc(tc)
+    route = {"risky": bool(rt),
+             "sig": (rt["sig"] if rt else None),
+             "eval_key": (rt["eval_key"] if rt else None),
+             "use_case": tc,
+             "active": bool(rt and rt["sig"] in active)}
     return {
         "tc": tc, "title": _CLASS_TITLE.get(tc, tc.replace("_", " ")),
         "share": round(row["share"], 3), "cost_per_message": round(row["cost"], 6),
         "llm_cost": round(llm, 6), "tool_cost": round(row["tool"], 6),
         "pattern": pattern, "llm_url": llm_url, "tool_rows": tool_rows,
         "cache": ({"sig": cache_sig, "active": cache_sig in active} if cache_sig else None),
-        "route": {"risky": tc not in _SIMPLE_ROUTE,
-                  "sig": ("route_model:simple" if tc in _SIMPLE_ROUTE else None),
-                  "eval_key": ("hold" if tc in _SIMPLE_ROUTE else "trip")},
+        "route": route,
     }
 
 
