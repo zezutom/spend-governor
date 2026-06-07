@@ -1,16 +1,17 @@
-"""Generate a synthetic dataset of Helpdesk Co-Pilot runs.
+"""Generate a synthetic dataset for the observed FLEET.
 
-Drives the agent through many tickets across the four task types so
-there is enough trace data for downstream analysis. The customer_id is
-passed as the ADK user_id so it propagates into trace attributes for
-per-customer rollups.
+Drives EACH agent in the fleet (Support Co-Pilot, Refund Auditor, Sales
+Assistant, Docs Bot) through its own messages, so every agent's signature
+waste pattern lands in the traces for the Accountant to detect. Each agent
+stamps its identity as the grouping key, so downstream aggregation groups by
+agent. customer_id is passed as the ADK user_id for per-customer rollups.
 
 Usage:
-    uv run python -m observed.generate_dataset [N] [CONCURRENCY]
+    uv run python -m observed.generate_dataset [PER_AGENT] [CONCURRENCY]
 
-Defaults: N=1200, CONCURRENCY=10. Start with N=20 to validate the wiring
-before kicking off a full 1,200-run batch (which takes 20-30 minutes and
-spends a few dollars of Gemini quota).
+Defaults: PER_AGENT=50, CONCURRENCY=4. PER_AGENT is the number of traces per
+agent (4 agents → 4×PER_AGENT total). Keep concurrency low to stay under the
+Vertex quota. Start with PER_AGENT=4 to validate wiring.
 """
 
 import asyncio
@@ -28,85 +29,10 @@ init_telemetry()
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from observed.agent import build_agent
+from observed.fleet import AGENT_ORDER, FLEET, build_fleet_agent
 
 
 APP_NAME = "agent-accountant"
-
-
-# Refund handling is intentionally a large slice (25%) because the
-# anti-pattern lives there and we want enough refund traces for the
-# aggregation to surface it cleanly.
-TASK_DISTRIBUTION = {
-    "password_reset": 0.35,
-    "account_question": 0.25,
-    "refund_handling": 0.25,
-    "plan_change": 0.15,
-}
-
-
-# Refund messages are a mix of complete (with amount + date, so the
-# agent reaches refund_api) and incomplete (vague, so the agent ends in
-# a clarifying question). Both are realistic outcomes; both still
-# exhibit the redundant-web_search anti-pattern.
-MESSAGE_POOLS = {
-    "password_reset": [
-        "I can't log in to my Stratus Forms account. Help me reset my password.",
-        "Forgot my password. How do I reset it?",
-        "I'm locked out. Need a password reset.",
-        "Can't sign in. My password isn't working.",
-        "Reset my password please.",
-        "Help, I'm locked out of my account.",
-        "My password isn't working anymore. What do I do?",
-        "I keep getting 'invalid credentials' when I try to log in.",
-        "Password reset link expired. Need a new one.",
-        "Account locked after too many login attempts.",
-    ],
-    "account_question": [
-        "How do I add a teammate to my account?",
-        "Where do I update my billing address?",
-        "How do I transfer ownership of my account to a colleague?",
-        "How do I enable SSO?",
-        "Where's my invoice from last month?",
-        "How do I change my email address?",
-        "Where do I find my API key?",
-        "Can I export all my form responses?",
-        "How do I delete a form?",
-        "What's the difference between Pro and Enterprise?",
-        "Can I use a custom domain for my forms?",
-        "Where do I see analytics for my forms?",
-        "How do I integrate Stratus Forms with Zapier?",
-        "Can I embed forms in my website?",
-        "What payment methods do you accept?",
-    ],
-    "refund_handling": [
-        # Complete — agent should reach refund_api.
-        "I want a refund. My account is {customer_id}. The charge was $49 on May 1.",
-        "Please refund me. Account {customer_id}, charged $49 last month.",
-        "Refund $49 from my Pro subscription. Account {customer_id}.",
-        "Account {customer_id}, refund the $49 charge from last month.",
-        "I need a refund. {customer_id}, $499 on April 15.",
-        "Please reverse the May 1 charge of $49 on {customer_id}.",
-        # Incomplete — agent should ask a clarifying question.
-        "Can you refund my last charge? My account is {customer_id}.",
-        "I want my money back.",
-        "Reverse the charge from last month.",
-        "Refund please. Account {customer_id}.",
-        "Got double-charged, need a refund.",
-        "Refund the charge from last week.",
-    ],
-    "plan_change": [
-        "I want to upgrade from Pro to Enterprise. My account is {customer_id}.",
-        "Downgrade me to Free, please. {customer_id}.",
-        "How do I switch to Enterprise? Account {customer_id}.",
-        "Cancel my Pro subscription. {customer_id}.",
-        "Upgrade {customer_id} to the next tier.",
-        "Please downgrade my plan to Pro. {customer_id}.",
-        "Move me from Enterprise back to Pro. Account {customer_id}.",
-        "Can I change my billing cycle from monthly to annual?",
-        "Switch my account {customer_id} to annual billing.",
-    ],
-}
 
 
 CUSTOMER_POOL = [
@@ -119,30 +45,18 @@ CUSTOMER_POOL = [
 ]
 
 
-# Shared agent — LlmAgent is stateless across runs in the Helpdesk
-# Co-Pilot's configuration (no per-session memory). Runner is per-call
-# because InMemoryRunner's session service holds state we don't want to
-# share between concurrent invocations.
-_AGENT = build_agent()
+# One LlmAgent per fleet agent, built once (stateless across runs). Runner is
+# per-call because InMemoryRunner's session service holds per-invocation state.
+_AGENTS = {aid: build_fleet_agent(aid) for aid in AGENT_ORDER}
 
 
-def pick_task() -> str:
-    r = random.random()
-    cumulative = 0.0
-    for task, weight in TASK_DISTRIBUTION.items():
-        cumulative += weight
-        if r < cumulative:
-            return task
-    return "account_question"
-
-
-def build_message(task: str, customer_id: str) -> str:
-    template = random.choice(MESSAGE_POOLS[task])
+def build_message(agent_id: str, customer_id: str) -> str:
+    template = random.choice(FLEET[agent_id]["messages"])
     return template.replace("{customer_id}", customer_id)
 
 
-async def run_one(message: str, customer_id: str) -> bool:
-    runner = InMemoryRunner(agent=_AGENT, app_name=APP_NAME)
+async def run_one(agent_id: str, message: str, customer_id: str) -> bool:
+    runner = InMemoryRunner(agent=_AGENTS[agent_id], app_name=APP_NAME)
     try:
         session = await runner.session_service.create_session(
             app_name=APP_NAME,
@@ -157,33 +71,36 @@ async def run_one(message: str, customer_id: str) -> bool:
             pass
         return True
     except Exception as e:
-        print(f"[error] {customer_id}: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"[error] {agent_id}/{customer_id}: {type(e).__name__}: {e}", file=sys.stderr)
         return False
 
 
-async def main(n: int, concurrency: int) -> None:
+async def main(per_agent: int, concurrency: int) -> None:
     semaphore = asyncio.Semaphore(concurrency)
+    # one job per (agent, i), INTERLEAVED round-robin so every agent accrues
+    # traces together (no agent waits behind another's slow runs).
+    jobs = [(aid, i) for i in range(per_agent) for aid in AGENT_ORDER]
+    total = len(jobs)
     completed = 0
 
-    async def bounded(_: int) -> bool:
+    async def bounded(agent_id: str) -> bool:
         nonlocal completed
         async with semaphore:
-            task = pick_task()
             customer = random.choice(CUSTOMER_POOL)
-            message = build_message(task, customer)
-            ok = await run_one(message, customer)
+            message = build_message(agent_id, customer)
+            ok = await run_one(agent_id, message, customer)
             completed += 1
-            if completed % 50 == 0 or completed == n:
-                print(f"[{completed}/{n}] done")
+            if completed % 20 == 0 or completed == total:
+                print(f"[{completed}/{total}] done")
             return ok
 
-    print(f"Generating {n} traces with concurrency {concurrency}...")
-    results = await asyncio.gather(*[bounded(i) for i in range(n)])
-    successes = sum(results)
-    print(f"\nGenerated {successes}/{n} traces successfully.")
+    print(f"Generating {per_agent} traces × {len(AGENT_ORDER)} agents "
+          f"= {total} total, concurrency {concurrency}...")
+    results = await asyncio.gather(*[bounded(aid) for aid, _ in jobs])
+    print(f"\nGenerated {sum(results)}/{total} traces successfully.")
 
 
 if __name__ == "__main__":
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 1200
-    concurrency = int(sys.argv[2]) if len(sys.argv) > 2 else 10
-    asyncio.run(main(n, concurrency))
+    per_agent = int(sys.argv[1]) if len(sys.argv) > 1 else 50
+    concurrency = int(sys.argv[2]) if len(sys.argv) > 2 else 4
+    asyncio.run(main(per_agent, concurrency))

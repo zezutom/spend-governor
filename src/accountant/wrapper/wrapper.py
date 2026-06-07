@@ -66,6 +66,10 @@ _route_decision: contextvars.ContextVar = contextvars.ContextVar(
 _trace_acc: contextvars.ContextVar = contextvars.ContextVar(
     "accountant_trace_acc", default=None
 )
+# Per-trace tool-call tally, so `limit_tool_calls` can cap a tool at N/trace.
+_tool_calls: contextvars.ContextVar = contextvars.ContextVar(
+    "accountant_tool_calls", default=None
+)
 
 _CACHE = SemanticCache()
 
@@ -174,6 +178,56 @@ def _active_cache_policy(tool: str) -> dict | None:
     return None
 
 
+def _policy_targets(p: dict, tool: str) -> bool:
+    """A non-cache lever (cap / suppress) targets this tool if its params name
+    the tool and, optionally, the current agent (task_class)."""
+    if p["params"].get("tool") != tool:
+        return False
+    want_agent = p["params"].get("task_class") or p["params"].get("agent")
+    return (not want_agent) or want_agent == _task_class.get()
+
+
+def _suppress_policy(tool: str) -> dict | None:
+    for p in _effective_policies():
+        if p["policy_type"] == "suppress_tool" and _policy_targets(p, tool):
+            return p
+    return None
+
+
+def _limit_policy(tool: str) -> dict | None:
+    for p in _effective_policies():
+        if p["policy_type"] == "limit_tool_calls" and _policy_targets(p, tool):
+            return p
+    return None
+
+
+def _govern_suppressed(span, name: str, policy: dict):
+    """Suppress a provably-needless tool call: the paid call never fires; a
+    benign no-op result is returned. Saves the full unit price."""
+    baseline = TOOL_PRICES.get(name, 0.0)
+    _annotate_tool_actual(span, 0.0)
+    _annotate_modification(span, modification="suppressed", policy_id=policy["signature"],
+                           baseline_usd=baseline, savings_usd=baseline,
+                           counterfactual={"tool": name})
+    _accumulate_savings(baseline)
+    store.record_intervention(kind="tool_suppressed", tool=name, task_class=_task_class.get(),
+                              cost_avoided_usd=baseline, detail={"reason": "needless call"})
+    return {"status": "skipped", "note": "call suppressed by policy"}
+
+
+def _govern_capped(span, name: str, policy: dict):
+    """Hard-cap a tool at N calls/trace: calls beyond the cap never fire."""
+    baseline = TOOL_PRICES.get(name, 0.0)
+    _annotate_tool_actual(span, 0.0)
+    _annotate_modification(span, modification="capped", policy_id=policy["signature"],
+                           baseline_usd=baseline, savings_usd=baseline,
+                           counterfactual={"tool": name, "max_calls": policy["params"].get("max_calls")})
+    _accumulate_savings(baseline)
+    store.record_intervention(kind="tool_capped", tool=name, task_class=_task_class.get(),
+                              cost_avoided_usd=baseline, detail={"max_calls": policy["params"].get("max_calls")})
+    return {"status": "skipped", "note": "call cap reached for this conversation"}
+
+
 def _govern_cacheable(fn, name: str, args, kwargs):
     span = otel_trace.get_current_span()
     _annotate_presence(span)
@@ -244,11 +298,25 @@ def _wrap(fn):
             _annotate_presence(span)
             _annotate_tool_actual(span, TOOL_PRICES.get(name, 0.0))
             return result
+        span = otel_trace.get_current_span()
+        _annotate_presence(span)
+        # Suppress a needless call outright (highest-priority intervention).
+        sup = _suppress_policy(name)
+        if sup is not None:
+            return _govern_suppressed(span, name, sup)
+        # Hard-cap: count this call; refuse it once the cap is reached.
+        lim = _limit_policy(name)
+        if lim is not None:
+            counts = _tool_calls.get()
+            if counts is None:
+                counts = {}
+                _tool_calls.set(counts)
+            counts[name] = counts.get(name, 0) + 1
+            if counts[name] > int(lim["params"].get("max_calls", 1)):
+                return _govern_capped(span, name, lim)
         if name in CACHEABLE:
             return _govern_cacheable(fn, name, args, kwargs)
         # Non-cacheable tool: inspected, not modified.
-        span = otel_trace.get_current_span()
-        _annotate_presence(span)
         _annotate_tool_actual(span, TOOL_PRICES.get(name, 0.0))
         return fn(*args, **kwargs)
 
@@ -441,6 +509,7 @@ def trace_start_callback(callback_context):
         "policies": [p["signature"] for p in store.active_policies()],
         "quality_degraded": False,
     })
+    _tool_calls.set({})  # fresh per-trace tool-call tally for limit_tool_calls
     return None
 
 

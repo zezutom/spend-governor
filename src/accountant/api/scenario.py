@@ -15,9 +15,9 @@ The governor owns all I/O and reacts to `live_beats(now)` / `released_sigs(now)`
 import math
 import time
 
-WALL_WINDOW_SEC = 180.0          # a 3-minute demo
+WALL_WINDOW_SEC = 80.0           # the window fills fast; beats gate on YOUR decisions
 COMPRESSED_WINDOW_HOURS = 12.0   # ≈ 12h of traffic compressed into the window
-SPEEDUP = (COMPRESSED_WINDOW_HOURS * 3600.0) / WALL_WINDOW_SEC  # ≈ 240×
+SPEEDUP = (COMPRESSED_WINDOW_HOURS * 3600.0) / WALL_WINDOW_SEC  # = 540×
 _DAY_START_HOUR = 8.0            # the clock label reads as a business day from 08:00
 
 # Economy routing drops the LLM portion to ~1/5 (flash-lite vs flash) — the SAME
@@ -31,25 +31,24 @@ ROUTE_ECON_DROP = 0.8
 #   eval_key — the QUICK eval popup (data/evals/<key>.json): 'hold' holds, 'trip'
 #              breaks, None → the evidence is the replay LAB (/api/lab/<use_case>).
 DEMO_ARC = (
-    {"id": "beat-1", "at_h": 1.5, "kind": "act_alone", "use_case": "refund_handling",
-     "lever": "cache_tool:web_search", "lever_type": "cache_tool", "eval_key": None,
-     "headline": "Redundant refund lookups",
-     "trigger": "web_search ×3 redundant detected"},
-    {"id": "beat-2", "at_h": 4.0, "kind": "defer", "use_case": "password_reset",
-     "lever": "route_model:password_reset", "lever_type": "route_model", "eval_key": "hold",
-     "headline": "Premium model on password resets",
-     "trigger": "premium model on a templated answer"},
-    {"id": "beat-3", "at_h": 7.0, "kind": "defer", "use_case": "account_question",
-     "lever": "route_model:account_question", "lever_type": "route_model", "eval_key": None,
-     "headline": "Account questions on premium",
-     "trigger": "wide variety — can't prove economy holds"},
-    {"id": "beat-4", "at_h": 10.0, "kind": "trap", "use_case": "refund_handling",
-     "lever": "route_model:refund_handling", "lever_type": "route_model", "eval_key": "trip",
-     "headline": "Route refunds to economy",
-     "trigger": "biggest model spend — but multi-step"},
+    {"id": "beat-1", "at_h": 0.7, "kind": "act_alone", "use_case": "support_copilot",
+     "lever": "cache_tool:support_copilot", "lever_type": "cache_tool", "eval_key": None,
+     "headline": "Support Co-Pilot — redundant searches",
+     "trigger": "web_search ×3 redundant per ticket"},
+    {"id": "beat-2", "at_h": 2.5, "kind": "act_alone", "use_case": "refund_auditor",
+     "lever": "limit_tool_calls:refund_auditor", "lever_type": "limit_tool_calls", "eval_key": None,
+     "headline": "Refund Auditor — verification loop",
+     "trigger": "same web_search ×5 (identical loop)"},
+    {"id": "beat-3", "at_h": 5.0, "kind": "defer", "use_case": "sales_assistant",
+     "lever": "suppress_tool:sales_assistant", "lever_type": "suppress_tool", "eval_key": None,
+     "headline": "Sales Assistant — needless search",
+     "trigger": "competitor search the KB already covers"},
+    {"id": "beat-4", "at_h": 7.5, "kind": "trap", "use_case": "docs_bot",
+     "lever": "route_model:docs_bot", "lever_type": "route_model", "eval_key": "trip",
+     "headline": "Docs Bot — over-powered model",
+     "trigger": "premium model on trivial how-to Q&A"},
 )
-# Safe caches that ride the act-alone beat (the agent does both safe wins at beat-1).
-_EXTRA_SAFE_AT = {"cache_tool:kb_lookup": 1.5}
+_EXTRA_SAFE_AT: dict[str, float] = {}  # all fixes are scheduled as beats now
 
 SCHEDULES = {0: DEMO_ARC}
 

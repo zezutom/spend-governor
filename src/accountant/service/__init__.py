@@ -61,7 +61,8 @@ lever_text = _vm._fix_text                        # (title, one-line) for a leve
 # --- enactable vs roadmap (the honesty contract, enforced at the seam) ------
 # The ONLY policy types that physically exist and can be enforced today. The
 # optimizer may *recommend* anything; it may only *enact* these.
-ENACTABLE_POLICY_TYPES = frozenset({"cache_tool", "route_model"})
+ENACTABLE_POLICY_TYPES = frozenset(
+    {"cache_tool", "route_model", "limit_tool_calls", "suppress_tool"})
 
 # Capabilities the agent may recommend but must label not-yet-enforced. Surfaced
 # explicitly here so the seam — not UI discipline — owns the real/roadmap split.
@@ -87,7 +88,7 @@ def is_enactable(policy_type: str | None) -> bool:
 # the output, so the agent ESCALATES these for a human accept/reject instead of
 # auto-applying. Caching serves a semantically-equivalent result, so it's safe to
 # auto-apply. This is a real property of the lever, not a cosmetic flag.
-ANSWER_AFFECTING_POLICY_TYPES = frozenset({"route_model"})
+ANSWER_AFFECTING_POLICY_TYPES = frozenset({"route_model", "suppress_tool"})
 
 
 def is_safe(policy_type: str | None) -> bool:

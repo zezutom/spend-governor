@@ -113,33 +113,22 @@ def summary() -> dict:
     return s
 
 
-# Each canvas node maps to the task classes that flow through it — so its proof
-# is scoped to THAT node, not one global pair.
-_NODE_CLASSES = {
-    "tools": ["refund_handling", "account_question"],
-    "gateway": ["refund_handling", "account_question"],
-    "model": ["password_reset", "account_question"],
-    "router": ["refund_handling", "account_question", "password_reset", "plan_change"],
-    "requests": ["refund_handling", "account_question", "password_reset", "plan_change"],
-}
-_NODE_TITLE = {"tools": "Cache / tool gateway", "gateway": "Tool gateway",
-               "model": "Model routing", "router": "Router", "requests": "Incoming requests"}
+# Proof drill-down is scoped to a fleet agent (or a generic node).
+from accountant.api.governor import _FLEET, _FLEET_ORDER  # noqa: E402
 
-
-_KNOWN_CLASSES = {"refund_handling", "account_question", "password_reset", "plan_change"}
-_CLASS_TITLE = {"refund_handling": "Refund tickets", "account_question": "Account questions",
-                "password_reset": "Password resets", "plan_change": "Plan changes"}
+_KNOWN_CLASSES = set(_FLEET_ORDER)
+_CLASS_TITLE = {aid: _FLEET[aid]["label"] for aid in _FLEET_ORDER}
+_NODE_TITLE = {"tools": "Tool gateway", "model": "Model routing", "requests": "Incoming traffic"}
 
 
 def _node_insight(node: str) -> dict:
-    if node in _KNOWN_CLASSES:  # a workload lane → that conversation type's traces
+    if node in _KNOWN_CLASSES:  # a fleet agent → that agent's traces
         classes = [node]
         title = _CLASS_TITLE[node]
-        pair = service.captured_trace_pair() if node == "refund_handling" else None
+        pair = service.captured_trace_pair() if _FLEET[node]["fix"] == "cache_tool" else None
     else:
-        classes = _NODE_CLASSES.get(node, _NODE_CLASSES["requests"])
+        classes = list(_FLEET_ORDER)
         title = _NODE_TITLE.get(node, node)
-        # The captured before/after pair is a CACHING proof — tool/cache nodes only.
         pair = service.captured_trace_pair() if node in ("tools", "gateway") else None
     gid = service.project_gid()
     rows = service.class_trace_costs(classes, 8, 0)
@@ -183,9 +172,6 @@ def eval_result(key: str) -> dict:
     return r
 
 
-_CACHE_FOR = {"refund_handling": "cache_tool:web_search", "account_question": "cache_tool:kb_lookup"}
-
-
 @app.get("/api/debug/{tc}")
 def debug_box(tc: str) -> dict:
     """The debugger's per-box view: the cost of one workload broken to each call,
@@ -216,23 +202,24 @@ def debug_box(tc: str) -> dict:
         if top["count"] >= 1.5:
             pattern = f"Repeated {top['tool']} ×{round(top['count'])} on the premium model — same lookup more than once."
     active = {p["signature"] for p in service.active_policies()}
-    cache_sig = _CACHE_FOR.get(tc)
-    # The route control + its real eval come from the scenario beat for this
-    # workload: password→'hold' (quick eval), refund→'trip' (quick eval),
-    # account→None (the evidence is the replay lab). risky=True for every route.
+    # Each fleet agent has ONE fix. A SAFE fix (cache/cap) shows as a cache-style
+    # control (force-on); a RISKY fix (suppress/route) shows as a route-style
+    # control gated by its quick eval (None ⇒ evidence is the lab/proof).
     rt = governor.route_for_tc(tc)
-    route = {"risky": bool(rt),
-             "sig": (rt["sig"] if rt else None),
-             "eval_key": (rt["eval_key"] if rt else None),
-             "use_case": tc,
-             "active": bool(rt and rt["sig"] in active)}
+    fix_label = _FLEET[tc]["fix_label"] if tc in _FLEET else None
+    cache = route = None
+    if rt and not rt["risky"]:
+        cache = {"sig": rt["sig"], "active": rt["sig"] in active, "type": rt["type"], "label": fix_label}
+    elif rt and rt["risky"]:
+        route = {"risky": True, "sig": rt["sig"], "eval_key": rt["eval_key"], "type": rt["type"],
+                 "use_case": tc, "label": fix_label, "active": rt["sig"] in active}
     return {
         "tc": tc, "title": _CLASS_TITLE.get(tc, tc.replace("_", " ")),
+        "purpose": (_FLEET[tc]["purpose"] if tc in _FLEET else None),
         "share": round(row["share"], 3), "cost_per_message": round(row["cost"], 6),
         "llm_cost": round(llm, 6), "tool_cost": round(row["tool"], 6),
         "pattern": pattern, "llm_url": llm_url, "tool_rows": tool_rows,
-        "cache": ({"sig": cache_sig, "active": cache_sig in active} if cache_sig else None),
-        "route": route,
+        "cache": cache, "route": route,
     }
 
 

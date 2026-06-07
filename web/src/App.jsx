@@ -152,7 +152,13 @@ export default function App() {
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {decision && <div style={{ padding: '12px 18px 0', animation: 'rise .45s ease-out' }}>
             <DeferCard route={decision.route} act={act} state={state} openProof={openProof}
-              onExperiment={(uc) => setLab({ uc })} />
+              onExperiment={(uc, evalKey) => {
+                // open the at-scale LAB for use cases that have one; otherwise the
+                // quick accelerated eval (password holds on the quick check).
+                if (LAB_USE_CASES.some((u) => u.key === uc)) setLab({ uc })
+                else if (evalKey) setEvalView({ key: evalKey, mode: 'arm' })
+                else setLab({ uc })
+              }} />
             <style>{`@keyframes rise{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}`}</style>
           </div>}
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
@@ -327,7 +333,7 @@ function VerifyCard({ text, state }) {
 // on, and frames the ask by that route's real pre-run verdict (holds / wide variety
 // / breaks). Each of the three defers reads differently because the situation is.
 const _ROUTE_FRAME = {
-  hold: { color: AMBER, line: "the replay says it holds — but it's still answer-affecting, so the call's yours." },
+  hold: { color: AMBER, line: "the quick check looked clean — but it's answer-affecting, so test it at scale in the lab before you trust it." },
   trip: { color: RED, line: "I don't think it holds — the replay had it degrading. I'd keep premium, but it's your call." },
   none: { color: AMBER, line: "the variety is wide — I can't prove economy holds across it. Test it in the lab first." },
 }
@@ -357,7 +363,7 @@ function DeferCard({ route, act, state, onExperiment, openProof }) {
         <Btn onClick={() => act('reject', route.sig)} label="not now" color={DIM} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 9, alignItems: 'center' }}>
           <Btn onClick={() => act('accept', route.sig)} label="arm it" color={AMBER} />
-          <Btn onClick={() => onExperiment(uc)} label="experiment →" color={GREEN} primary big />
+          <Btn onClick={() => onExperiment(uc, route.eval_key)} label="experiment →" color={GREEN} primary big />
         </div>
       </div>
       <div style={{ fontSize: 11.5, color: DIM, marginTop: 8, textAlign: 'right' }}>
@@ -960,6 +966,7 @@ function mdCode(s) {
 const LAB_USE_CASES = [
   { key: 'account_question', label: 'Account questions' },
   { key: 'refund_handling', label: 'Refund tickets' },
+  { key: 'password_reset', label: 'Password resets' },
 ]
 
 // group a conversation's calls into canvas boxes (consecutive same-tool → ×N),
@@ -1056,9 +1063,11 @@ function ReplayLab({ onClose, initialUc }) {
   const [confirm, setConfirm] = useState(false)    // close-to-apply
   const esRef = useRef(null)
 
+  const [loadErr, setLoadErr] = useState(false)
   useEffect(() => {
-    setData(null); setRan(false); setRunRows([]); esRef.current?.close()
-    fetch(`${API}/api/lab/${uc}`).then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {})
+    setData(null); setLoadErr(false); setRan(false); setRunRows([]); esRef.current?.close()
+    fetch(`${API}/api/lab/${uc}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error('no pre-run'))))
+      .then(setData).catch(() => setLoadErr(true))
   }, [uc])
   useEffect(() => () => esRef.current?.close(), [])
   useEffect(() => {   // default to a representative degraded-with-dup conversation
@@ -1159,7 +1168,10 @@ function ReplayLab({ onClose, initialUc }) {
           <span style={{ marginLeft: 'auto', fontSize: 11.5, color: DIM }}>sandbox · live untouched · traces tagged 'test'</span>
         </div>
 
-        {!data ? <div style={{ color: DIM, padding: 24 }}>Loading the pre-run batch…</div> : (
+        {!data ? (loadErr
+          ? <div style={{ color: DIM, padding: 24, fontSize: 14 }}>
+              No pre-run batch for <b>{uc.replace('_', ' ')}</b>. Switch the source to <b>synthetic</b> and Run to generate one live.</div>
+          : <div style={{ color: DIM, padding: 24 }}>Loading the pre-run batch…</div>) : (
           <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 12 }}>
             {/* LEFT — call list (UNCHANGED) */}
             <div style={{ width: 290, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
