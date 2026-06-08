@@ -44,7 +44,7 @@ function RootNode({ data }) {
       borderRadius: 16, padding: '14px 22px', minWidth: 230, textAlign: 'center',
       boxShadow: '0 10px 30px rgba(0,0,0,.22)' }}>
       <div style={{ fontSize: 12.6, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the governor</div>
-      <div style={{ fontSize: 23, fontWeight: 800, marginTop: 2 }}>Cost Governor</div>
+      <div style={{ fontSize: 23, fontWeight: 800, marginTop: 2 }}>Spend Governor</div>
       <div style={{ fontSize: 14.4, color: '#cfece3', marginTop: 3 }}>{data.sub}</div>
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
     </div>
