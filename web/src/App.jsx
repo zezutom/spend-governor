@@ -381,7 +381,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
   }, [open?.agent, start])
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight }, [steps, answer])
 
-  const submit = () => { const t = q.trim(); if (t && status !== 'running') start(`${API}/api/ask?q=${encodeURIComponent(t)}`, t) }
+  const submit = () => { const t = q.trim(); if (t && status !== 'running') { start(`${API}/api/ask?q=${encodeURIComponent(t)}`, t); setQ('') } }
   const mcpCount = steps.filter((s) => s.kind === 'tool' && s.mcp).length
 
   return (
@@ -413,7 +413,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
               Ask a cost question — the Accountant will call the Phoenix MCP tools to check the real traces before answering.
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {ASK_SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => { setQ(s); start(`${API}/api/ask?q=${encodeURIComponent(s)}`, s) }}
+                  <button key={s} onClick={() => start(`${API}/api/ask?q=${encodeURIComponent(s)}`, s)}
                     style={{ textAlign: 'left', fontSize: 14, color: MCP, background: '#fff', cursor: 'pointer',
                       border: `1px solid ${MCP}33`, borderRadius: 9, padding: '8px 11px' }}>{s}</button>
                 ))}
