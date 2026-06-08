@@ -15,7 +15,7 @@ const GREEN = '#0f6e56', AMBER = '#b5791a', RED = '#a3402f', DIM = '#9ca3af', IN
 
 function Btn({ onClick, label, color, primary, big }) {
   return <button className="nodrag nopan" onClick={(e) => { e.stopPropagation(); onClick() }}
-    style={{ fontSize: big ? 15 : 13, borderRadius: 8, padding: big ? '10px 22px' : '6px 13px',
+    style={{ fontSize: big ? 17 : 14.5, borderRadius: 9, padding: big ? '13px 28px' : '9px 18px',
       cursor: 'pointer', fontWeight: primary ? 800 : 600,
       border: `1px solid ${color}`, color: primary ? '#fff' : color,
       background: primary ? color : '#fff' }}>{label}</button>
