@@ -14,7 +14,7 @@
     "projected": 0.013,
     "pct": 7
   },
-  "elapsed_sec": 62.0,
+  "elapsed_sec": 77.8,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -27,8 +27,38 @@
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "c5256eb961d182a6",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/dc0b2ed00763fdbb4bb4839fffae3d03",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ca5e72179daa38ec1008774f750086eb",
       "baseline_answer": "To add a teammate to your Stratus Forms account, navigate to **Settings \u2192 Account**. From there, you will find options for team member management.",
       "economy_answer": "I can help with that! You can add teammates to your account by going to Settings \u2192 Account. From there, you should see options for managing team members.",
       "baseline_model_cost": 0.000661,
@@ -45,7 +75,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "8a1d65a6b311c4ed"
+          "span_id": "014d646c01a32a9f"
         },
         {
           "kind": "tool",
@@ -54,7 +84,7 @@
           "dup": false,
           "input": "{\"query\": \"add teammate to stratus forms account\"}",
           "output": "{\"result\": [{\"title\": \"add teammate to stratus forms account \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/add_teammate_to_stratus_forms_account\", \"snippet\": \"This article provides a general overview of \u2026",
-          "span_id": "f32254a70ddc7c89"
+          "span_id": "d190b55bcb8eb63e"
         },
         {
           "kind": "tool",
@@ -63,7 +93,7 @@
           "dup": true,
           "input": "{\"query\": \"stratus forms team management settings\"}",
           "output": "{\"result\": [{\"title\": \"stratus forms team management settings \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_team_management_settings\", \"snippet\": \"This article provides a general overview o\u2026",
-          "span_id": "4fb9da5129b21cb6"
+          "span_id": "a7e4f8390593ac3e"
         },
         {
           "kind": "tool",
@@ -72,7 +102,7 @@
           "dup": true,
           "input": "{\"query\": \"stratus forms invite user to account\"}",
           "output": "{\"result\": [{\"title\": \"stratus forms invite user to account \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_invite_user_to_account\", \"snippet\": \"This article provides a general overview of st\u2026",
-          "span_id": "5f31f1ea8381e5b3"
+          "span_id": "48599211cfcd6553"
         },
         {
           "kind": "tool",
@@ -81,7 +111,7 @@
           "dup": false,
           "input": "{\"customer_reply\": \"You can add teammates to your account by going to Settings \u2192 Account. From there, you should see options for managing team members.\", \"status\": \"resolved\"}",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can add teammates to your account by going to Settings \u2192 Account. From there, you should see optio\u2026",
-          "span_id": "24c1f41c5c4f2bdb"
+          "span_id": "74ad8519c902eb1d"
         },
         {
           "kind": "model",
@@ -89,9 +119,39 @@
           "cost": 0.000224,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 6524,
+          "latency_ms": 5996,
           "in_tokens": 2107,
-          "out_tokens": 32
+          "out_tokens": 32,
+          "span_id": "c5256eb961d182a6",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -108,12 +168,42 @@
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "6536579dcce907ff",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/eebca53b39fd7a93000c747b7e83034a",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/2fe3e29f66cc5c70818fb4e5946a53f3",
       "baseline_answer": "To update your billing address, navigate to **Settings \u2192 Account** within your Stratus Forms account. Billing contacts can update payment methods there.\n\nI hope this helps! Let me know if you have any other questions.",
-      "economy_answer": "I can help with that! You can update your billing address in Stratus Forms under **Settings \u2192 Account**.",
+      "economy_answer": "I can help with that. You can update your billing address in Stratus Forms under Settings \u2192 Account.",
       "baseline_model_cost": 0.000689,
-      "economy_model_cost": 0.000215,
+      "economy_model_cost": 0.000216,
       "calls": [
         {
           "kind": "user",
@@ -126,7 +216,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "3cb85e6901e89e6d"
+          "span_id": "985a5e339158ef52"
         },
         {
           "kind": "tool",
@@ -135,25 +225,25 @@
           "dup": false,
           "input": "{\"query\": \"Stratus Forms update billing address\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms update billing address \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_update_billing_address\", \"snippet\": \"This article provides a general overview of St\u2026",
-          "span_id": "aa6e5cb030d0272c"
+          "span_id": "2e3f9da2cabe6b96"
         },
         {
           "kind": "tool",
           "tool": "web_search",
           "cost": 0.005,
           "dup": true,
-          "input": "{\"query\": \"Stratus Forms account settings billing address\"}",
-          "output": "{\"result\": [{\"title\": \"Stratus Forms account settings billing address \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_account_settings_billing_address\", \"snippet\": \"This article provides a ge\u2026",
-          "span_id": "89378ab8598b4c66"
+          "input": "{\"query\": \"SaaS billing address update best practices\"}",
+          "output": "{\"result\": [{\"title\": \"SaaS billing address update best practices \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/SaaS_billing_address_update_best_practices\", \"snippet\": \"This article provides a general ov\u2026",
+          "span_id": "e725dd53913af5b1"
         },
         {
           "kind": "tool",
           "tool": "web_search",
           "cost": 0.005,
           "dup": true,
-          "input": "{\"query\": \"Stratus Forms change billing information\"}",
-          "output": "{\"result\": [{\"title\": \"Stratus Forms change billing information \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_change_billing_information\", \"snippet\": \"This article provides a general overvi\u2026",
-          "span_id": "0e0cc1d4588b7574"
+          "input": "{\"query\": \"change billing address stratus forms account settings\"}",
+          "output": "{\"result\": [{\"title\": \"change billing address stratus forms account settings \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/change_billing_address_stratus_forms_account_settings\", \"snippet\": \"This article\u2026",
+          "span_id": "bd04684bbccac7fd"
         },
         {
           "kind": "tool",
@@ -162,17 +252,47 @@
           "dup": false,
           "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can update your billing address in Stratus Forms under Settings \u2192 Account.\"}",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can update your billing address in Stratus Forms under Settings \u2192 Account.'} from model returned f\u2026",
-          "span_id": "9f737aa5f1e5cc0a"
+          "span_id": "981ecb57aa31ead4"
         },
         {
           "kind": "model",
           "label": "model \u00b7 respond",
-          "cost": 0.000215,
+          "cost": 0.000216,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 4718,
-          "in_tokens": 2058,
-          "out_tokens": 22
+          "latency_ms": 4690,
+          "in_tokens": 2075,
+          "out_tokens": 21,
+          "span_id": "6536579dcce907ff",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -184,13 +304,43 @@
       "conv_id": "1202",
       "ticket": "How do I enable SSO?",
       "sub_type": "simple",
-      "equivalent": true,
-      "baseline_quality": 4,
-      "economy_quality": 4,
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "262e4afd8fe37712",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/32904141e8de4b7e54fdd241557c37b7",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 3,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 4,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 3,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/09a9d64f044a9bb51d31a2086e4650d4",
       "baseline_answer": "To enable SSO, navigate to Settings \u2192 Account in your Stratus Forms account. You'll find the SSO configuration options there. For general best practices on SSO, you can refer to resources like Wikipedia's overview on SSO, Stack Exchange dis",
       "economy_answer": "I can help with that! You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to configure SSO. For more detailed instructions, please refer to our knowledge base article on account settings.",
       "baseline_model_cost": 0.000705,
@@ -207,7 +357,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "4d3a7cbad890958c"
+          "span_id": "4b7e634fff07dd19"
         },
         {
           "kind": "tool",
@@ -216,7 +366,7 @@
           "dup": false,
           "input": "{\"query\": \"Stratus Forms SSO setup guide\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms SSO setup guide \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_SSO_setup_guide\", \"snippet\": \"This article provides a general overview of Stratus Forms SS\u2026",
-          "span_id": "ef9a95402290af68"
+          "span_id": "457ad5e69b0ba9f0"
         },
         {
           "kind": "tool",
@@ -225,7 +375,7 @@
           "dup": true,
           "input": "{\"query\": \"SAML SSO configuration Stratus Forms\"}",
           "output": "{\"result\": [{\"title\": \"SAML SSO configuration Stratus Forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/SAML_SSO_configuration_Stratus_Forms\", \"snippet\": \"This article provides a general overview of SA\u2026",
-          "span_id": "9e5e9883679a1a6a"
+          "span_id": "b669df185570f7d7"
         },
         {
           "kind": "tool",
@@ -234,16 +384,16 @@
           "dup": true,
           "input": "{\"query\": \"configure single sign-on Stratus Forms\"}",
           "output": "{\"result\": [{\"title\": \"configure single sign-on Stratus Forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/configure_single_sign-on_Stratus_Forms\", \"snippet\": \"This article provides a general overview o\u2026",
-          "span_id": "ed50e4fe7d3c9087"
+          "span_id": "7c9abb03990a0d99"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"customer_reply\": \"You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to configure SSO. For more detailed instructions, please refer to our knowledge base article on account set\u2026",
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to configure SSO. For more detailed instructions, please refer to our knowledge base \u2026",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can enable SSO by navigating to Settings \u2192 Account. From there, you should see an option to config\u2026",
-          "span_id": "bfac0759376ebf03"
+          "span_id": "a93566d8dfe062f3"
         },
         {
           "kind": "model",
@@ -251,9 +401,39 @@
           "cost": 0.000233,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5245,
-          "in_tokens": 2146,
-          "out_tokens": 46
+          "latency_ms": 6289,
+          "in_tokens": 2147,
+          "out_tokens": 46,
+          "span_id": "262e4afd8fe37712",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 3,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 4,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 3,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -270,8 +450,38 @@
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "8df919310e6973af",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0a0a1688d8543f988dc9f0b16455dfc1",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/be631e6324193b7616fe5838e30016b1",
       "baseline_answer": "To change your email address, navigate to Settings \u2192 Account within your Stratus Forms account. You should be able to update your contact information there. If you encounter any issues, please let us know!",
       "economy_answer": "I can help with that! You can change your email address in your account settings. Navigate to Settings \u2192 Account to update your email address.",
       "baseline_model_cost": 0.000685,
@@ -288,7 +498,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "514207e1fc174945"
+          "span_id": "4df0fa22ab31f9ff"
         },
         {
           "kind": "tool",
@@ -297,7 +507,7 @@
           "dup": false,
           "input": "{\"query\": \"change email address stratus forms\"}",
           "output": "{\"result\": [{\"title\": \"change email address stratus forms \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/change_email_address_stratus_forms\", \"snippet\": \"This article provides a general overview of change\u2026",
-          "span_id": "e2fcb994793442b6"
+          "span_id": "0456e94798fbecf3"
         },
         {
           "kind": "tool",
@@ -306,7 +516,7 @@
           "dup": true,
           "input": "{\"query\": \"stratus forms account settings email update\"}",
           "output": "{\"result\": [{\"title\": \"stratus forms account settings email update \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_account_settings_email_update\", \"snippet\": \"This article provides a general \u2026",
-          "span_id": "9de809f88365e0b5"
+          "span_id": "b8a14eb7e791a67e"
         },
         {
           "kind": "tool",
@@ -315,7 +525,7 @@
           "dup": true,
           "input": "{\"query\": \"stratus forms change login email\"}",
           "output": "{\"result\": [{\"title\": \"stratus forms change login email \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_change_login_email\", \"snippet\": \"This article provides a general overview of stratus fo\u2026",
-          "span_id": "080efd643300715d"
+          "span_id": "b39a8f554fbc2bae"
         },
         {
           "kind": "tool",
@@ -324,7 +534,7 @@
           "dup": false,
           "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can change your email address in your account settings. Navigate to Settings \u2192 Account to update your email address.\"}",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can change your email address in your account settings. Navigate to Settings \u2192 Account to update y\u2026",
-          "span_id": "199ac68c188c9564"
+          "span_id": "42623e0a7b0dbecd"
         },
         {
           "kind": "model",
@@ -332,9 +542,39 @@
           "cost": 0.000219,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5858,
+          "latency_ms": 5912,
           "in_tokens": 2079,
-          "out_tokens": 28
+          "out_tokens": 28,
+          "span_id": "8df919310e6973af",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
         },
         {
           "kind": "reply",

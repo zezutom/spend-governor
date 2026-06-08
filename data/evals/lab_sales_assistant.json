@@ -14,7 +14,7 @@
     "projected": 0.0062,
     "pct": 46
   },
-  "elapsed_sec": 50.9,
+  "elapsed_sec": 85.3,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -23,12 +23,42 @@
       "ticket": "What's the difference between Pro and Enterprise?",
       "sub_type": "simple",
       "equivalent": false,
-      "baseline_quality": 4,
-      "economy_quality": 3,
+      "baseline_quality": 5,
+      "economy_quality": 2,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "f8431e23c57a6745",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/03f34a716872790dd478fa06a0b06ea7",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 3,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3afe164092f1e1639e1d07e041918d25",
       "baseline_answer": "The Pro plan offers advanced features like conditional logic, file uploads, and integrations with popular services. The Enterprise plan includes everything in Pro, plus dedicated support, custom branding, audit logs, and advanced security f",
       "economy_answer": "The Pro plan is designed for growing businesses needing advanced features like custom branding and priority support. The Enterprise plan is for large organizations requiring dedicated infrastructure, advanced security, and a Service Level A",
       "baseline_model_cost": 0.00064,
@@ -45,7 +75,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/plan-changes\"}",
           "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "7a07790e44241ccd"
+          "span_id": "7e9470b30a13bbfd"
         },
         {
           "kind": "tool",
@@ -54,7 +84,7 @@
           "dup": false,
           "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
           "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "f6b9d4ab2252f6a9"
+          "span_id": "da8744f2d2dd09a0"
         },
         {
           "kind": "model",
@@ -62,9 +92,39 @@
           "cost": 0.0002,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 6020,
+          "latency_ms": 7379,
           "in_tokens": 1484,
-          "out_tokens": 130
+          "out_tokens": 130,
+          "span_id": "f8431e23c57a6745",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 3,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -77,12 +137,42 @@
       "ticket": "How much is Enterprise per month?",
       "sub_type": "simple",
       "equivalent": false,
-      "baseline_quality": 4,
-      "economy_quality": 3,
+      "baseline_quality": 5,
+      "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
+      "span_id": "9d15d0802282373e",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e48de5a5307cc63046380b06812cd344",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/756e457dcf1fa483d1fcab09faf20cde",
       "baseline_answer": "Our Enterprise plan is custom-quoted based on your specific needs. Please contact our sales team for a personalized quote. Competitor pricing varies widely, but we strive to offer competitive rates and superior features.",
       "economy_answer": "The Enterprise plan is custom-priced. To get a quote, please provide your specific needs. Our competitors typically charge between $50-$150/month for comparable plans, but we offer more features and better support.",
       "baseline_model_cost": 0.000464,
@@ -99,7 +189,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/plan-changes\"}",
           "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "84af0227b49fbad5"
+          "span_id": "c9a18e3ac3da48b4"
         },
         {
           "kind": "tool",
@@ -108,7 +198,7 @@
           "dup": false,
           "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
           "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "1f3bc0dbeb604a77"
+          "span_id": "33b8ed8f6a98e6be"
         },
         {
           "kind": "model",
@@ -116,9 +206,39 @@
           "cost": 0.000166,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 3738,
+          "latency_ms": 4725,
           "in_tokens": 1478,
-          "out_tokens": 46
+          "out_tokens": 46,
+          "span_id": "9d15d0802282373e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -135,8 +255,38 @@
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": true,
+      "span_id": "8dfbbd94522e6cb6",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/56765e6345f0c8fcab282f976a617962",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1f3ec5b424c1db4985107d2733eb34a8",
       "baseline_answer": "We accept all major credit cards, including Visa, Mastercard, American Express, and Discover. We also support payments via PayPal.",
       "economy_answer": "The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard payment methods commonly used by SaaS businesses. For a definitive",
       "baseline_model_cost": 0.000506,
@@ -153,7 +303,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/general\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
-          "span_id": "8cf1d4fddf911331"
+          "span_id": "516f3cc237547d21"
         },
         {
           "kind": "tool",
@@ -162,16 +312,16 @@
           "dup": false,
           "input": "{\"query\": \"Stratus Forms accepted payment methods\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms accepted payment methods \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_accepted_payment_methods\", \"snippet\": \"This article provides a general overview o\u2026",
-          "span_id": "39a060f5c794695e"
+          "span_id": "f3d3284af9986065"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"status\": \"resolved\", \"customer_reply\": \"The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard paym\u2026",
+          "input": "{\"status\": \"resolved\", \"ticket_id\": \"1701\", \"customer_reply\": \"The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we\u2026",
           "output": "{\"result\": {\"status\": \"ok\", \"ticket_id\": \"1701\"}}",
-          "span_id": "a3c0ff14bafac15e"
+          "span_id": "6a19bb87afb5d1de"
         },
         {
           "kind": "model",
@@ -179,9 +329,39 @@
           "cost": 0.000156,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5332,
+          "latency_ms": 4909,
           "in_tokens": 1559,
-          "out_tokens": 0
+          "out_tokens": 0,
+          "span_id": "8dfbbd94522e6cb6",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -198,8 +378,38 @@
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": true,
+      "span_id": "2f0c4cbcaf073d0e",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/83e5ba0b2a9eb7238be2760cac1d3963",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3866e7e93da15e83da64ef6592174862",
       "baseline_answer": "We offer a Pro plan at $25 per user per month. For 50 seats, that would be $1250 per month. This includes all Pro features such as advanced analytics, custom branding, and priority support.\n\nOur competitors generally offer similar pricing s",
       "economy_answer": "(no answer)",
       "baseline_model_cost": 0.000767,
@@ -215,9 +425,39 @@
           "cost": 0.000117,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 1085,
+          "latency_ms": 2066,
           "in_tokens": 1170,
-          "out_tokens": 0
+          "out_tokens": 0,
+          "span_id": "2f0c4cbcaf073d0e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",

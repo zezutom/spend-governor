@@ -14,7 +14,7 @@
     "projected": 0.0277,
     "pct": 23
   },
-  "elapsed_sec": 79.7,
+  "elapsed_sec": 102.3,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -27,12 +27,42 @@
       "economy_quality": 2,
       "clarified": true,
       "refused_escalated": false,
+      "span_id": "a936775b299d2d94",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/28ea0abe6b7d346ec5acaf8e5a6cbb0b",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80802294cd843a1df77d2a8203890d75",
       "baseline_answer": "Your refund of $49 has been processed. Please allow 5-10 business days for the credit to appear on your statement.",
       "economy_answer": "The refund has been processed. However, I need a ticket ID to update the ticket status. Could you please provide the ticket ID?",
-      "baseline_model_cost": 0.000938,
-      "economy_model_cost": 0.000275,
+      "baseline_model_cost": 0.000937,
+      "economy_model_cost": 0.000276,
       "calls": [
         {
           "kind": "user",
@@ -45,7 +75,7 @@
           "dup": false,
           "input": "{\"path\": \"/policies/refunds\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms refund policy. Refunds are available within 30 days of the charge for paid plans (Pro, Enterprise). Free plan accounts are not eligible. Refunds for Enterprise contracts beyond 30 da\u2026",
-          "span_id": "7d34090f376a0d39"
+          "span_id": "831c55a624dbf582"
         },
         {
           "kind": "tool",
@@ -54,7 +84,7 @@
           "dup": false,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "825fb2e03c4fd735"
+          "span_id": "011b47a133759262"
         },
         {
           "kind": "tool",
@@ -63,7 +93,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "f3d8d1fa5d8f4717"
+          "span_id": "d3860d7989aef8a3"
         },
         {
           "kind": "tool",
@@ -72,7 +102,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "b47f7ddd7cd8083e"
+          "span_id": "31ffb7c848a40ba8"
         },
         {
           "kind": "tool",
@@ -81,7 +111,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "523a92588bb7f0f2"
+          "span_id": "6523609edaf35fcc"
         },
         {
           "kind": "tool",
@@ -90,7 +120,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "8a3c0227c0ca1f95"
+          "span_id": "a86fbf5d4ee7d38d"
         },
         {
           "kind": "tool",
@@ -99,16 +129,16 @@
           "dup": false,
           "input": "{\"customer_id\": \"ACME-001\"}",
           "output": "{\"result\": {\"name\": \"ACME Corp\", \"plan\": \"pro\", \"mrr\": 49.0, \"signup_date\": \"2025-08-12\", \"recent_ticket_count\": 3}}",
-          "span_id": "6f8df2205606fb18"
+          "span_id": "676820b0ed0418ac"
         },
         {
           "kind": "tool",
           "tool": "refund_api",
           "cost": 0.001,
           "dup": false,
-          "input": "{\"customer_id\": \"ACME-001\", \"amount_usd\": 49, \"reason\": \"Customer requested refund for charge on May 1.\"}",
-          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"918255de-723d-46dd-969e-033cbfd6ea9c\", \"amount_usd\": 49}}",
-          "span_id": "9548b8938a13c18d"
+          "input": "{\"reason\": \"Customer requested refund for charge on May 1.\", \"customer_id\": \"ACME-001\", \"amount_usd\": 49}",
+          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"187f1f74-9b79-47bd-b6e4-5f90fa631351\", \"amount_usd\": 49}}",
+          "span_id": "a2a8a3b44d59bb64"
         },
         {
           "kind": "tool",
@@ -117,17 +147,47 @@
           "dup": false,
           "input": "{\"customer_reply\": \"Your refund of $49 has been processed.\", \"status\": \"resolved\"}",
           "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your refund of $49 has been processed.'} from model returned function call argument {'customer_reply':\u2026",
-          "span_id": "8a8dfcf2cafdd16b"
+          "span_id": "d1b7a336f6fbad63"
         },
         {
           "kind": "model",
           "label": "model \u00b7 respond",
-          "cost": 0.000275,
+          "cost": 0.000276,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 6763,
-          "in_tokens": 2645,
-          "out_tokens": 27
+          "latency_ms": 6615,
+          "in_tokens": 2647,
+          "out_tokens": 27,
+          "span_id": "a936775b299d2d94",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -141,14 +201,44 @@
       "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
-      "economy_quality": 3,
+      "economy_quality": 2,
       "clarified": true,
       "refused_escalated": false,
+      "span_id": "8ee09254b6ec7762",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4108a0d5baa0d73eaec15f4186b4772a",
-      "baseline_answer": "Your refund of $49 has been processed for account GLOBEX-001.",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ae703ccd5c976a67ea6dd7fbad9325b0",
+      "baseline_answer": "Your refund of $49 has been processed for account GLOBEX-001. Please allow 5-10 business days for the credit to appear on your statement.",
       "economy_answer": "The refund has been processed. However, I need a ticket ID to update the ticket status. Could you please provide the ticket ID?",
-      "baseline_model_cost": 0.000822,
+      "baseline_model_cost": 0.000868,
       "economy_model_cost": 0.000276,
       "calls": [
         {
@@ -162,7 +252,7 @@
           "dup": false,
           "input": "{\"path\": \"/policies/refunds\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms refund policy. Refunds are available within 30 days of the charge for paid plans (Pro, Enterprise). Free plan accounts are not eligible. Refunds for Enterprise contracts beyond 30 da\u2026",
-          "span_id": "3242a7bc730e3c98"
+          "span_id": "1e0df3b3e3ea8940"
         },
         {
           "kind": "tool",
@@ -171,7 +261,7 @@
           "dup": false,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "50409cc155542377"
+          "span_id": "2999f5938ffb6c0e"
         },
         {
           "kind": "tool",
@@ -180,7 +270,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "201f4cc36bd52bed"
+          "span_id": "43a4c25f8cf2270c"
         },
         {
           "kind": "tool",
@@ -189,7 +279,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "1f7b6425843f7871"
+          "span_id": "fa1cd7c3445ab7cb"
         },
         {
           "kind": "tool",
@@ -198,7 +288,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "77c5742663a2bbfc"
+          "span_id": "4f6618e06413740d"
         },
         {
           "kind": "tool",
@@ -207,7 +297,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "75b1742541c4bbc9"
+          "span_id": "7d7428c9a4cedbfd"
         },
         {
           "kind": "tool",
@@ -216,25 +306,25 @@
           "dup": false,
           "input": "{\"customer_id\": \"GLOBEX-001\"}",
           "output": "{\"result\": {\"name\": \"Globex\", \"plan\": \"enterprise\", \"mrr\": 499.0, \"signup_date\": \"2024-03-04\", \"recent_ticket_count\": 1}}",
-          "span_id": "2c41cb0d3013fcf5"
+          "span_id": "2f071bd4a2f3e7f3"
         },
         {
           "kind": "tool",
           "tool": "refund_api",
           "cost": 0.001,
           "dup": false,
-          "input": "{\"customer_id\": \"GLOBEX-001\", \"amount_usd\": 49, \"reason\": \"Customer request for refund within 30-day policy window\"}",
-          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"8545abd5-b257-438b-b765-1be451669dbb\", \"amount_usd\": 49}}",
-          "span_id": "0d9d7d5fef74a5b7"
+          "input": "{\"reason\": \"Customer request for refund within 30-day policy window\", \"amount_usd\": 49, \"customer_id\": \"GLOBEX-001\"}",
+          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"6d4b25a4-0ad5-49fd-bf8c-20c985198e80\", \"amount_usd\": 49}}",
+          "span_id": "7e1578b1b398799a"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"customer_reply\": \"Your refund of $49 has been processed.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your refund of $49 has been processed.'} from model returned function call argument {'customer_reply':\u2026",
-          "span_id": "bd42d1449e8c72dd"
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"Your refund of $49 has been processed.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your refund of $49 has been processed.'} from model returned function call argument {'status': 'resolv\u2026",
+          "span_id": "7fe4e956d802d6f2"
         },
         {
           "kind": "model",
@@ -242,9 +332,39 @@
           "cost": 0.000276,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5970,
-          "in_tokens": 2655,
-          "out_tokens": 27
+          "latency_ms": 6004,
+          "in_tokens": 2657,
+          "out_tokens": 27,
+          "span_id": "8ee09254b6ec7762",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -258,15 +378,45 @@
       "sub_type": "simple",
       "equivalent": false,
       "baseline_quality": 5,
-      "economy_quality": 3,
-      "clarified": false,
+      "economy_quality": 1,
+      "clarified": true,
       "refused_escalated": false,
+      "span_id": "4ebbb1f05f50997a",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0e1c781d7e6c7a34e0756634eef2ef68",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/07e7cc4172b9b6d86b0afe4e0b515457",
       "baseline_answer": "The customer is on a free plan and is not eligible for a refund according to our policy. Additionally, the signup date for the account is in the future, which is an anomaly that needs to be investigated. I have escalated this ticket to a hu",
-      "economy_answer": "The refund policy states that refunds are only available for paid plans (Pro, Enterprise) within 30 days of the charge. Your account is on the free plan, so it is not eligible for a refund.",
+      "economy_answer": "I am unable to resolve this ticket because the ticket ID is missing. Could you please provide the ticket ID?",
       "baseline_model_cost": 0.00087,
-      "economy_model_cost": 0.00039,
+      "economy_model_cost": 0.000273,
       "calls": [
         {
           "kind": "user",
@@ -279,7 +429,7 @@
           "dup": false,
           "input": "{\"path\": \"/policies/refunds\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms refund policy. Refunds are available within 30 days of the charge for paid plans (Pro, Enterprise). Free plan accounts are not eligible. Refunds for Enterprise contracts beyond 30 da\u2026",
-          "span_id": "d23dc5b8f20c77fc"
+          "span_id": "503579fd642ea53d"
         },
         {
           "kind": "tool",
@@ -288,7 +438,7 @@
           "dup": false,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "0dcb6955adcce7be"
+          "span_id": "3482727c7a9f466f"
         },
         {
           "kind": "tool",
@@ -297,7 +447,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "b658e36636f5dbe8"
+          "span_id": "beb0c1031264d24a"
         },
         {
           "kind": "tool",
@@ -306,7 +456,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "648e9be695100e07"
+          "span_id": "ba6e2d004386c3ab"
         },
         {
           "kind": "tool",
@@ -315,7 +465,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "0cac2f70992a3b53"
+          "span_id": "0ddc9bfe4c6d2e42"
         },
         {
           "kind": "tool",
@@ -324,7 +474,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "b656ef4eede4d884"
+          "span_id": "cd5627d7446ac805"
         },
         {
           "kind": "tool",
@@ -333,71 +483,56 @@
           "dup": false,
           "input": "{\"customer_id\": \"INITECH-001\"}",
           "output": "{\"result\": {\"name\": \"Initech\", \"plan\": \"free\", \"mrr\": 0.0, \"signup_date\": \"2026-01-15\", \"recent_ticket_count\": 7}}",
-          "span_id": "0ab8c4fa0503b47b"
+          "span_id": "472930f891786595"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "b278cbce4063fffd"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": true,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "cf2b45c2b0e70c2d"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": true,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "f238104738bf731c"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": true,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "3520b6de5e07284f"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": true,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "f0e1c629c5d3af7e"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": true,
-          "input": "{\"customer_reply\": \"Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only for paid plans (Pro, Enterprise) within 30 days of the charge.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your account is on the free plan, which is not eligible for refunds. Our policy allows refunds only fo\u2026",
-          "span_id": "32f6ece2f097e9d8"
+          "input": "{\"customer_reply\": \"I'm sorry, but I cannot process this refund request as your account is on the free plan, which is not eligible for refunds according to our policy.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': \\\"I'm sorry, but I cannot process this refund request as your account is on the free plan, which is not\u2026",
+          "span_id": "af4493a25a046fc5"
         },
         {
           "kind": "model",
           "label": "model \u00b7 respond",
-          "cost": 0.00039,
+          "cost": 0.000273,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 7681,
-          "in_tokens": 3545,
-          "out_tokens": 89
+          "latency_ms": 5884,
+          "in_tokens": 2637,
+          "out_tokens": 22,
+          "span_id": "4ebbb1f05f50997a",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -414,11 +549,41 @@
       "economy_quality": 1,
       "clarified": true,
       "refused_escalated": false,
+      "span_id": "092788ba7338c287",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/08f3e9eb9f44e06d957376b71c715be6",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/97e59b65c189bb8b4378539fee4809e5",
       "baseline_answer": "Your refund of $49 has been processed.",
-      "economy_answer": "The refund has been processed. However, I encountered an error when trying to update the ticket status and send a reply. It seems the `ticket_id` is missing. Could you please provide the ticket ID so I can close this ticket properly?",
-      "baseline_model_cost": 0.000812,
+      "economy_answer": "The refund has been processed. However, I encountered an error when trying to update the ticket status and send a reply. It seems the `ticket_id` is missing. Could you please provide the ticket ID so I can complete the process?",
+      "baseline_model_cost": 0.000811,
       "economy_model_cost": 0.000286,
       "calls": [
         {
@@ -432,7 +597,7 @@
           "dup": false,
           "input": "{\"path\": \"/policies/refunds\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms refund policy. Refunds are available within 30 days of the charge for paid plans (Pro, Enterprise). Free plan accounts are not eligible. Refunds for Enterprise contracts beyond 30 da\u2026",
-          "span_id": "894f28be265e0c4f"
+          "span_id": "3f1db69f98d73bf4"
         },
         {
           "kind": "tool",
@@ -441,7 +606,7 @@
           "dup": false,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "bacf6984069835d9"
+          "span_id": "c230e7e85dafc571"
         },
         {
           "kind": "tool",
@@ -450,7 +615,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "402a64c41a4f9147"
+          "span_id": "7fc0b9b08d9f543e"
         },
         {
           "kind": "tool",
@@ -459,7 +624,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "2844ac127df59809"
+          "span_id": "892223f324ca5c70"
         },
         {
           "kind": "tool",
@@ -468,7 +633,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "c8481e5ff39409ce"
+          "span_id": "8513e46756288eaa"
         },
         {
           "kind": "tool",
@@ -477,7 +642,7 @@
           "dup": true,
           "input": "{\"query\": \"current SaaS refund regulations\"}",
           "output": "{\"result\": [{\"title\": \"current SaaS refund regulations \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/current_SaaS_refund_regulations\", \"snippet\": \"This article provides a general overview of current SaaS\u2026",
-          "span_id": "cf24d2d8be18f1f8"
+          "span_id": "86a7b8deaba712cc"
         },
         {
           "kind": "tool",
@@ -486,25 +651,25 @@
           "dup": false,
           "input": "{\"customer_id\": \"STARK-001\"}",
           "output": "{\"result\": {\"name\": \"Stark Industries\", \"plan\": \"enterprise\", \"mrr\": 999.0, \"signup_date\": \"2023-11-20\", \"recent_ticket_count\": 0}}",
-          "span_id": "007b09b655ad2a5e"
+          "span_id": "abf2e99a4ab9fa15"
         },
         {
           "kind": "tool",
           "tool": "refund_api",
           "cost": 0.001,
           "dup": false,
-          "input": "{\"reason\": \"Customer requested refund for last month's charge.\", \"customer_id\": \"STARK-001\", \"amount_usd\": 49}",
-          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"8895bed1-a7f6-4e36-af36-99c9f4fb8577\", \"amount_usd\": 49}}",
-          "span_id": "cc6d43a77498ce3f"
+          "input": "{\"customer_id\": \"STARK-001\", \"reason\": \"Customer requested refund for last month's charge.\", \"amount_usd\": 49}",
+          "output": "{\"result\": {\"status\": \"ok\", \"refund_id\": \"78f8a013-c59e-4ccf-8817-c864fe598e0e\", \"amount_usd\": 49}}",
+          "span_id": "533ede1307517bd9"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"status\": \"resolved\", \"customer_reply\": \"Your refund of $49 has been processed.\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your refund of $49 has been processed.'} from model returned function call argument {'status': 'resolv\u2026",
-          "span_id": "372f2ccad4d9801f"
+          "input": "{\"customer_reply\": \"Your refund of $49 has been processed.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Your refund of $49 has been processed.'} from model returned function call argument {'customer_reply':\u2026",
+          "span_id": "c65f38c2e287f690"
         },
         {
           "kind": "model",
@@ -512,9 +677,39 @@
           "cost": 0.000286,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5220,
-          "in_tokens": 2664,
-          "out_tokens": 50
+          "latency_ms": 6890,
+          "in_tokens": 2665,
+          "out_tokens": 49,
+          "span_id": "092788ba7338c287",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",

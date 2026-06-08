@@ -1439,14 +1439,8 @@ function ReplayLab({ onClose, initialUc }) {
                   {imp.degraded.length > 0 && <>
                     <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 6px' }}>DEGRADED CASES ({imp.degraded.length})</div>
                     {imp.degraded.map((r) => (
-                      <div key={r._i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', fontSize: 12.5,
-                        borderBottom: '1px solid #f1efe8' }}>
-                        <span style={{ flex: 1, color: '#3b3b37' }}>#{r.conv_id} · {r.ticket.slice(0, 22)}</span>
-                        <span style={{ color: AMBER, fontWeight: 600 }}>q{r.economy_quality}</span>
-                        <button onClick={() => openDegraded(r._i)} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600,
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>open</button>
-                        {r.phoenix_url && <SpanLink url={redirectUrl({ span_id: r.span_id }, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0)} label="trace ↗" />}
-                      </div>
+                      <DegradedRow key={r._i} r={r} onOpen={() => openDegraded(r._i)}
+                        traceUrl={r.phoenix_url ? redirectUrl({ span_id: r.span_id }, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0) : null} />
                     ))}
                   </>}
 
@@ -1545,10 +1539,64 @@ function CallInspector({ call, row, corpus, live }) {
       ['tokens', call.in_tokens != null ? `${call.in_tokens} in → ${call.out_tokens} out` : '—'],
       ['cost', <>${(call.cost || 0).toFixed(5)} <span style={{ color: GREEN }}>Phoenix-measured</span></>],
     ]} /></div>
+    <JudgePanel votes={call.votes || row.judge_votes} held={row.held} />
     <div style={{ fontSize: 12.5, color: bites ? AMBER : GREEN, marginTop: 8 }}>
-      → this replay {row.held ? 'holds' : 'degrades'} under the candidate
+      → this replay {row.held ? 'holds' : 'degrades'} — by <b>majority of the neutral panel</b>
     </div>
   </InsShell>
+}
+
+// A degraded case in the drill-down: expand to see BASELINE vs ECONOMY side by
+// side + the neutral panel's per-lens votes (why it was scored degraded).
+function DegradedRow({ r, onOpen, traceUrl }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ borderBottom: '1px solid #f1efe8', padding: '6px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5 }}>
+        <button onClick={() => setOpen((o) => !o)} style={{ flex: 1, textAlign: 'left', background: 'none',
+          border: 'none', cursor: 'pointer', color: '#3b3b37', padding: 0 }}>
+          <span style={{ color: DIM }}>{open ? '▾' : '▸'}</span> #{r.conv_id} · {r.ticket.slice(0, 22)}
+        </button>
+        <span style={{ color: AMBER, fontWeight: 700 }}>q{r.economy_quality}</span>
+        <button onClick={onOpen} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>step</button>
+        {traceUrl && <SpanLink url={traceUrl} label="trace ↗" />}
+      </div>
+      {open && (
+        <div style={{ marginTop: 6 }}>
+          <div style={{ border: `1px solid ${GREEN}33`, background: '#eef7f1', borderRadius: 7, padding: '7px 9px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>baseline (premium · {r.baseline_quality}/5)</div>
+            <div style={{ fontSize: 12, color: '#1a4f40', marginTop: 2, lineHeight: 1.4 }}>{r.baseline_answer}</div>
+          </div>
+          <div style={{ border: `1px solid ${AMBER}33`, background: '#faeeda', borderRadius: 7, padding: '7px 9px', marginTop: 5 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: AMBER }}>economy (candidate · {r.economy_quality}/5)</div>
+            <div style={{ fontSize: 12, color: '#85540b', marginTop: 2, lineHeight: 1.4 }}>{r.economy_answer}</div>
+          </div>
+          <JudgePanel votes={r.judge_votes} held={r.held} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The neutral judge panel: gemini-2.5-pro (neither contestant) voting from three
+// lenses; majority decides held/degraded. Shown so the verdict is auditable.
+function JudgePanel({ votes, held }) {
+  if (!votes || !votes.length) return null
+  return (
+    <div style={{ marginTop: 10, border: '1px solid #e6e1d4', borderRadius: 8, padding: '8px 10px', background: '#fcfbf7' }}>
+      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.05em', textTransform: 'uppercase', fontWeight: 700 }}>
+        neutral judge panel · gemini-2.5-pro · {votes.filter((v) => v.held).length}/{votes.length} held → {held ? 'HELD' : 'DEGRADED'}
+      </div>
+      {votes.map((v, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, marginTop: 5 }}>
+          <span style={{ flex: 1, color: '#3b3b37' }}>{v.lens.replace('_', ' ')}</span>
+          {v.refused && <span style={{ color: RED, fontSize: 11 }}>refused/errored</span>}
+          {v.clarified && <span style={{ color: AMBER, fontSize: 11 }}>asked customer</span>}
+          <span style={{ fontWeight: 700, color: v.held ? GREEN : AMBER }}>economy {v.economy_quality}/5 · {v.held ? 'held' : 'degraded'}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 function Field({ label, children }) {
   return (

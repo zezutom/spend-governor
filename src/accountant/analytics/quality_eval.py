@@ -25,6 +25,7 @@ import json
 import os
 import threading
 import time
+from dataclasses import dataclass
 
 from google import genai
 from google.genai import types
@@ -32,7 +33,18 @@ from pydantic import BaseModel, Field
 
 BASELINE_MODEL = "gemini-2.5-flash"
 ECONOMY_MODEL = "gemini-2.5-flash-lite"
-JUDGE_MODEL = "gemini-2.5-flash"
+# NEUTRAL judge — neither contestant. gemini-2.5-pro is the only third-party model
+# available in this Vertex project; a panel of lenses on it votes (see _judge).
+JUDGE_MODEL = "gemini-2.5-pro"
+
+# A response HELD if it's not MEANINGFULLY WORSE than baseline — within
+# HELD_TOLERANCE points of the baseline quality. RELATIVE, not an absolute bar: if
+# the baseline itself is poor, a comparably-poor economy answer didn't *degrade*.
+HELD_TOLERANCE = 1
+
+
+def _held(economy_q: int, baseline_q: int) -> bool:
+    return economy_q >= baseline_q - HELD_TOLERANCE
 
 # Thread-local clients: the genai client isn't safe to share across the worker
 # threads that replay tickets concurrently (a shared client gets its httpx
@@ -165,38 +177,103 @@ class _Verdict(BaseModel):
     economy_refused_or_escalated: bool = Field(description="Does the economy answer refuse, defer, or escalate instead of resolving?")
 
 
-_JUDGE_SYSTEM = (
+_JUDGE_COMMON = (
     "You are a QA judge for a customer-support agent. You are given one support "
-    "ticket and two candidate answers — BASELINE (a stronger model) and ECONOMY "
-    "(a cheaper model). Judge whether the ECONOMY answer serves the customer as "
-    "well as the BASELINE.\n"
-    "Score resolution-APPROPRIATENESS, not heroics: for a vague request, clear "
-    "self-service guidance (e.g. how to reset a password) is a good answer and "
-    "scores high (4-5). For a request with all the details needed to act, "
-    "actually completing the action is the good answer; asking for information "
-    "the agent already has, or that it could look up, is a quality DROP.\n"
-    "Set economy_asked_clarification true only when the economy answer asks the "
-    "customer for more information instead of resolving, AND the baseline did "
-    "not need to. Set equivalent true when both answers give the customer the "
-    "same effective resolution, even if worded differently. Return the verdict."
+    "ticket and two candidate answers — BASELINE (one model) and ECONOMY (a "
+    "cheaper model). Score each answer 1 (poor) to 5 (excellent).\n"
+    "Set economy_asked_clarification true only when the ECONOMY answer asks the "
+    "customer for more information instead of resolving, AND the baseline did not "
+    "need to. Set economy_refused_or_escalated true when the economy answer "
+    "refuses, errors, defers, or escalates instead of resolving. Set equivalent "
+    "true when both answers give the customer the same effective resolution, even "
+    "if worded differently. Be fair to BOTH models — do not assume either is "
+    "better; judge only what each answer actually does for the customer."
+)
+# A panel of THREE evaluation LENSES, all run on the NEUTRAL judge model
+# (gemini-2.5-pro — neither the baseline gemini-2.5-flash nor the economy
+# flash-lite, so it isn't grading its own sibling). Majority of the three decides
+# held vs degraded; the per-lens votes are surfaced so the call is auditable.
+_JUDGE_LENSES = (
+    ("resolution",
+     "LENS — RESOLUTION. Did the answer actually resolve the ticket? For a vague "
+     "request, clear self-service guidance scores high (4-5). For a request with "
+     "all details needed to act, completing the action is the good answer; asking "
+     "for info the agent already has, or could look up, is a quality DROP."),
+    ("customer",
+     "LENS — CUSTOMER EXPERIENCE. Would a real customer be satisfied? Reward a "
+     "correct, complete, actionable answer on its OWN merits even if worded "
+     "differently from the baseline. Penalize confusion, leaking internal details "
+     "(e.g. asking the customer for a ticket ID), or anything that makes the "
+     "customer do extra work."),
+    ("support_lead",
+     "LENS — SUPPORT LEAD. Would a support team lead ship this answer unedited? "
+     "Penalize factual errors, tool/function failures surfaced to the customer, "
+     "policy mistakes, or unsafe actions. A safe, correct, shippable answer scores "
+     "high even if terse."),
 )
 
 
-def _judge(ticket: str, baseline: str, economy: str) -> _Verdict:
+def _judge_one(ticket: str, baseline: str, economy: str, system: str) -> _Verdict | None:
     payload = (f"TICKET:\n{ticket}\n\nBASELINE ANSWER:\n{baseline}\n\n"
                f"ECONOMY ANSWER:\n{economy}")
-    resp = _genai().models.generate_content(
-        model=JUDGE_MODEL,
-        contents=payload,
-        config=types.GenerateContentConfig(
-            system_instruction=_JUDGE_SYSTEM,
-            response_mime_type="application/json",
-            response_schema=_Verdict,
-            temperature=0.0,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
-    )
-    return resp.parsed if isinstance(resp.parsed, _Verdict) else _Verdict.model_validate_json(resp.text)
+    try:
+        resp = _genai().models.generate_content(
+            model=JUDGE_MODEL, contents=payload,
+            config=types.GenerateContentConfig(
+                system_instruction=_JUDGE_COMMON + "\n\n" + system,
+                response_mime_type="application/json", response_schema=_Verdict,
+                temperature=0.0, thinking_config=types.ThinkingConfig(thinking_budget=512)))
+        return resp.parsed if isinstance(resp.parsed, _Verdict) else _Verdict.model_validate_json(resp.text)
+    except Exception:
+        return None
+
+
+@dataclass
+class _PanelVerdict:
+    """Aggregated verdict from the neutral judge panel: majority decides held;
+    medians summarize the quality scores; `votes` carries each lens's call."""
+    equivalent: bool
+    baseline_quality: int
+    economy_quality: int
+    economy_asked_clarification: bool
+    economy_refused_or_escalated: bool
+    held: bool
+    votes: list
+
+
+def _judge(ticket: str, baseline: str, economy: str) -> _PanelVerdict:
+    # run the three lenses in parallel (one neutral judge, three perspectives)
+    with cf.ThreadPoolExecutor(max_workers=3) as ex:
+        results = list(ex.map(lambda L: (L[0], _judge_one(ticket, baseline, economy, L[1])),
+                              _JUDGE_LENSES))
+    votes = [{"lens": name, "economy_quality": v.economy_quality,
+              "baseline_quality": v.baseline_quality, "held": _held(v.economy_quality, v.baseline_quality),
+              "clarified": v.economy_asked_clarification, "refused": v.economy_refused_or_escalated,
+              "equivalent": v.equivalent}
+             for name, v in results if v is not None]
+    if not votes:  # all judges errored — fall back to a single judge call
+        v = _judge_one(ticket, baseline, economy, _JUDGE_LENSES[0][1])
+        if v is None:
+            return _PanelVerdict(False, 3, 3, False, False, False, [])
+        votes = [{"lens": "resolution", "economy_quality": v.economy_quality,
+                  "baseline_quality": v.baseline_quality, "held": _held(v.economy_quality, v.baseline_quality),
+                  "clarified": v.economy_asked_clarification,
+                  "refused": v.economy_refused_or_escalated, "equivalent": v.equivalent}]
+    n = len(votes)
+    maj = lambda key: sum(1 for x in votes if x[key]) > n / 2
+    return _PanelVerdict(
+        equivalent=maj("equivalent"),
+        baseline_quality=int(_median([x["baseline_quality"] for x in votes])),
+        economy_quality=int(_median([x["economy_quality"] for x in votes])),
+        economy_asked_clarification=maj("clarified"),
+        economy_refused_or_escalated=maj("refused"),
+        held=sum(1 for x in votes if x["held"]) > n / 2,  # MAJORITY decides held
+        votes=votes)
+
+
+def _median(xs: list) -> float:
+    import statistics
+    return statistics.median(xs) if xs else 3
 
 
 def _traced_replay(ticket: str, model: str, gid: str | None, attrs: dict | None = None):
@@ -397,7 +474,7 @@ def replay_one_live(use_case: str, *, idx: int = 0, baseline_model: str = BASELI
     r = _eval_ticket(sample["ticket"], baseline_model, economy_model, gid, tag,
                      instruction=_fleet_instruction(use_case))
     r["sub_type"] = sample["sub_type"]
-    r["held"] = bool(r["equivalent"]) and not r["refused_escalated"]
+    r["held"] = _held(r["economy_quality"], r["baseline_quality"])
     return r
 
 
@@ -506,16 +583,17 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
     seq = ([{"kind": "user", "label": f'user: "{ticket[:90]}"'}]
            + calls
            + [{"kind": "model", "label": "model · respond", "cost": econ_cost,
-               "bites": v.economy_quality < v.baseline_quality, "model": economy_model,
+               "bites": not v.held, "model": economy_model,
                "latency_ms": econ_latency_ms, "in_tokens": econ_in, "out_tokens": econ_out,
-               "span_id": esid},  # link the model call to the ECONOMY replay span
+               "span_id": esid, "votes": v.votes},  # link to the economy span + carry the panel votes
               {"kind": "reply", "label": "reply sent"}])
     return {
         "conv_id": conv_id, "ticket": ticket, "sub_type": sub_type,
         "equivalent": v.equivalent, "baseline_quality": v.baseline_quality,
         "economy_quality": v.economy_quality, "clarified": v.economy_asked_clarification,
         "refused_escalated": v.economy_refused_or_escalated, "span_id": esid,
-        "held": v.economy_quality >= 4, "phoenix_url": phoenix_cost.span_deeplink(gid, etid, None) if gid else None,
+        "held": v.held, "judge_votes": v.votes,  # MAJORITY of the neutral panel
+        "phoenix_url": phoenix_cost.span_deeplink(gid, etid, None) if gid else None,
         "baseline_answer": base[:240], "economy_answer": econ[:240],
         "baseline_model_cost": base_cost, "economy_model_cost": econ_cost,
         "calls": seq,
@@ -720,7 +798,7 @@ def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
 
 def _lab_recompute(rows: list[dict]) -> list[dict]:
     for r in rows:
-        r["held"] = r["economy_quality"] >= 4
+        r["held"] = _held(r["economy_quality"], r["baseline_quality"])
     return rows
 
 

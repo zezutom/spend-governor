@@ -1,9 +1,9 @@
 {
-  "held_pct": 0.5,
-  "degraded_pct": 0.5,
+  "held_pct": 0.75,
+  "degraded_pct": 0.25,
   "degraded_dominant_sub": "simple",
   "held_by_sub": {
-    "simple": 0.5
+    "simple": 0.75
   },
   "use_case": "docs_bot",
   "candidate": "economy",
@@ -14,7 +14,7 @@
     "projected": 0.0008,
     "pct": 76
   },
-  "elapsed_sec": 48.8,
+  "elapsed_sec": 64.1,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -23,16 +23,46 @@
       "ticket": "How do I rename a form?",
       "sub_type": "simple",
       "equivalent": false,
-      "baseline_quality": 2,
+      "baseline_quality": 1,
       "economy_quality": 1,
-      "clarified": false,
+      "clarified": true,
       "refused_escalated": true,
-      "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0c02b2687171996d59279ffb25521e90",
+      "span_id": "5715f21d82d59b78",
+      "held": true,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5a50e2755d7324c972b60bc39f40bf37",
       "baseline_answer": "To rename a form, navigate to Settings \u2192 Account, where you can manage various account settings.",
-      "economy_answer": "I cannot fulfill this request. The `ticket_update` function is missing the `ticket_id` argument.",
+      "economy_answer": "I can't resolve this ticket without a ticket ID. Please provide the ticket ID.",
       "baseline_model_cost": 0.000414,
-      "economy_model_cost": 0.000142,
+      "economy_model_cost": 0.00014,
       "calls": [
         {
           "kind": "user",
@@ -45,26 +75,56 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "b71fcaa9a09fa829"
+          "span_id": "c5f3e3c1e9c05cbc"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"customer_reply\": \"You can rename a form by going to Settings \u2192 Account.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can rename a form by going to Settings \u2192 Account.'} from model returned function call argument {'c\u2026",
-          "span_id": "bf717d2ba9f2abe7"
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can rename a form by going to Settings \u2192 Account.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can rename a form by going to Settings \u2192 Account.'} from model returned function call argument {'s\u2026",
+          "span_id": "6bc732781224b2ac"
         },
         {
           "kind": "model",
           "label": "model \u00b7 respond",
-          "cost": 0.000142,
+          "cost": 0.00014,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 4269,
-          "in_tokens": 1330,
-          "out_tokens": 23
+          "latency_ms": 4092,
+          "in_tokens": 1331,
+          "out_tokens": 18,
+          "span_id": "5715f21d82d59b78",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -81,8 +141,38 @@
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "38ace024d06af488",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d8902b810abeaef2c61c27a31b102d1a",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/fecb2dd10f191df3f86900cd3d85ed55",
       "baseline_answer": "The dashboard is located under Settings \u2192 Account.",
       "economy_answer": "The dashboard and account settings can be found under Settings \u2192 Account.",
       "baseline_model_cost": 0.000388,
@@ -99,7 +189,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "85724d9f8d5f106c"
+          "span_id": "ea7529cc622f25a4"
         },
         {
           "kind": "model",
@@ -107,9 +197,39 @@
           "cost": 0.000127,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2079,
+          "latency_ms": 2839,
           "in_tokens": 1218,
-          "out_tokens": 13
+          "out_tokens": 13,
+          "span_id": "38ace024d06af488",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -126,8 +246,38 @@
       "economy_quality": 1,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "61992bf5c4960cd4",
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9caf74136f3c3362579e9b9d131a8280",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3d87299cf233d3c99e0a1ef91a6a04fb",
       "baseline_answer": "To duplicate a form, navigate to your dashboard, select the form you wish to duplicate, and choose the \"Duplicate\" option from the form's action menu.",
       "economy_answer": "I can help with that. You can duplicate a form by going to Settings \u2192 Account.",
       "baseline_model_cost": 0.000449,
@@ -144,7 +294,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "8bb93d7a72726566"
+          "span_id": "11f605be1447b41b"
         },
         {
           "kind": "model",
@@ -152,9 +302,39 @@
           "cost": 0.000127,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2179,
+          "latency_ms": 2847,
           "in_tokens": 1201,
-          "out_tokens": 18
+          "out_tokens": 18,
+          "span_id": "61992bf5c4960cd4",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
         },
         {
           "kind": "reply",
@@ -171,8 +351,38 @@
       "economy_quality": 5,
       "clarified": false,
       "refused_escalated": false,
+      "span_id": "d5781d165158793e",
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/67765f5b507c5aee114a46445d7f5335",
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4e9f4b2244d423dd6571309f85469352",
       "baseline_answer": "To see who's on your team, navigate to Settings \u2192 Account, where you can manage team members and other account settings.",
       "economy_answer": "The Stratus Forms account settings, including team member management, are available under Settings \u2192 Account.",
       "baseline_model_cost": 0.000393,
@@ -189,7 +399,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "8c0f632131455954"
+          "span_id": "b9c62b94d11c66fb"
         },
         {
           "kind": "model",
@@ -197,9 +407,39 @@
           "cost": 0.000131,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2274,
+          "latency_ms": 2644,
           "in_tokens": 1230,
-          "out_tokens": 19
+          "out_tokens": 19,
+          "span_id": "d5781d165158793e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
         },
         {
           "kind": "reply",
