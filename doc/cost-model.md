@@ -136,7 +136,7 @@ layer surfaces.
 `usage_metadata` dict and prints the breakdown:
 
 ```
-uv run python -m accountant.cli.verify_cost
+uv run python -m governor.cli.verify_cost
 ```
 
 Use this as a regression check whenever pricing rates change.

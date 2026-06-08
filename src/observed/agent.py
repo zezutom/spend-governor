@@ -1,6 +1,6 @@
 from google.adk.agents import LlmAgent
 
-from accountant.wrapper.wrapper import (
+from governor.wrapper.wrapper import (
     cost_after_model_callback,
     model_routing_callback,
     trace_finalize_callback,

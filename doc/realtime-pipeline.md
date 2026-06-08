@@ -13,7 +13,7 @@ This starts the control-plane API (`:8800`), the ingest server (`:8765`),
 and the React cockpit (Vite, `:5173`; open this). On first run it:
 
 1. Probes `127.0.0.1:8765`; if nothing is listening, spawns the ingest
-   server (`uvicorn accountant.pipeline.ingest_server:app`) as a background
+   server (`uvicorn governor.pipeline.ingest_server:app`) as a background
    subprocess.
 2. Checks the SQLite cache. If empty (a new account), POSTs
    `/backfill/start` to import history from Phoenix.

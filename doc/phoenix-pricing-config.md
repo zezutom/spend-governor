@@ -121,7 +121,7 @@ normally edit them. Our `gemini.py` table must agree with those defaults
 3. Phoenix UI → Settings → Models — **only if** reconciliation shows
    Phoenix's defaults are wrong for a model (rare); override there.
 
-Then re-run `uv run python -m accountant.cli.verify_cost` for a token-math
+Then re-run `uv run python -m governor.cli.verify_cost` for a token-math
 sanity check, and re-run the GraphQL reconciliation
 (`getSpanByOtelId(spanId).costSummary` vs our number on the same tokens)
 on a recent trace.
