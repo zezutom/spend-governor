@@ -1,4 +1,4 @@
-"""Semantic cache for the Accountant wrapper.
+"""Semantic cache for the Governor wrapper.
 
 A tool call (e.g. web_search) is served from cache only when its query
 is *semantically equivalent* to a previously executed one — cosine
@@ -22,11 +22,11 @@ import threading
 from google import genai
 
 
-EMBED_MODEL = os.environ.get("ACCOUNTANT_EMBED_MODEL", "text-embedding-005")
+EMBED_MODEL = os.environ.get("GOVERNOR_EMBED_MODEL", "text-embedding-005")
 # Cosine similarity at/above which two queries count as equivalent.
 # 0.93 keeps near-duplicates together while rejecting genuinely
 # different intents. Tunable per policy.
-DEFAULT_THRESHOLD = float(os.environ.get("ACCOUNTANT_CACHE_THRESHOLD", "0.93"))
+DEFAULT_THRESHOLD = float(os.environ.get("GOVERNOR_CACHE_THRESHOLD", "0.93"))
 
 
 _client: genai.Client | None = None

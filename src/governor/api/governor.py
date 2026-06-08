@@ -1,8 +1,8 @@
-"""The autonomous governor — one Accountant watching a FLEET of observed agents.
+"""The autonomous governor — one Governor watching a FLEET of observed agents.
 
 The demo company runs several specialized agents (Support Co-Pilot, Refund
 Auditor, Sales Assistant, Docs Bot), each with one signature cost-waste pattern.
-The Accountant sweeps the fleet on a time-compressed clock: it AUTO-APPLIES the
+The Governor sweeps the fleet on a time-compressed clock: it AUTO-APPLIES the
 safe fixes (cache redundant searches, cap a runaway loop) and ESCALATES the
 risky ones (suppress a maybe-needed call, route to a cheaper model) for a human
 call. Every figure comes from `governor.service` over the real corpus; the
@@ -29,7 +29,7 @@ TICK_SECONDS = 2.5
 PHASE_DWELL = 0.7  # hold a real phase briefly so the loop indicator is legible
 HEARTBEAT_SEC = 2.0  # spine sampling cadence
 # The spine ring buffer must hold the whole window at the heartbeat cadence, else a
-# longer ACCOUNTANT_WALL_WINDOW_SEC evicts the early arc before the window ends.
+# longer GOVERNOR_WALL_WINDOW_SEC evicts the early arc before the window ends.
 _HIST_CAP = max(160, int(WALL_WINDOW_SEC / HEARTBEAT_SEC) + 40)
 
 STEPS = ["OBSERVE", "DIAGNOSE", "DECIDE", "ACT", "VERIFY"]

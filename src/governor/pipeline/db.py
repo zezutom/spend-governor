@@ -1,4 +1,4 @@
-"""SQLite store for the Accountant's real-time pipeline.
+"""SQLite store for the Governor's real-time pipeline.
 
 Three tables matter:
 
@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 DEFAULT_DB_PATH = os.environ.get(
-    "ACCOUNTANT_DB",
+    "GOVERNOR_DB",
     str(Path(__file__).resolve().parents[3] / "data" / "accountant.db"),
 )
 

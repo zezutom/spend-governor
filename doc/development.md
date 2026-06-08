@@ -35,17 +35,17 @@ GOOGLE_GENAI_USE_VERTEXAI=True
 GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
 GOOGLE_CLOUD_LOCATION=us-central1
 
-# Enables the observed agent's real-time fan-out to the Accountant.
+# Enables the observed agent's real-time fan-out to the Governor.
 # Without it, spans go only to Phoenix (and the agent logs a notice).
-ACCOUNTANT_INGEST_URL=http://localhost:8765
+GOVERNOR_INGEST_URL=http://localhost:8765
 ```
 
 `telemetry.py` reads `PHOENIX_API_KEY_OBSERVED_WRITE` and sets it
 as `PHOENIX_API_KEY` for the OTEL exporter. The two-key naming
-reserves room for a separate Accountant read key.
+reserves room for a separate Governor read key.
 
-`ACCOUNTANT_INGEST_URL` turns on the second OTEL exporter that posts
-spans to the Accountant ingest server in real time. Leave it unset to
+`GOVERNOR_INGEST_URL` turns on the second OTEL exporter that posts
+spans to the Governor ingest server in real time. Leave it unset to
 emit to Phoenix only.
 
 ## Vertex AI authentication
@@ -91,7 +91,7 @@ Phoenix (empty cache = new account). See
 the hood.
 
 To feed it live traffic, run the observed agent (next command) with
-`ACCOUNTANT_INGEST_URL` set — the dashboard reflects each new trace
+`GOVERNOR_INGEST_URL` set — the dashboard reflects each new trace
 within ~0.5s.
 
 The ingest server can also be started on its own (e.g. for debugging):
@@ -103,12 +103,12 @@ uv run uvicorn governor.pipeline.ingest_server:app --port 8765
 ### Run the observed agent once
 
 ```bash
-ACCOUNTANT_INGEST_URL=http://localhost:8765 \
+GOVERNOR_INGEST_URL=http://localhost:8765 \
   uv run python -m observed.main "I want a refund for last month's charge."
 ```
 
 Prints the tool sequence and the agent's reply. The trace is emitted
-to Phoenix and (with the env var set) to the Accountant in the
+to Phoenix and (with the env var set) to the Governor in the
 background.
 
 ### Generate a synthetic dataset
@@ -179,7 +179,7 @@ the import order in `observed/main.py` and
   The dashboard spawns it automatically, but if port 8765 is taken by
   another process the spawn is skipped.
 - For live traffic, confirm the observed agent ran with
-  `ACCOUNTANT_INGEST_URL` set — without it, spans only reach Phoenix.
+  `GOVERNOR_INGEST_URL` set — without it, spans only reach Phoenix.
   The agent prints a notice on startup either way.
 - The dashboard reads SQLite at `data/accountant.db`. Deleting it
   forces a fresh new-account backfill on the next dashboard load.

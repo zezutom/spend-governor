@@ -1,6 +1,6 @@
 """Shared store for the wrapper's policies and interventions.
 
-Lives in the same SQLite file as the rest of Agent Accountant (the demo's
+Lives in the same SQLite file as the rest of Spend Governor (the demo's
 shared store) and owns its policy + intervention tables.
 
 - accountant_policies: operator-activated policies. The dashboard writes
@@ -19,10 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-# This module lives at src/accountant/wrapper/store.py, so the repo root
+# This module lives at src/governor/wrapper/store.py, so the repo root
 # (which holds data/accountant.db) is four parents up.
 DB_PATH = os.environ.get(
-    "ACCOUNTANT_DB",
+    "GOVERNOR_DB",
     str(Path(__file__).resolve().parents[3] / "data" / "accountant.db"),
 )
 

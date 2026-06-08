@@ -9,7 +9,7 @@ hand-built.
 Run it with the ingest server up and ingest fan-out on, so the spans land in
 the cache where align/fixture read them:
 
-    ACCOUNTANT_INGEST_URL=http://localhost:8765 \\
+    GOVERNOR_INGEST_URL=http://localhost:8765 \\
         uv run python -m governor.trace_race.capture "I want a refund for order 12345"
 
 It restores the policy override on exit. ~2 live agent runs — Vertex-quota
@@ -60,7 +60,7 @@ def _wait_for_new_trace(before: set[str], *, timeout: float = 90.0, settle: floa
 def capture_pair(ticket: str, customer_id: str = "race-demo") -> dict:
     """Run `ticket` twice (baseline policies-off, governed policies-on),
     capture both trace_ids and both final answer texts. Requires ingest on
-    (ACCOUNTANT_INGEST_URL set + server up) so the spans reach the cache."""
+    (GOVERNOR_INGEST_URL set + server up) so the spans reach the cache."""
     from observed.telemetry import init_telemetry
     init_telemetry()
     from observed.agent import build_agent

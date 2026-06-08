@@ -1,4 +1,4 @@
-"""The autonomous Accountant agent — it reasons over real cost and decides.
+"""The autonomous Governor agent — it reasons over real cost and decides.
 
 No pre-canned text: a Gemini call reads the live workflow state (per-class cost,
 the waste patterns, the levers available with their measured savings, what is
@@ -27,11 +27,11 @@ from pydantic import BaseModel
 from governor import service
 
 
-DEFAULT_MODEL = os.environ.get("ACCOUNTANT_AGENT_MODEL", "gemini-2.5-flash")
-THINKING_BUDGET = int(os.environ.get("ACCOUNTANT_AGENT_THINKING_BUDGET", "512"))
+DEFAULT_MODEL = os.environ.get("GOVERNOR_AGENT_MODEL", "gemini-2.5-flash")
+THINKING_BUDGET = int(os.environ.get("GOVERNOR_AGENT_THINKING_BUDGET", "512"))
 
 _INSTRUCTION = """\
-You are the autonomous Accountant: an agent that governs ANOTHER agent's runtime
+You are the autonomous Governor: an agent that governs ANOTHER agent's runtime
 cost. You watch its live traffic and the cost it is burning, and you decide — on
 your own — what to do about it. The operator does not approve your reasoning;
 they may CORRECT you by vetoing a lever, and you must respect that.

@@ -62,7 +62,7 @@ cat <<EOF
   [ok] DASHBOARD      http://localhost:${UI_PORT}   <- open this in your browser
 
   stream traffic (optional, separate terminal):
-    ACCOUNTANT_INGEST_URL=http://localhost:${INGEST_PORT} uv run python -m observed.generate_dataset 100 1
+    GOVERNOR_INGEST_URL=http://localhost:${INGEST_PORT} uv run python -m observed.generate_dataset 100 1
 
   logs: data/cockpit-{api,ingest,ui}.log
   Ctrl-C to stop all three.

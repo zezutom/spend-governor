@@ -11,7 +11,7 @@ from google.genai import types
 from governor.agent import build_agent
 
 
-APP_NAME = "accountant"
+APP_NAME = "governor"
 USER_ID = "dev"
 DEFAULT_QUESTION = (
     "Analyze the last 24 hours of traces in the agent-accountant "

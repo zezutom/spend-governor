@@ -1,6 +1,6 @@
 """Baseline instruction for the observed agent.
 
-The Accountant wrapper never edits prompts or source — it enforces
+The Governor wrapper never edits prompts or source — it enforces
 economic policy inline at the boundary — so this is read-only: the
 agent simply loads its system prompt here. (An optional
 `data/observed_config.json` can override it for local experiments, but

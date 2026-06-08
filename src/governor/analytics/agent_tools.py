@@ -1,4 +1,4 @@
-"""Agent-facing tools for the Accountant.
+"""Agent-facing tools for the Governor.
 
 These wrap analysis.py and surface compact, structured summaries that
 fit comfortably in Gemini's context. Raw bulk-trace operations are
@@ -82,10 +82,10 @@ def find_cost_anomalies(hours_back: int = 2) -> dict:
 
 
 def write_report(path: str, content: dict) -> dict:
-    """Write the Accountant's findings to a JSON file on disk.
+    """Write the Governor's findings to a JSON file on disk.
 
     Args:
-        path: destination path (e.g. "examples/accountant-report.json").
+        path: destination path (e.g. "examples/governor-report.json").
               Relative paths resolve against the project root.
         content: JSON-serializable dict — typically containing summary,
                  anomalies, and recommendations.

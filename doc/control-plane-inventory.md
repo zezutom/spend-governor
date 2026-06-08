@@ -7,7 +7,7 @@ seam, and records the archive + parity plan, before any code is touched.
 
 ## Headline finding
 
-`import streamlit` appears in **exactly one file**: `src/accountant/ui/dashboard.py`.
+`import streamlit` appears in **exactly one file**: `src/governor/ui/dashboard.py`.
 The entire backend (`pipeline`, `analytics`, `wrapper`, `pricing`, `trace_race`)
 is Streamlit-free. The only entanglement is **view-model compute defined inside
 the dashboard** (Streamlit-free in logic, but living in the UI file). Phase 2
@@ -40,7 +40,7 @@ decomposition, the issue→policy lever mapping, and the live-state/recs loaders
 
 ## Archive
 
-`src/accountant/ui/dashboard.py` → `src/accountant/ui/_archive/dashboard_v5.py`
+`src/governor/ui/dashboard.py` → `src/governor/ui/_archive/dashboard_v5.py`
 (git move, not delete). The only archival adaptation is guarding the trailing
 `main()` call behind `if __name__ == "__main__"` so the module's view-model
 functions can be imported for the parity check without launching the app. The

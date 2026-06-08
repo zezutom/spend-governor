@@ -1,4 +1,4 @@
-"""FastAPI ingest server for the Accountant.
+"""FastAPI ingest server for the Governor.
 
 Fast-path handler: on POST /ingest, the body is inserted as one
 transactional row into span_outbox and we return 200 immediately. No
@@ -10,7 +10,7 @@ Run with:
     uv run uvicorn governor.pipeline.ingest_server:app --port 8000
 
 The observed agent's accountant_exporter posts to /ingest when
-ACCOUNTANT_INGEST_URL is set in its environment.
+GOVERNOR_INGEST_URL is set in its environment.
 """
 
 import asyncio

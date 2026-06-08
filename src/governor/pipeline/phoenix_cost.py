@@ -1,7 +1,7 @@
 """Read Phoenix's computed cost at scale via GraphQL (refactor #2).
 
 Phoenix computes LLM **actual** cost (`costSummary`) from token attributes
-+ its pricing table, and stores our `accountant.*` span attributes. Neither
++ its pricing table, and stores our `governor.*` span attributes. Neither
 is exposed by the `phoenix-client` REST API — both live only in Phoenix's
 GraphQL. This module cursor-paginates the project's spans connection and
 returns per-span cost so the pipeline can make Phoenix the source of truth
@@ -43,13 +43,13 @@ def _endpoint_and_key() -> tuple[str, str]:
     base = os.environ["PHOENIX_COLLECTOR_ENDPOINT"].rstrip("/")
     # Prefer a dedicated read key; fall back to the write key like analysis.py.
     key = (
-        os.environ.get("PHOENIX_API_KEY_ACCOUNTANT_READ")
+        os.environ.get("PHOENIX_API_KEY_GOVERNOR_READ")
         or os.environ["PHOENIX_API_KEY_OBSERVED_WRITE"]
     )
     return base + "/graphql", key
 
 
-def _accountant_savings(attributes) -> float:
+def _governor_savings(attributes) -> float:
     """Pull accountant.cost.savings_usd out of the span's attributes blob
     (Phoenix returns `attributes` as a JSON string)."""
     if isinstance(attributes, str):
@@ -59,7 +59,7 @@ def _accountant_savings(attributes) -> float:
             return 0.0
     if not isinstance(attributes, dict):
         return 0.0
-    cost = (attributes.get("accountant") or {}).get("cost") or {}
+    cost = (attributes.get("governor") or {}).get("cost") or {}
     try:
         return float(cost.get("savings_usd") or 0.0)
     except (TypeError, ValueError):
@@ -231,7 +231,7 @@ def fetch_span_costs(
                     "span_kind": node.get("spanKind"),
                     "phoenix_node_id": node.get("id"),
                     "phoenix_cost_usd": total.get("cost"),
-                    "savings_usd": _accountant_savings(node.get("attributes")),
+                    "savings_usd": _governor_savings(node.get("attributes")),
                 })
                 if len(out) >= max_spans:
                     break

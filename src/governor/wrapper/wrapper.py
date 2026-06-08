@@ -1,9 +1,9 @@
-"""The wrapper — Agent Accountant's enforcement plane.
+"""The wrapper — Spend Governor's enforcement plane.
 
 Sits in the observed agent's call path (here as in-process tool wrappers
 + ADK callbacks; in production a network gateway the agent's traffic
 routes through). On operator-activated policies it intervenes in real
-time and annotates every span it handles with the `accountant.*` schema
+time and annotates every span it handles with the `governor.*` schema
 (see `doc/instrumentation-schema.md`), so savings are independently
 verifiable in the customer's own Phoenix traces.
 
@@ -54,21 +54,21 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 # Per-async-task isolation so concurrent tickets don't bleed into each
 # other's contextvars.
 _task_class: contextvars.ContextVar = contextvars.ContextVar(
-    "accountant_task_class", default=None
+    "governor_task_class", default=None
 )
 _route_decision: contextvars.ContextVar = contextvars.ContextVar(
-    "accountant_route_decision", default=None
+    "governor_route_decision", default=None
 )
 # Trace accumulator tracks **savings only**. Total baseline / actual
 # can't be assembled at finalization (Phoenix hasn't computed LLM actuals
 # by then) — they're recovered at query time from Phoenix's trace cost +
 # the per-span `accountant.cost.actual_usd` (tools) + this savings field.
 _trace_acc: contextvars.ContextVar = contextvars.ContextVar(
-    "accountant_trace_acc", default=None
+    "governor_trace_acc", default=None
 )
 # Per-trace tool-call tally, so `limit_tool_calls` can cap a tool at N/trace.
 _tool_calls: contextvars.ContextVar = contextvars.ContextVar(
-    "accountant_tool_calls", default=None
+    "governor_tool_calls", default=None
 )
 
 _CACHE = SemanticCache()

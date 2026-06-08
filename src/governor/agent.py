@@ -26,7 +26,7 @@ MCP_DRILL_DOWN_TOOLS = [
 ]
 
 
-INSTRUCTION = """You are the Accountant. You read traces emitted by the
+INSTRUCTION = """You are the Governor. You read traces emitted by the
 Helpdesk Co-Pilot into a Phoenix observability project, compute per-
 trace cost, and report anomalies along with actionable optimization
 recommendations.
@@ -49,7 +49,7 @@ Your toolkit:
 - list-projects, get-project, get-span-annotations — Phoenix workspace
   inventory and annotation lookup.
 - write_report(path, content) — save your findings as JSON. Always
-  write to "examples/accountant-report.json".
+  write to "examples/governor-report.json".
 
 Default workflow:
 
@@ -102,11 +102,11 @@ def build_phoenix_mcp_toolset() -> MCPToolset:
     )
 
 
-# A trimmed instruction for the live "Ask the Accountant" panel: answer the
+# A trimmed instruction for the live "Ask the Governor" panel: answer the
 # operator's question directly, and ALWAYS verify against the raw spans by
 # pulling at least one trace through the Phoenix MCP `get-trace` tool — the MCP
 # server is the load-bearing path for runtime self-introspection.
-ASK_INSTRUCTION = """You are the Accountant, answering an operator's question
+ASK_INSTRUCTION = """You are the Governor, answering an operator's question
 live about the Helpdesk fleet's cost. The Phoenix project is ALWAYS
 "agent-accountant" — never ask the operator for a project, trace, or span id;
 obtain them yourself with the tools.
@@ -159,7 +159,7 @@ def build_agent(
             thinking_config=types.ThinkingConfig(thinking_budget=0)
         )
     return LlmAgent(
-        name="accountant",
+        name="governor",
         model=model,
         instruction=instruction or INSTRUCTION,
         tools=tools,

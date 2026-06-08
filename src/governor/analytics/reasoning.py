@@ -32,7 +32,7 @@ from governor.pipeline.db import get_meta, set_meta, upsert_recommendation
 
 log = logging.getLogger(__name__)
 
-REASONING_MODEL = os.environ.get("ACCOUNTANT_REASONING_MODEL", "gemini-2.5-pro")
+REASONING_MODEL = os.environ.get("GOVERNOR_REASONING_MODEL", "gemini-2.5-pro")
 
 # Re-reason an existing anomaly only if its magnitude grew or shrank by
 # at least this factor since the last time Gemini looked at it — avoids
@@ -46,12 +46,12 @@ _in_flight: set[str] = set()
 _client: genai.Client | None = None
 
 
-# Context for Gemini: the Accountant is a RUNTIME WRAPPER. It does not
+# Context for Gemini: the Governor is a RUNTIME WRAPPER. It does not
 # edit prompts or touch source — it enforces economic policy inline at a
 # gateway the observed agent's tool/LLM traffic flows through. The
 # operator activates a policy; the gateway enforces it in real time.
 WRAPPER_CONTEXT = """\
-You advise Agent Accountant, a runtime cost wrapper for AI agents. The
+You advise Spend Governor, a runtime cost wrapper for AI agents. The
 wrapper sits inline (an API gateway the agent's tool and model calls route through)
 and enforces economic policies in real time — WITHOUT editing prompts or
 accessing source. Available policy types:
@@ -111,7 +111,7 @@ def _issue_changed(sig: str, magnitude: float, reasoned: dict) -> bool:
 
 
 def _build_prompt(issue: dict) -> str:
-    return f"""You advise Agent Accountant, a runtime cost wrapper for AI agents. A \
+    return f"""You advise Spend Governor, a runtime cost wrapper for AI agents. A \
 detector flagged a costly execution pattern and quantified the savings \
 of a runtime policy. Write the operator-facing rationale.
 

@@ -44,7 +44,7 @@ RUN uv sync --frozen --no-dev
 
 # Runtime config: writable DB in /tmp (Cloud Run fs is read-only), call the
 # MCP binary directly, Gemini via API key (set GOOGLE_API_KEY at deploy).
-ENV ACCOUNTANT_DB=/tmp/accountant.db \
+ENV GOVERNOR_DB=/tmp/accountant.db \
     PHOENIX_MCP_COMMAND=phoenix-mcp \
     GOOGLE_GENAI_USE_VERTEXAI=false \
     PORT=8080

@@ -31,7 +31,7 @@ These are non-negotiable. Any generated code must respect them.
 
 ## Architecture in one paragraph
 
-Accountant Agent is **AI Runtime FinOps**: a runtime economic governor
+Governor Agent is **AI Runtime FinOps**: a runtime economic governor
 for multi-agent AI systems. It does not edit prompts or touch the
 observed agent's source — enterprises won't grant that access. It
 operates in two planes. The **learning plane** reads the observed
@@ -44,7 +44,7 @@ observed agent's outbound tool and LLM traffic flows through; on
 operator-activated policies it intervenes in real time — suppressing
 redundant tool calls and serving a *semantically-equivalent* cache,
 routing simple requests to cheaper models, capping tool invocations,
-preventing wasteful loops — and the Accountant re-measures from traces
+preventing wasteful loops — and the Governor re-measures from traces
 to prove the cost delta with quality held. The **observed agent** is a
 small customer-support agent (resolves helpdesk tickets, calls Gemini +
 a few tools) used as the demo target; its traffic is routed through the
@@ -79,7 +79,7 @@ If those aren't recorded, propose them in writing first.
   application. The MCP server's role should be obvious in the code,
   the architecture, and the video.
 - **Keep the agent loop visible.** The hackathon rule is to "move
-  beyond chat." The Accountant must plan, use tools (Arize MCP +
+  beyond chat." The Governor must plan, use tools (Arize MCP +
   config-write), and execute — and the demo must show this, not
   abstract it away behind a chat UI.
 - **The cost-attribution math must be auditable.** Every per-trace
@@ -94,7 +94,7 @@ When asked to help with demo content:
 - **3 minutes hard cap.** Only the first 3 minutes are evaluated.
 - **English (or English subtitles).** No exceptions.
 - **Show real functionality.** No "imagine if…" hand-waving. The
-  observed agent must actually run; the Accountant must actually
+  observed agent must actually run; the Governor must actually
   read real traces; the optimization must actually change behavior
   and produce a measurable before/after delta.
 - **The first 30 seconds is critical.** The premise (an agent
@@ -103,12 +103,12 @@ When asked to help with demo content:
 
 ## Repository conventions
 
-- `src/accountant/` — the Accountant agent code.
-- `src/observed/` — the demo support agent the Accountant monitors.
+- `src/governor/` — the Governor agent code.
+- `src/observed/` — the demo support agent the Governor monitors.
 - `infra/` — GCP deployment configs (Terraform / gcloud scripts /
   Cloud Run configs).
 - `examples/` — sample traces, sample config files, sample
-  Accountant outputs.
+  Governor outputs.
 - `doc/` — public-facing documentation, including architecture
   overview.
 - `LICENSE` — MIT.

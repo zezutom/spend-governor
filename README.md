@@ -1,4 +1,4 @@
-# Agent Accountant
+# Spend Governor
 
 **AI Runtime FinOps — a FinOps platform that governs AI spend at runtime.
 It stops wasteful AI spend as it happens, and proves the savings from
@@ -12,7 +12,7 @@ A submission to the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.dev
 
 **▶ [agent-accountant-835758104453.us-central1.run.app](https://agent-accountant-835758104453.us-central1.run.app)** — the cockpit, running on Google Cloud Run.
 
-Open it and watch the Accountant govern a **fleet of four AI agents** on a
+Open it and watch the Governor govern a **fleet of four AI agents** on a
 time-compressed clock (disclosed as *"last 12h · time-compressed"*):
 
 1. It **auto-applies** the safe fixes — semantic-cache a redundant search loop,
@@ -20,7 +20,7 @@ time-compressed clock (disclosed as *"last 12h · time-compressed"*):
 2. It **escalates** the answer-affecting ones to you. Click **arm it**, or open
    the **debugger** to replay the change across real conversations and see the
    held/degraded split (a real neutral-judge eval panel) *before* you commit.
-3. Click any agent → **🔍 ask the accountant**: the real ADK agent calls the
+3. Click any agent → **🔍 ask the governor**: the real ADK agent calls the
    **Phoenix MCP server at runtime** to pull a real trace and explain the waste,
    grounded in the spans — with trace/span ids that link straight into Phoenix.
 
@@ -38,7 +38,7 @@ over-powered model answering trivial requests, runaway tool loops. The
 spend grows; nobody can point at *where* or stop it without an
 engineering project.
 
-Agent Accountant is **not** an analytics dashboard. It's a runtime
+Spend Governor is **not** an analytics dashboard. It's a runtime
 FinOps **platform** whose enforcement plane is a thin **wrapper** in
 front of your LLM/tool calls. It learns where the waste is from your
 traces, then intervenes in real time at that wrapper your agents'
@@ -111,9 +111,9 @@ gateway — not per-agent changes.
 
 **The Arize/Phoenix MCP server is load-bearing two ways.** The learning
 pipeline reads traces in bulk via the Phoenix SDK/GraphQL to attach cost and
-detect waste. And the Accountant — a Google ADK agent with the Phoenix MCP
+detect waste. And the Governor — a Google ADK agent with the Phoenix MCP
 server registered as a tool — **introspects its own operational data at
-runtime**: in the *Ask the Accountant* panel it calls `get-trace` /
+runtime**: in the *Ask the Governor* panel it calls `get-trace` /
 `get-span-annotations` live to pull a real trace and ground its answer in the
 spans. That agentic MCP loop (plan → call MCP → explain) is visible on screen,
 not buried in code.
@@ -125,7 +125,7 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 
 ## Built with
 
-- [Google ADK](https://github.com/google/adk-python) + [Gemini](https://deepmind.google/technologies/gemini/) — the Accountant and the observed fleet are ADK agents (Gemini embeddings power the semantic cache)
+- [Google ADK](https://github.com/google/adk-python) + [Gemini](https://deepmind.google/technologies/gemini/) — the Governor and the observed fleet are ADK agents (Gemini embeddings power the semantic cache)
 - [Arize / Phoenix](https://phoenix.arize.com/) — OTEL traces via OpenInference instrumentation; the learning signal, **introspected at runtime through the Phoenix MCP server**
 - FastAPI + SQLite — the gateway, control-plane API, and store
 - React (Vite) — the operator cockpit (SSE-driven, live)
@@ -138,16 +138,16 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 ```
 .
 ├── src/
-│   ├── accountant/      Learning plane (cost model, detection, savings,
+│   ├── governor/      Learning plane (cost model, detection, savings,
 │   │                    verification, ingest, dashboard) + wrapper/ —
 │   │                    the enforcement plane (semantic cache, tool
 │   │                    interception, model routing, policy store)
-│   │                    Also accountant/agent.py — the ADK agent with the
-│   │                    Phoenix MCP toolset (the "Ask the Accountant" panel)
+│   │                    Also governor/agent.py — the ADK agent with the
+│   │                    Phoenix MCP toolset (the "Ask the Governor" panel)
 │   └── observed/        The observed agent fleet (the governed targets)
 ├── web/                 React (Vite) operator cockpit (the dashboard)
 ├── infra/               Cloud Run deploy (deploy.sh / teardown.sh); Dockerfile at root
-├── examples/            Sample traces and Accountant outputs
+├── examples/            Sample traces and Governor outputs
 ├── doc/
 │   ├── architecture.md      Two-plane design overview
 │   ├── realtime-pipeline.md Ingest, wrapper, policies, verification
@@ -185,14 +185,14 @@ and the React cockpit (Vite, `:5173`). **Open http://localhost:5173.**
 
 ### What to try
 
-1. The cockpit opens mid-crisis. The Accountant reads the fleet's traces,
+1. The cockpit opens mid-crisis. The Governor reads the fleet's traces,
    **auto-applies** the safe fixes (cache a redundant search loop, cap a runaway
    loop), and **$/message** steps down on the value spine.
 2. When a fix is answer-affecting (route to a cheaper model), it **escalates to
    you** — click **arm it**, or open the **debugger** to replay the change across
    N real conversations and see the held/degraded split *before* you commit. The
    eval is a real neutral-judge panel (gemini-2.5-pro, majority vote).
-3. Click any agent → **🔍 ask the accountant**: the real ADK agent calls the
+3. Click any agent → **🔍 ask the governor**: the real ADK agent calls the
    **Phoenix MCP server** at runtime to pull a real trace and explain the waste,
    grounded in the spans — trace/span ids link straight into Phoenix.
 

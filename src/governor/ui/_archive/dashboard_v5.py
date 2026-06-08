@@ -1,4 +1,4 @@
-"""Streamlit dashboard for the Accountant.
+"""Streamlit dashboard for the Governor.
 
 Single entry point — running this file spins up the entire stack:
 
@@ -11,7 +11,7 @@ Single entry point — running this file spins up the entire stack:
    active recommendation cards. Auto-refreshes every 2 seconds.
 
 Run:
-    uv run streamlit run src/accountant/ui/dashboard.py
+    uv run streamlit run src/governor/ui/dashboard.py
 """
 
 import json
@@ -34,7 +34,7 @@ from governor.pipeline.db import connect, get_meta
 
 
 INGEST_HOST = "127.0.0.1"
-INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
+INGEST_PORT = int(os.environ.get("GOVERNOR_INGEST_PORT", "8765"))
 INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}"
 LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
@@ -44,7 +44,7 @@ BASELINE_CLASS = "password_reset"
 
 
 st.set_page_config(
-    page_title="Agent Accountant",
+    page_title="Spend Governor",
     layout="wide",
 )
 
@@ -700,7 +700,7 @@ def _render_trace_race() -> None:
     fx = load_fixture()
     if not fx:
         st.info("**Seeded race pending.** Capture one with ingest on:\n\n"
-                "`ACCOUNTANT_INGEST_URL=http://localhost:8765 uv run python -m "
+                "`GOVERNOR_INGEST_URL=http://localhost:8765 uv run python -m "
                 "governor.trace_race.capture \"<a refund ticket>\"`\n\n"
                 "It runs the ticket policies-off (baseline) then policies-on (governed), "
                 "captures both real traces, and drops them here.")
@@ -948,7 +948,7 @@ def render_dashboard() -> None:
 
 
 def main() -> None:
-    st.title("Agent Accountant")
+    st.title("Spend Governor")
     st.caption("A runtime economic governor for AI agents — mechanism and proof, measured from Phoenix.")
     render_dashboard()
 

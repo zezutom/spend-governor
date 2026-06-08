@@ -1,11 +1,11 @@
-"""Custom OpenTelemetry span exporter that POSTs spans to the Accountant.
+"""Custom OpenTelemetry span exporter that POSTs spans to the Governor.
 
 This is the second exporter on the observed agent's TracerProvider — the
 first stays Phoenix Cloud (historical store, drill-down), this one fans
-out the same spans to the Accountant's real-time ingest endpoint.
+out the same spans to the Governor's real-time ingest endpoint.
 
-Failure semantics: the Accountant's outbox is durable, but this network
-hop is best-effort. If the Accountant ingest server is down, the export
+Failure semantics: the Governor's outbox is durable, but this network
+hop is best-effort. If the Governor ingest server is down, the export
 fails and OTel logs a warning — we don't block the observed agent.
 Phoenix still receives the spans regardless. For an MVP this is
 acceptable; production would need a local persistent queue on the
@@ -78,7 +78,7 @@ def _serialize_span(span: ReadableSpan) -> dict:
 
 
 class AccountantHTTPExporter(SpanExporter):
-    """POSTs spans as JSON to the Accountant ingest server."""
+    """POSTs spans as JSON to the Governor ingest server."""
 
     def __init__(self, endpoint: str, timeout: float = 2.0):
         self._endpoint = endpoint.rstrip("/") + "/ingest"
@@ -90,14 +90,14 @@ class AccountantHTTPExporter(SpanExporter):
             resp = self._client.post(self._endpoint, json=payload)
             if resp.status_code >= 300:
                 log.warning(
-                    "accountant export non-2xx %s: %s",
+                    "governor export non-2xx %s: %s",
                     resp.status_code,
                     resp.text[:200],
                 )
                 return SpanExportResult.FAILURE
             return SpanExportResult.SUCCESS
         except Exception as e:
-            log.warning("accountant export failed: %s", e)
+            log.warning("governor export failed: %s", e)
             return SpanExportResult.FAILURE
 
     def shutdown(self) -> None:
@@ -108,18 +108,18 @@ class AccountantHTTPExporter(SpanExporter):
 
 
 def build_accountant_exporter() -> AccountantHTTPExporter | None:
-    """Return an exporter if ACCOUNTANT_INGEST_URL is set, else None."""
-    endpoint = os.environ.get("ACCOUNTANT_INGEST_URL")
+    """Return an exporter if GOVERNOR_INGEST_URL is set, else None."""
+    endpoint = os.environ.get("GOVERNOR_INGEST_URL")
     if not endpoint:
         log.warning(
-            "ACCOUNTANT_INGEST_URL is not set — observed-agent spans will "
-            "only go to Phoenix, not the Accountant. Set the env var "
+            "GOVERNOR_INGEST_URL is not set — observed-agent spans will "
+            "only go to Phoenix, not the Governor. Set the env var "
             "(e.g. http://localhost:8765) to enable the live fan-out."
         )
         print(
-            "[telemetry] ACCOUNTANT_INGEST_URL not set; Accountant fan-out disabled.",
+            "[telemetry] GOVERNOR_INGEST_URL not set; Governor fan-out disabled.",
             flush=True,
         )
         return None
-    print(f"[telemetry] Accountant fan-out → {endpoint}", flush=True)
+    print(f"[telemetry] Governor fan-out → {endpoint}", flush=True)
     return AccountantHTTPExporter(endpoint=endpoint)

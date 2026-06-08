@@ -6,7 +6,7 @@ UI. We don't duplicate that work.
 
 This module is the primitive for the OTHER cost number the product needs:
 the COUNTERFACTUAL — what an LLM call WOULD have cost without an
-Accountant policy applied (e.g. on the original, pre-routed model). The
+Governor policy applied (e.g. on the original, pre-routed model). The
 wrapper writes `accountant.cost.baseline_usd` and
 `accountant.cost.savings_usd` using these functions; the schema doc
 (`doc/instrumentation-schema.md`) is the contract.

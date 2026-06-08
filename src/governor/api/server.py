@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Agent Accountant — Control Plane API", lifespan=lifespan)
+app = FastAPI(title="Spend Governor — Control Plane API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev
@@ -70,7 +70,7 @@ async def stream():
 
 @app.get("/api/ask")
 async def ask(q: str | None = None, agent: str | None = None, session: str | None = None):
-    """Live 'Ask the Accountant': runs the real ADK agent, which introspects its
+    """Live 'Ask the Governor': runs the real ADK agent, which introspects its
     own Phoenix operational data at runtime via the Phoenix MCP server, and
     streams each tool-call + the answer (SSE). `agent` seeds a per-agent
     investigation; `q` is a free-form question."""

@@ -1,6 +1,6 @@
 """One-shot Phoenix backfill for onboarding.
 
-When the Accountant ingest server starts and finds an empty spans cache
+When the Governor ingest server starts and finds an empty spans cache
 (a first-time / new-tenant install), this module pulls historical spans
 from Phoenix and writes them into the local SQLite cache so the
 operator sees meaningful state immediately rather than an empty
@@ -40,19 +40,19 @@ from governor.pipeline.worker import _row_for_span, reconcile_from_phoenix
 log = logging.getLogger(__name__)
 
 
-# If ACCOUNTANT_BACKFILL_HOURS is set, use a fixed window. Otherwise the
+# If GOVERNOR_BACKFILL_HOURS is set, use a fixed window. Otherwise the
 # default is "exhaustive": walk backwards in time until we see
 # CONSECUTIVE_EMPTY_STOP chunks in a row (end of project history) or
 # hit the HARD_FLOOR_DAYS safety limit.
-BACKFILL_HOURS_ENV = os.environ.get("ACCOUNTANT_BACKFILL_HOURS")
+BACKFILL_HOURS_ENV = os.environ.get("GOVERNOR_BACKFILL_HOURS")
 CHUNK_MINUTES = 10
 SPAN_LIMIT_PER_CHUNK = 5000
 # 250 × 10-min chunks = ~42 hours of empty before we conclude the
 # project history has truly ended. Generous enough to bridge overnight
 # idle periods or a weekend; tight enough that fresh tenants don't
 # wait through 90 days of empties.
-CONSECUTIVE_EMPTY_STOP = int(os.environ.get("ACCOUNTANT_BACKFILL_EMPTY_STOP", "250"))
-HARD_FLOOR_DAYS = int(os.environ.get("ACCOUNTANT_BACKFILL_FLOOR_DAYS", "90"))
+CONSECUTIVE_EMPTY_STOP = int(os.environ.get("GOVERNOR_BACKFILL_EMPTY_STOP", "250"))
+HARD_FLOOR_DAYS = int(os.environ.get("GOVERNOR_BACKFILL_FLOOR_DAYS", "90"))
 
 
 # Module-level handle so /backfill/start is idempotent — if a task is

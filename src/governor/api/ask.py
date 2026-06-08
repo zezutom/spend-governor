@@ -1,7 +1,7 @@
-"""Live "Ask the Accountant" — runs the real ADK agent with the Phoenix MCP
+"""Live "Ask the Governor" — runs the real ADK agent with the Phoenix MCP
 toolset and streams its tool-calls + answer.
 
-This is the load-bearing MCP path: on an operator's question the Accountant
+This is the load-bearing MCP path: on an operator's question the Governor
 agent introspects its OWN operational data in Phoenix at runtime by calling the
 Phoenix MCP server (get-trace, list-projects, get-span-annotations, …) through
 its ADK tool-loop. The cockpit renders each MCP call as a visible step, so the
@@ -19,12 +19,12 @@ from google.genai import types
 
 from governor.agent import ASK_INSTRUCTION, MCP_DRILL_DOWN_TOOLS, build_agent
 
-APP_NAME = "accountant-ask"
+APP_NAME = "governor-ask"
 USER_ID = "operator"
 _MCP_TOOLS = set(MCP_DRILL_DOWN_TOOLS)
 # Flash keeps the live panel snappy; pro is overkill for "fetch a trace and
-# explain it". Override with ACCOUNTANT_ASK_MODEL if you want pro for the demo.
-ASK_MODEL = os.environ.get("ACCOUNTANT_ASK_MODEL", "gemini-2.5-flash")
+# explain it". Override with GOVERNOR_ASK_MODEL if you want pro for the demo.
+ASK_MODEL = os.environ.get("GOVERNOR_ASK_MODEL", "gemini-2.5-flash")
 
 # One warmed runner (and its MCP subprocess) reused across questions; each
 # question gets its own session, so concurrent asks don't share state.

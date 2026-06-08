@@ -1,8 +1,8 @@
 # Deploy
 
-Agent Accountant runs as **one Cloud Run service**: FastAPI serves the built
+Spend Governor runs as **one Cloud Run service**: FastAPI serves the built
 React cockpit, the `/api` control plane, and spawns the Phoenix MCP server for
-the live "Ask the Accountant" introspection.
+the live "Ask the Governor" introspection.
 
 ## One-time
 
@@ -41,7 +41,7 @@ On success it prints the URL; smoke-test with `curl -fsS <URL>/health`.
   `phoenix-mcp` binary globally and bakes the corpus snapshot (`data/accountant.db`).
 - **Read-only filesystem**: `infra/entrypoint.sh` copies the corpus to
   `/tmp/accountant.db` (the one writable path) on each cold start, and
-  `ACCOUNTANT_DB` points there. Every instance therefore boots from a clean demo.
+  `GOVERNOR_DB` points there. Every instance therefore boots from a clean demo.
 - **MCP without npx**: the agent calls the globally-installed `phoenix-mcp`
   binary directly (`PHOENIX_MCP_COMMAND=phoenix-mcp`) — npx would need a writable
   cache.

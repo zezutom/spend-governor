@@ -13,7 +13,7 @@ recommend-only and never enacted; the forward proposal tiers down to a
 quality-floor guard. Every figure is the real measured delta from the service
 layer; the agent's prose carries no numbers.
 
-    uv run streamlit run src/accountant/ui/dashboard.py
+    uv run streamlit run src/governor/ui/dashboard.py
 """
 
 import json
@@ -35,7 +35,7 @@ from governor import service
 from governor.optimizer import agent
 
 INGEST_HOST = "127.0.0.1"
-INGEST_PORT = int(os.environ.get("ACCOUNTANT_INGEST_PORT", "8765"))
+INGEST_PORT = int(os.environ.get("GOVERNOR_INGEST_PORT", "8765"))
 INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}"
 LOG_PATH = Path(__file__).resolve().parents[3] / "data" / "ingest_server.log"
 
@@ -45,7 +45,7 @@ _TICK_SECONDS = 5.0
 _NODE_FOR = {"cache_tool:web_search": "tools", "cache_tool:kb_lookup": "tools",
              "route_model:simple": "model"}
 
-st.set_page_config(page_title="Agent Accountant — Control Plane", layout="wide")
+st.set_page_config(page_title="Spend Governor — Control Plane", layout="wide")
 
 
 # --- ingest bootstrap ------------------------------------------------------
