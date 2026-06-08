@@ -8,6 +8,28 @@ A submission to the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.dev
 
 ---
 
+## Live demo
+
+**▶ [agent-accountant-835758104453.us-central1.run.app](https://agent-accountant-835758104453.us-central1.run.app)** — the cockpit, running on Google Cloud Run.
+
+Open it and watch the Accountant govern a **fleet of four AI agents** on a
+time-compressed clock (disclosed as *"last 12h · time-compressed"*):
+
+1. It **auto-applies** the safe fixes — semantic-cache a redundant search loop,
+   cap a runaway tool loop — and **$/message** steps down on the value spine.
+2. It **escalates** the answer-affecting ones to you. Click **arm it**, or open
+   the **debugger** to replay the change across real conversations and see the
+   held/degraded split (a real neutral-judge eval panel) *before* you commit.
+3. Click any agent → **🔍 ask the accountant**: the real ADK agent calls the
+   **Phoenix MCP server at runtime** to pull a real trace and explain the waste,
+   grounded in the spans — with trace/span ids that link straight into Phoenix.
+
+Everything is real — real ADK agents, real OTEL traces, real eval verdicts, real
+measured savings. The only scripted thing is *when* each problem surfaces, and
+the clock says so.
+
+---
+
 ## What this does
 
 Production AI agents quietly burn money on economically irrational
@@ -87,6 +109,15 @@ intercept calls (it's post-hoc), so enforcement happens at the inline
 gateway. Integration is one boundary — route traffic through the
 gateway — not per-agent changes.
 
+**The Arize/Phoenix MCP server is load-bearing two ways.** The learning
+pipeline reads traces in bulk via the Phoenix SDK/GraphQL to attach cost and
+detect waste. And the Accountant — a Google ADK agent with the Phoenix MCP
+server registered as a tool — **introspects its own operational data at
+runtime**: in the *Ask the Accountant* panel it calls `get-trace` /
+`get-span-annotations` live to pull a real trace and ground its answer in the
+spans. That agentic MCP loop (plan → call MCP → explain) is visible on screen,
+not buried in code.
+
 See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 [`doc/realtime-pipeline.md`](./doc/realtime-pipeline.md) for the runtime path.
 
@@ -94,11 +125,11 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 
 ## Built with
 
-- [Google ADK](https://github.com/google/adk-python) + [Gemini](https://deepmind.google/technologies/gemini/) (incl. Gemini embeddings for the semantic cache)
-- [Arize / Phoenix](https://phoenix.arize.com/) — traces, the learning signal (read via SDK + MCP)
-- FastAPI + SQLite (the gateway + store; Cloud Run / a managed queue / BigQuery in production)
-- Streamlit (the operator dashboard)
-- [uv](https://docs.astral.sh/uv/) · MIT licensed
+- [Google ADK](https://github.com/google/adk-python) + [Gemini](https://deepmind.google/technologies/gemini/) — the Accountant and the observed fleet are ADK agents (Gemini embeddings power the semantic cache)
+- [Arize / Phoenix](https://phoenix.arize.com/) — OTEL traces via OpenInference instrumentation; the learning signal, **introspected at runtime through the Phoenix MCP server**
+- FastAPI + SQLite — the gateway, control-plane API, and store
+- React (Vite) — the operator cockpit (SSE-driven, live)
+- Deployed on **Google Cloud Run** · [uv](https://docs.astral.sh/uv/) · MIT licensed
 
 ---
 
@@ -111,7 +142,11 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 │   │                    verification, ingest, dashboard) + wrapper/ —
 │   │                    the enforcement plane (semantic cache, tool
 │   │                    interception, model routing, policy store)
-│   └── observed/        The demo customer-support agent (governed target)
+│   │                    Also accountant/agent.py — the ADK agent with the
+│   │                    Phoenix MCP toolset (the "Ask the Accountant" panel)
+│   └── observed/        The observed agent fleet (the governed targets)
+├── web/                 React (Vite) operator cockpit (the dashboard)
+├── infra/               Cloud Run deploy (deploy.sh / teardown.sh); Dockerfile at root
 ├── examples/            Sample traces and Accountant outputs
 ├── doc/
 │   ├── architecture.md      Two-plane design overview
@@ -126,42 +161,45 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 
 ---
 
-## Running it
+## Running it locally
 
 ### Prerequisites
 
-- Google Cloud project with billing + Vertex AI enabled, `gcloud` authenticated (ADC)
 - A Phoenix Cloud account + API key
-- [uv](https://docs.astral.sh/uv/)
+- A Gemini API key (`GOOGLE_API_KEY`) — or Vertex AI via `gcloud` ADC
+- [uv](https://docs.astral.sh/uv/) and **Node 20+** (the cockpit UI and the
+  Phoenix MCP server both need Node)
 
+Copy `.env.example` to `.env` and fill in `PHOENIX_API_KEY_OBSERVED_WRITE`,
+`PHOENIX_COLLECTOR_ENDPOINT`, `PHOENIX_PROJECT_NAME`, and `GOOGLE_API_KEY`.
 Full setup is in [`doc/development.md`](./doc/development.md).
 
 ### Launch (one command)
 
 ```bash
-uv run streamlit run src/accountant/ui/dashboard.py
+./scripts/start-cockpit.sh
 ```
 
-The dashboard boots the whole stack: it spawns the gateway/ingest server,
-imports your trace history from Phoenix on first run, and opens at
-`http://localhost:8501`.
+This starts the control-plane API (`:8800`), the trace-ingest server (`:8765`),
+and the React cockpit (Vite, `:5173`). **Open http://localhost:5173.**
 
-### Try it
+### What to try
 
-1. The dashboard leads with **avoidable AI waste ($/mo)** and a
-   signal-first breakdown of where the money goes.
-2. Click **Activate caching** (and/or **Activate routing**) on a policy card.
-3. Send live traffic through the governed agent:
-   ```bash
-   ACCOUNTANT_INGEST_URL=http://localhost:8765 \
-     uv run python -m observed.generate_dataset 40 2
-   ```
-4. Watch **Saved so far** climb, and each active card flip to
-   **"Verified from your traces: $X → $Y per ticket (−Z%)"** — proven,
-   not claimed.
-5. In Phoenix, filter on `accountant.cache_hit` / `accountant.modification == 'model_swap'`
-   to see exactly which calls were optimized — the cheaper model and the
-   suppressed searches, in the system of record.
+1. The cockpit opens mid-crisis. The Accountant reads the fleet's traces,
+   **auto-applies** the safe fixes (cache a redundant search loop, cap a runaway
+   loop), and **$/message** steps down on the value spine.
+2. When a fix is answer-affecting (route to a cheaper model), it **escalates to
+   you** — click **arm it**, or open the **debugger** to replay the change across
+   N real conversations and see the held/degraded split *before* you commit. The
+   eval is a real neutral-judge panel (gemini-2.5-pro, majority vote).
+3. Click any agent → **🔍 ask the accountant**: the real ADK agent calls the
+   **Phoenix MCP server** at runtime to pull a real trace and explain the waste,
+   grounded in the spans — trace/span ids link straight into Phoenix.
+
+### Deploy your own
+
+`./infra/deploy.sh` builds and deploys the whole thing as a single Cloud Run
+service. See [`infra/README.md`](./infra/README.md).
 
 ---
 
