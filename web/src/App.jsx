@@ -340,12 +340,28 @@ const ASK_SUGGESTIONS = [
   'Find the biggest cost anomaly and verify it against one real trace.',
   'Is the repeated web_search on the refund auditor genuine waste?',
 ]
+// Turn trace ids the agent cites (32-hex or dashed-UUID) into Phoenix deep-links.
+function linkifyTraces(text, base) {
+  if (!base || !text) return text
+  const re = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})\b/gi
+  const out = []; let last = 0, m, i = 0
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index))
+    const hex = m[0].replace(/-/g, '')
+    out.push(<a key={i++} href={`${base}/redirects/traces/${hex}`} target="_blank" rel="noreferrer"
+      style={{ color: MCP, fontWeight: 600, fontFamily: 'ui-monospace, monospace', wordBreak: 'break-all' }}>{m[0]} ↗</a>)
+    last = m.index + m[0].length
+  }
+  if (last < text.length) out.push(text.slice(last))
+  return out
+}
 function AskPanel({ open, state, onClose, onDebug }) {
   const [q, setQ] = useState('')
   const [steps, setSteps] = useState([])   // interleaved tool calls + results
   const [answer, setAnswer] = useState('')
   const [status, setStatus] = useState('idle')  // idle | running | done | error
   const [question, setQuestion] = useState(null)
+  const [phoenixBase, setPhoenixBase] = useState('')
   const esRef = useRef(null)
   const bodyRef = useRef(null)
 
@@ -355,7 +371,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
     const es = new EventSource(url); esRef.current = es
     es.onmessage = (e) => {
       const s = JSON.parse(e.data)
-      if (s.type === 'question') setQuestion(s.question)
+      if (s.type === 'question') { setQuestion(s.question); if (s.phoenix_base) setPhoenixBase(s.phoenix_base) }
       else if (s.type === 'tool_call') setSteps((x) => {
         // flash sometimes emits the same call twice in parallel — show it once
         const last = x[x.length - 1]
@@ -456,7 +472,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
               <div style={{ fontSize: 12.6, fontWeight: 800, color: GREEN, letterSpacing: '.05em' }}>
                 THE ACCOUNTANT {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
               </div>
-              <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{answer}</div>
+              <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{linkifyTraces(answer, phoenixBase)}</div>
             </div>
           )}
         </div>

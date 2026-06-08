@@ -85,9 +85,12 @@ async def ask(q: str | None = None, agent: str | None = None):
     if not question:
         raise HTTPException(400, "provide ?q=<question> or ?agent=<id>")
 
+    phoenix_base = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "").rstrip("/")
+
     async def gen():
         yield {"event": "message",
-               "data": json.dumps({"type": "question", "question": question, **meta})}
+               "data": json.dumps({"type": "question", "question": question,
+                                   "phoenix_base": phoenix_base, **meta})}
         async for step in ask_mod.ask_stream(question):
             yield {"event": "message", "data": json.dumps(step)}
 
