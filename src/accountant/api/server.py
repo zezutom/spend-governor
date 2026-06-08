@@ -69,7 +69,7 @@ async def stream():
 
 
 @app.get("/api/ask")
-async def ask(q: str | None = None, agent: str | None = None):
+async def ask(q: str | None = None, agent: str | None = None, session: str | None = None):
     """Live 'Ask the Accountant': runs the real ADK agent, which introspects its
     own Phoenix operational data at runtime via the Phoenix MCP server, and
     streams each tool-call + the answer (SSE). `agent` seeds a per-agent
@@ -91,7 +91,7 @@ async def ask(q: str | None = None, agent: str | None = None):
         yield {"event": "message",
                "data": json.dumps({"type": "question", "question": question,
                                    "phoenix_base": phoenix_base, **meta})}
-        async for step in ask_mod.ask_stream(question):
+        async for step in ask_mod.ask_stream(question, session_id=session):
             yield {"event": "message", "data": json.dumps(step)}
 
     return EventSourceResponse(gen())

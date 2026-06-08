@@ -355,50 +355,102 @@ function linkifyTraces(text, base) {
   if (last < text.length) out.push(text.slice(last))
   return out
 }
+// One turn of the conversation: the question, the agent's tool steps, and its
+// grounded answer. Trace ids in the answer deep-link into Phoenix.
+function Turn({ t, phoenixBase }) {
+  const mcpCount = t.steps.filter((s) => s.kind === 'tool' && s.mcp).length
+  return (
+    <div style={{ marginBottom: 18 }}>
+      {t.q && <div style={{ fontSize: 15, color: INK, background: '#f5f4ed', borderRadius: 10,
+        padding: '10px 12px', marginBottom: 12 }}><b style={{ color: DIM, fontSize: 12.6 }}>YOU ASKED</b><br />{t.q}</div>}
+      {t.steps.map((s, i) => s.kind === 'error' ? (
+        <div key={i} style={{ fontSize: 13.8, color: RED, marginBottom: 8 }}>⚠ {s.error}</div>
+      ) : s.kind === 'tool' ? (
+        <div key={i} style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: s.mcp ? MCP : DIM,
+            background: s.mcp ? '#eaf2f6' : '#f1f0ea', border: `1px solid ${s.mcp ? MCP + '44' : '#e0ded5'}`,
+            borderRadius: 6, padding: '2px 7px' }}>{s.mcp ? '◇ MCP' : 'fn'}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{s.name}</span>
+          <span style={{ fontSize: 12.6, color: DIM, fontFamily: 'ui-monospace, monospace' }}>
+            ({Object.entries(s.args || {}).map(([k, v]) => `${k}: ${String(v).slice(0, 36)}`).join(', ')})
+          </span>
+        </div>
+      ) : (
+        <div key={i} style={{ marginBottom: 12, marginLeft: 14, fontSize: 12.6, color: DIM,
+          fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+          borderLeft: `2px solid ${s.mcp ? MCP + '55' : '#e0ded5'}`, paddingLeft: 9 }}>
+          → {s.summary}
+        </div>
+      ))}
+      {t.status === 'running' && !t.answer && (
+        <div style={{ fontSize: 13.8, color: MCP, marginTop: 4 }}>
+          <span style={{ animation: 'pulse 1s infinite' }}>●</span>{' '}
+          {t.steps.some((s) => s.kind === 'result')
+            ? 'reading the trace’s spans — composing the answer…'
+            : 'calling the Phoenix MCP server…'}
+        </div>
+      )}
+      {t.answer && (
+        <div style={{ marginTop: 8, padding: '12px 14px', borderRadius: 11, background: '#eef5f1',
+          border: `1px solid ${GREEN}33` }}>
+          <div style={{ fontSize: 12.6, fontWeight: 800, color: GREEN, letterSpacing: '.05em' }}>
+            THE ACCOUNTANT {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
+          </div>
+          <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{linkifyTraces(t.answer, phoenixBase)}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AskPanel({ open, state, onClose, onDebug }) {
   const [q, setQ] = useState('')
-  const [steps, setSteps] = useState([])   // interleaved tool calls + results
-  const [answer, setAnswer] = useState('')
-  const [status, setStatus] = useState('idle')  // idle | running | done | error
-  const [question, setQuestion] = useState(null)
+  const [turns, setTurns] = useState([])   // [{q, steps, answer, status}] — the conversation
   const [phoenixBase, setPhoenixBase] = useState('')
   const esRef = useRef(null)
+  const sessionRef = useRef(null)          // conversation id — follow-ups share the agent's memory
   const bodyRef = useRef(null)
+  const running = turns.length > 0 && turns[turns.length - 1].status === 'running'
 
-  const start = useCallback((url, shownQ) => {
+  const updateLast = useCallback((fn) => setTurns((ts) => {
+    if (!ts.length) return ts
+    const u = ts.slice(); u[u.length - 1] = fn(u[u.length - 1]); return u
+  }), [])
+
+  const start = useCallback((params, shownQ) => {
     if (esRef.current) esRef.current.close()
-    setSteps([]); setAnswer(''); setStatus('running'); setQuestion(shownQ || null)
-    const es = new EventSource(url); esRef.current = es
+    const sp = new URLSearchParams(params)
+    if (sessionRef.current) sp.set('session', sessionRef.current)  // continue the conversation
+    setTurns((ts) => [...ts, { q: shownQ || null, steps: [], answer: '', status: 'running' }])
+    const es = new EventSource(`${API}/api/ask?${sp.toString()}`); esRef.current = es
     es.onmessage = (e) => {
       const s = JSON.parse(e.data)
-      if (s.type === 'question') { setQuestion(s.question); if (s.phoenix_base) setPhoenixBase(s.phoenix_base) }
-      else if (s.type === 'tool_call') setSteps((x) => {
-        // flash sometimes emits the same call twice in parallel — show it once
-        const last = x[x.length - 1]
-        if (last && last.kind === 'tool' && last.name === s.name &&
-            JSON.stringify(last.args) === JSON.stringify(s.args)) return x
-        return [...x, { kind: 'tool', name: s.name, args: s.args, mcp: s.mcp }]
+      if (s.type === 'session') sessionRef.current = s.session_id
+      else if (s.type === 'question') { if (s.phoenix_base) setPhoenixBase(s.phoenix_base); updateLast((t) => ({ ...t, q: t.q || s.question })) }
+      else if (s.type === 'tool_call') updateLast((t) => {
+        const last = t.steps[t.steps.length - 1]  // flash sometimes double-fires a call — show it once
+        if (last && last.kind === 'tool' && last.name === s.name && JSON.stringify(last.args) === JSON.stringify(s.args)) return t
+        return { ...t, steps: [...t.steps, { kind: 'tool', name: s.name, args: s.args, mcp: s.mcp }] }
       })
-      else if (s.type === 'tool_result') setSteps((x) => {
-        const last = x[x.length - 1]
-        if (last && last.kind === 'result' && last.name === s.name && last.summary === s.summary) return x
-        return [...x, { kind: 'result', name: s.name, mcp: s.mcp, summary: s.summary }]
+      else if (s.type === 'tool_result') updateLast((t) => {
+        const last = t.steps[t.steps.length - 1]
+        if (last && last.kind === 'result' && last.name === s.name && last.summary === s.summary) return t
+        return { ...t, steps: [...t.steps, { kind: 'result', name: s.name, mcp: s.mcp, summary: s.summary }] }
       })
-      else if (s.type === 'text') setAnswer((a) => a + s.text)
-      else if (s.type === 'error') { setSteps((x) => [...x, { kind: 'error', error: s.error }]); setStatus('error'); es.close() }
-      else if (s.type === 'done') { setStatus('done'); es.close() }
+      else if (s.type === 'text') updateLast((t) => ({ ...t, answer: t.answer + s.text }))
+      else if (s.type === 'error') { updateLast((t) => ({ ...t, status: 'error', steps: [...t.steps, { kind: 'error', error: s.error }] })); es.close() }
+      else if (s.type === 'done') { updateLast((t) => ({ ...t, status: 'done' })); es.close() }
     }
     es.onerror = () => {}  // ride it out until our explicit 'done'
-  }, [])
+  }, [updateLast])
 
   useEffect(() => {
-    if (open?.agent) start(`${API}/api/ask?agent=${encodeURIComponent(open.agent)}`)
+    if (open?.agent) start({ agent: open.agent })
     return () => { if (esRef.current) esRef.current.close() }
   }, [open?.agent, start])
-  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight }, [steps, answer])
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight }, [turns])
 
-  const submit = () => { const t = q.trim(); if (t && status !== 'running') { start(`${API}/api/ask?q=${encodeURIComponent(t)}`, t); setQ('') } }
-  const mcpCount = steps.filter((s) => s.kind === 'tool' && s.mcp).length
+  const submit = () => { const t = q.trim(); if (t && !running) { start({ q: t }, t); setQ('') } }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
@@ -406,75 +458,35 @@ function AskPanel({ open, state, onClose, onDebug }) {
       <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 16, padding: '18px 22px',
         width: 'min(94vw, 760px)', height: 'min(88vh, 660px)', display: 'flex', flexDirection: 'column',
         boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
+        <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div>
             <span style={{ fontSize: 12.6, fontWeight: 800, color: MCP, background: '#eaf2f6',
               border: `1px solid ${MCP}33`, borderRadius: 999, padding: '3px 10px' }}>◇ live · Phoenix MCP</span>
             <div style={{ fontSize: 23, fontWeight: 800, marginTop: 8 }}>Ask the Accountant</div>
-            <div style={{ fontSize: 14.4, color: DIM }}>The agent introspects its own traces in Phoenix at runtime via the MCP server.</div>
+            <div style={{ fontSize: 14.4, color: DIM }}>The agent introspects its own traces in Phoenix at runtime via the MCP server. Follow-up questions keep the context.</div>
           </div>
           <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none',
             fontSize: 28, cursor: 'pointer', color: DIM }}>×</button>
         </div>
 
-        {/* transcript */}
+        {/* conversation */}
         <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 14,
           borderTop: '1px solid #eceae0', paddingTop: 12 }}>
-          {question && <div style={{ fontSize: 15, color: INK, background: '#f5f4ed', borderRadius: 10,
-            padding: '10px 12px', marginBottom: 12 }}><b style={{ color: DIM, fontSize: 12.6 }}>YOU ASKED</b><br />{question}</div>}
-
-          {steps.length === 0 && status === 'idle' && (
+          {turns.length === 0 && (
             <div style={{ color: DIM, fontSize: 14.4 }}>
               Ask a cost question — the Accountant will call the Phoenix MCP tools to check the real traces before answering.
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {ASK_SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => start(`${API}/api/ask?q=${encodeURIComponent(s)}`, s)}
+                  <button key={s} onClick={() => start({ q: s }, s)}
                     style={{ textAlign: 'left', fontSize: 14, color: MCP, background: '#fff', cursor: 'pointer',
                       border: `1px solid ${MCP}33`, borderRadius: 9, padding: '8px 11px' }}>{s}</button>
                 ))}
               </div>
             </div>
           )}
-
-          {steps.map((s, i) => s.kind === 'error' ? (
-            <div key={i} style={{ fontSize: 13.8, color: RED, marginBottom: 8 }}>⚠ {s.error}</div>
-          ) : s.kind === 'tool' ? (
-            <div key={i} style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11.5, fontWeight: 800, color: s.mcp ? MCP : DIM,
-                background: s.mcp ? '#eaf2f6' : '#f1f0ea', border: `1px solid ${s.mcp ? MCP + '44' : '#e0ded5'}`,
-                borderRadius: 6, padding: '2px 7px' }}>{s.mcp ? '◇ MCP' : 'fn'}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{s.name}</span>
-              <span style={{ fontSize: 12.6, color: DIM, fontFamily: 'ui-monospace, monospace' }}>
-                ({Object.entries(s.args || {}).map(([k, v]) => `${k}: ${String(v).slice(0, 36)}`).join(', ')})
-              </span>
-            </div>
-          ) : (
-            <div key={i} style={{ marginBottom: 12, marginLeft: 14, fontSize: 12.6, color: DIM,
-              fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              borderLeft: `2px solid ${s.mcp ? MCP + '55' : '#e0ded5'}`, paddingLeft: 9 }}>
-              → {s.summary}
-            </div>
-          ))}
-
-          {status === 'running' && !answer && (
-            <div style={{ fontSize: 13.8, color: MCP, marginTop: 4 }}>
-              <span style={{ animation: 'pulse 1s infinite' }}>●</span>{' '}
-              {steps.some((s) => s.kind === 'result')
-                ? 'reading the trace’s spans — composing the answer…'
-                : 'calling the Phoenix MCP server…'}
-              <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
-            </div>
-          )}
-          {answer && (
-            <div style={{ marginTop: 8, padding: '12px 14px', borderRadius: 11, background: '#eef5f1',
-              border: `1px solid ${GREEN}33` }}>
-              <div style={{ fontSize: 12.6, fontWeight: 800, color: GREEN, letterSpacing: '.05em' }}>
-                THE ACCOUNTANT {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
-              </div>
-              <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{linkifyTraces(answer, phoenixBase)}</div>
-            </div>
-          )}
+          {turns.map((t, i) => <Turn key={i} t={t} phoenixBase={phoenixBase} />)}
         </div>
 
         {/* free-form ask + jump to the debugger */}
@@ -482,9 +494,9 @@ function AskPanel({ open, state, onClose, onDebug }) {
           {open?.agent && LAB_USE_CASES.some((u) => u.key === open.agent) &&
             <Btn onClick={() => onDebug(open.agent)} label="🔬 debugger →" color={GREEN} />}
           <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()}
-            placeholder="Ask a cost question…" style={{ flex: 1, fontSize: 15, padding: '10px 12px',
+            placeholder={turns.length ? 'Ask a follow-up…' : 'Ask a cost question…'} style={{ flex: 1, fontSize: 15, padding: '10px 12px',
               borderRadius: 9, border: '1px solid #d8d6cc', outline: 'none' }} />
-          <Btn onClick={submit} label={status === 'running' ? 'working…' : 'ask →'} color={MCP} primary big />
+          <Btn onClick={submit} label={running ? 'working…' : 'ask →'} color={MCP} primary big />
         </div>
       </div>
     </div>

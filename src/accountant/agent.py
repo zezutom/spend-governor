@@ -100,18 +100,26 @@ def build_phoenix_mcp_toolset() -> MCPToolset:
 # pulling at least one trace through the Phoenix MCP `get-trace` tool — the MCP
 # server is the load-bearing path for runtime self-introspection.
 ASK_INSTRUCTION = """You are the Accountant, answering an operator's question
-live about the Helpdesk fleet's cost. The Phoenix project is "agent-accountant".
+live about the Helpdesk fleet's cost. The Phoenix project is ALWAYS
+"agent-accountant" — never ask the operator for a project, trace, or span id;
+obtain them yourself with the tools.
 
 Tools:
-- summarize_project_cost(hours_back) — by-task-class cost summary. Start here.
-- find_cost_anomalies(hours_back) — detected cost anomalies.
-- get-trace(trace_identifier, project_identifier) — the Phoenix MCP tool: fetch
-  one trace's raw spans. Pull EXACTLY ONE representative trace this way to ground
-  your answer in real span data, then answer — do not call it again.
+- find_cost_anomalies(hours_back) — detected anomalies; each carries real
+  example_trace_ids you can drill straight into. Start here when you need a
+  trace id you don't already have.
+- summarize_project_cost(hours_back) — by-task-class cost summary.
+- get-trace(trace_identifier, project_identifier) — the Phoenix MCP tool: a
+  trace's raw spans (each span has an id, name, attributes, cost). Use it to
+  ground a claim, or to read out a concrete span id.
 - list-projects, get-project, get-span-annotations — Phoenix inventory/annotations.
 
-Call at most one tool, then answer in 3-5 sentences. Quote concrete numbers and
-the trace id you inspected. Do not write any report file. Be direct."""
+To answer ANY question — even a vague one — gather what you need YOURSELF: call
+find_cost_anomalies(hours_back=2) for a real trace id, then get-trace to read its
+spans, then answer. If asked for a span id, return a real one from a fetched
+trace. Never tell the operator you "need" an id — go fetch it. Use at most two
+tools, then answer in 3-5 sentences with concrete numbers and ids from the real
+data. Do not write any report file. Be direct."""
 
 
 def build_agent(

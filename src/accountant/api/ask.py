@@ -52,19 +52,33 @@ def _compact(obj, limit: int = 700) -> str:
     return s if len(s) <= limit else s[:limit] + " …"
 
 
-async def ask_stream(question: str):
+async def ask_stream(question: str, session_id: str | None = None):
     """Async-generate step dicts as the agent works:
 
+    {"type": "session",     "session_id"}      # the conversation id (reuse for follow-ups)
     {"type": "tool_call",   "name", "args", "mcp": bool}
     {"type": "tool_result", "name", "summary", "mcp": bool}
     {"type": "text",        "text"}            # answer chunk(s)
     {"type": "done"} | {"type": "error", "error"}
+
+    Pass a prior session_id to continue the SAME conversation — the agent then
+    remembers earlier turns (e.g. "the LLM call you just flagged").
     """
     try:
         runner = await _get_runner()
-        session = await runner.session_service.create_session(
-            app_name=APP_NAME, user_id=USER_ID
-        )
+        session = None
+        if session_id:
+            try:
+                session = await runner.session_service.get_session(
+                    app_name=APP_NAME, user_id=USER_ID, session_id=session_id
+                )
+            except Exception:
+                session = None
+        if session is None:
+            session = await runner.session_service.create_session(
+                app_name=APP_NAME, user_id=USER_ID
+            )
+        yield {"type": "session", "session_id": session.id}
         content = types.Content(role="user", parts=[types.Part(text=question)])
         streamed_text = False  # de-dup: SSE mode emits text deltas THEN a final
                                # aggregated copy; emit the deltas, drop the repeat.
