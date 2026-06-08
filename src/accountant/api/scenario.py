@@ -13,11 +13,16 @@ The governor owns all I/O and reacts to `live_beats(now)` / `released_sigs(now)`
 """
 
 import math
+import os
 import time
 
-WALL_WINDOW_SEC = 80.0           # the window fills fast; beats gate on YOUR decisions
+# Wall-clock length of the whole demo window (carries COMPRESSED_WINDOW_HOURS of
+# traffic). Override per run with ACCOUNTANT_WALL_WINDOW_SEC to spread the traffic out
+# — e.g. 240 for a calmer ~4-min pass, 80 for the original fast one. SPEEDUP derives
+# from it, so the clock, beats, arrival curve, and spine all stretch proportionally.
+WALL_WINDOW_SEC = float(os.environ.get("ACCOUNTANT_WALL_WINDOW_SEC", "240"))
 COMPRESSED_WINDOW_HOURS = 12.0   # ≈ 12h of traffic compressed into the window
-SPEEDUP = (COMPRESSED_WINDOW_HOURS * 3600.0) / WALL_WINDOW_SEC  # = 540×
+SPEEDUP = (COMPRESSED_WINDOW_HOURS * 3600.0) / WALL_WINDOW_SEC  # window-derived speedup
 _DAY_START_HOUR = 8.0            # the clock label reads as a business day from 08:00
 
 # Economy routing drops the LLM portion to ~1/5 (flash-lite vs flash) — the SAME

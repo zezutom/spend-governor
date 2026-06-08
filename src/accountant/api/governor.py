@@ -20,13 +20,17 @@ import asyncio
 import time
 
 from accountant import service
-from accountant.api.scenario import Scenario, ROUTE_ECON_DROP
+from accountant.api.scenario import Scenario, ROUTE_ECON_DROP, WALL_WINDOW_SEC
 from accountant.optimizer import agent
 
 _MIN_PER_MONTH = 30 * 24 * 60
 _SEC_PER_MONTH = 30 * 24 * 60 * 60
 TICK_SECONDS = 2.5
 PHASE_DWELL = 0.7  # hold a real phase briefly so the loop indicator is legible
+HEARTBEAT_SEC = 2.0  # spine sampling cadence
+# The spine ring buffer must hold the whole window at the heartbeat cadence, else a
+# longer ACCOUNTANT_WALL_WINDOW_SEC evicts the early arc before the window ends.
+_HIST_CAP = max(160, int(WALL_WINDOW_SEC / HEARTBEAT_SEC) + 40)
 
 STEPS = ["OBSERVE", "DIAGNOSE", "DECIDE", "ACT", "VERIFY"]
 
@@ -338,8 +342,8 @@ class Governor:
             "quality": self._quality_now(by),
             "volume": round(self.scenario.arrival_volume(now, base=base_rate), 1),
         })
-        if len(self.history) > 160:
-            self.history = self.history[-160:]
+        if len(self.history) > _HIST_CAP:
+            self.history = self.history[-_HIST_CAP:]
 
     def _pin(self, kind: str, label: str, session: str | None = None, trigger: str | None = None) -> None:
         now = time.monotonic()
@@ -408,7 +412,7 @@ class Governor:
 
     async def _heartbeat(self) -> None:
         while True:
-            await asyncio.sleep(2.0)
+            await asyncio.sleep(HEARTBEAT_SEC)
             async with self._lock:
                 self._sample()
             await self._emit(None)
