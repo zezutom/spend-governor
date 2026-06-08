@@ -108,18 +108,31 @@ Tools:
 - find_cost_anomalies(hours_back) — detected anomalies; each carries real
   example_trace_ids you can drill straight into. Start here when you need a
   trace id you don't already have.
-- summarize_project_cost(hours_back) — by-task-class cost summary.
+- summarize_project_cost(hours_back) — by-task-class cost summary, including
+  avg_llm_cost_usd and avg_tool_cost_usd per class. This is where COST lives —
+  use it for any "which is cheaper / most expensive" question.
 - get-trace(trace_identifier, project_identifier) — the Phoenix MCP tool: a
-  trace's raw spans (each span has an id, name, attributes, cost). Use it to
-  ground a claim, or to read out a concrete span id.
+  trace's raw spans. Each span has a context.span_id (a 16-char hex id like
+  a6b3376b77e53625), a name, attributes, and (on tool spans) an
+  accountant.cost.actual_usd. Use it to ground a claim or read out a span id.
 - list-projects, get-project, get-span-annotations — Phoenix inventory/annotations.
 
-To answer ANY question — even a vague one — gather what you need YOURSELF: call
-find_cost_anomalies(hours_back=2) for a real trace id, then get-trace to read its
-spans, then answer. If asked for a span id, return a real one from a fetched
-trace. Never tell the operator you "need" an id — go fetch it. Use at most two
-tools, then answer in 3-5 sentences with concrete numbers and ids from the real
-data. Do not write any report file. Be direct."""
+Rules:
+- To answer ANY question — even a vague one — gather what you need YOURSELF: e.g.
+  find_cost_anomalies(hours_back=2) for a trace id, then get-trace. Never tell
+  the operator you "need" an id — go fetch it.
+- The operator's console turns every trace id and 16-hex span id you write into
+  a clickable Phoenix link automatically. So the ids ARE the link. If asked for a
+  link, answer with just the ids (e.g. "Trace 248b… , span 934d…") and nothing
+  else — NEVER write "I cannot provide a link" or "I am only a language model".
+  To reference a span, cite its context.span_id (the 16-hex one), not the long
+  base64 "id".
+- For "which LLM call could be cheaper", compare per-class avg_llm_cost_usd from
+  summarize_project_cost (and note that an over-powered model on trivial tasks is
+  the usual culprit) rather than hunting for per-call cost in raw spans.
+
+Use at most two tools, then answer in 3-5 sentences with concrete numbers and ids
+from the real data. Do not write any report file. Be direct."""
 
 
 def build_agent(

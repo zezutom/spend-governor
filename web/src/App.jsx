@@ -340,15 +340,17 @@ const ASK_SUGGESTIONS = [
   'Find the biggest cost anomaly and verify it against one real trace.',
   'Is the repeated web_search on the refund auditor genuine waste?',
 ]
-// Turn trace ids the agent cites (32-hex or dashed-UUID) into Phoenix deep-links.
+// Turn ids the agent cites into Phoenix deep-links: 32-hex / dashed-UUID -> the
+// trace; bare 16-hex -> that span.
 function linkifyTraces(text, base) {
   if (!base || !text) return text
-  const re = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})\b/gi
+  const re = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32}|[0-9a-f]{16})\b/gi
   const out = []; let last = 0, m, i = 0
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index))
     const hex = m[0].replace(/-/g, '')
-    out.push(<a key={i++} href={`${base}/redirects/traces/${hex}`} target="_blank" rel="noreferrer"
+    const kind = hex.length === 16 ? 'spans' : 'traces'
+    out.push(<a key={i++} href={`${base}/redirects/${kind}/${hex}`} target="_blank" rel="noreferrer"
       style={{ color: MCP, fontWeight: 600, fontFamily: 'ui-monospace, monospace', wordBreak: 'break-all' }}>{m[0]} ↗</a>)
     last = m.index + m[0].length
   }
