@@ -1445,7 +1445,7 @@ function ReplayLab({ onClose, initialUc }) {
                         <span style={{ color: AMBER, fontWeight: 600 }}>q{r.economy_quality}</span>
                         <button onClick={() => openDegraded(r._i)} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600,
                           background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>open</button>
-                        {r.phoenix_url && <SpanLink url={redirectUrl({}, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0)} label="trace ↗" />}
+                        {r.phoenix_url && <SpanLink url={redirectUrl({ span_id: r.span_id }, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0)} label="trace ↗" />}
                       </div>
                     ))}
                   </>}

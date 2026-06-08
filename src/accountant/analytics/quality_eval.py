@@ -483,6 +483,7 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
             span.set_attribute(k, v)
         er = _replay_full(ticket, economy_model)
         etid = format(span.get_span_context().trace_id, "032x")
+        esid = format(span.get_span_context().span_id, "016x")  # the ECONOMY replay span
     tool_span_ids = list(_tool_rec.ids)
     econ_latency_ms = round((time.monotonic() - t_econ) * 1000)
     econ = _final_answer(er)
@@ -506,13 +507,14 @@ def _lab_eval_ticket(ticket: str, sub_type: str, conv_id: str, gid, attrs: dict,
            + calls
            + [{"kind": "model", "label": "model · respond", "cost": econ_cost,
                "bites": v.economy_quality < v.baseline_quality, "model": economy_model,
-               "latency_ms": econ_latency_ms, "in_tokens": econ_in, "out_tokens": econ_out},
+               "latency_ms": econ_latency_ms, "in_tokens": econ_in, "out_tokens": econ_out,
+               "span_id": esid},  # link the model call to the ECONOMY replay span
               {"kind": "reply", "label": "reply sent"}])
     return {
         "conv_id": conv_id, "ticket": ticket, "sub_type": sub_type,
         "equivalent": v.equivalent, "baseline_quality": v.baseline_quality,
         "economy_quality": v.economy_quality, "clarified": v.economy_asked_clarification,
-        "refused_escalated": v.economy_refused_or_escalated,
+        "refused_escalated": v.economy_refused_or_escalated, "span_id": esid,
         "held": v.economy_quality >= 4, "phoenix_url": phoenix_cost.span_deeplink(gid, etid, None) if gid else None,
         "baseline_answer": base[:240], "economy_answer": econ[:240],
         "baseline_model_cost": base_cost, "economy_model_cost": econ_cost,
