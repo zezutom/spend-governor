@@ -99,7 +99,7 @@ def series() -> dict:
     and the closing summary. Cheap chart refetch (the same data also rides every
     snapshot on /api/stream)."""
     snap = governor.snapshot()
-    return {k: snap.get(k) for k in ("clock", "history", "pins", "summary",
+    return {k: snap.get(k) for k in ("clock", "history", "pins", "summary", "quality_basis",
                                      "baseline_dollars_per_message", "dollars_per_message")}
 
 

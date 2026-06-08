@@ -706,6 +706,19 @@ function Spine({ state, onPin }) {
   const fmtH = (h) => `${String(((h % 24) + 24) % 24).padStart(2, '0')}:00`
   const xticks = [[0, fmtH(startH)], [0.5, fmtH(startH + win / 2)], [1, fmtH(startH + win)]]
 
+  // quality tooltip — explains WHY the dashed line sits where it does (eval-measured)
+  const qb = state?.quality_basis
+  const qNow = history[history.length - 1].quality ?? 1
+  const qPct = Math.round((qb?.retention ?? qNow) * 100)
+  let qTip = `Quality ${qPct}% · eval-measured (pre-run replay panel)`
+  if (qb?.contributors?.length) {
+    qTip += '\n' + qb.contributors.map((c) =>
+      `${c.label}: economy ${c.economy_q}/5 vs ${c.baseline_q}/5 baseline · ×${Math.round(c.vshare * 100)}% of volume → −${Math.round(c.drop * 100)}%`
+    ).join('\n')
+  } else {
+    qTip += '\nNo answer-affecting route live — quality holds. Cache / cap / suppress are output-preserving, so they never depress it.'
+  }
+
   return (
     <div style={{ display: 'flex' }}>
       {/* y-axis: $/message */}
@@ -726,6 +739,11 @@ function Spine({ state, onPin }) {
                 strokeWidth="1" vectorEffect="non-scaling-stroke" />))}
             <path d={qual} fill="none" stroke={DIM} strokeWidth="2" strokeDasharray="5 4"
               vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+            {/* transparent wide hit-area so the thin dashed quality line is hoverable */}
+            <path d={qual} fill="none" stroke="transparent" strokeWidth="16"
+              vectorEffect="non-scaling-stroke" style={{ cursor: 'help' }}>
+              <title>{qTip}</title>
+            </path>
             <path d={cost} fill="none" stroke={GREEN} strokeWidth="2.75"
               vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
             <circle cx={nowX} cy={costY(history[history.length - 1].dollars_per_message)} r="3.5" fill={GREEN} />

@@ -197,15 +197,17 @@ class Governor:
             self._eval_cache[key] = quality_eval.load_eval(key)
         return self._eval_cache[key]
 
-    def _quality_now(self, by) -> float:
-        """Quality retention (0..1), eval-measured. Dips ONLY while a ROUTE fix
-        whose pre-run verdict is 'revert' (the Docs Bot trap) is active — by that
-        eval's measured economy/baseline quality × the agent's VOLUME share (quality
-        degradation hits a fraction of conversations, not of dollars). Recovers on
-        revert. Suppress/cap/cache never depress it (output-preserving / precautionary)."""
+    def _quality_breakdown(self, by):
+        """(retention 0..1, [contributors]), eval-measured. Retention dips ONLY while a
+        ROUTE fix whose pre-run verdict is 'revert' (the Docs Bot trap) is active — by
+        that eval's measured economy/baseline quality × the agent's VOLUME share (quality
+        degradation hits a fraction of conversations, not of dollars). Recovers on revert.
+        Suppress/cap/cache never depress it (output-preserving / precautionary). Each
+        contributor carries the numbers so the UI can explain *why* the line dipped."""
         active = {p["signature"] for p in service.active_policies()}
         total_n = sum((by.get(a) or {}).get("n", 0) or 0 for a in _FLEET_ORDER) or 1
         ret = 1.0
+        contributors = []
         for aid in _FLEET_ORDER:
             fx = _FLEET[aid]
             if fx["fix"] != "route_model" or _fix_sig(aid) not in active:
@@ -217,8 +219,22 @@ class Governor:
             econ_q = ev.get("mean_quality_economy") or base_q
             vshare = ((by.get(aid) or {}).get("n", 0) or 0) / total_n
             if base_q > 0:
-                ret -= (1 - econ_q / base_q) * vshare
-        return round(max(min(ret, 1.0), 0.0), 4)
+                drop = (1 - econ_q / base_q) * vshare
+                ret -= drop
+                contributors.append({
+                    "label": fx["label"], "economy_q": round(econ_q, 1),
+                    "baseline_q": round(base_q, 1), "vshare": round(vshare, 4),
+                    "drop": round(drop, 4),
+                })
+        return round(max(min(ret, 1.0), 0.0), 4), contributors
+
+    def _quality_now(self, by) -> float:
+        return self._quality_breakdown(by)[0]
+
+    def _quality_basis(self, by) -> dict:
+        """Snapshot-level explanation of the current quality line (for the tooltip)."""
+        ret, contributors = self._quality_breakdown(by)
+        return {"retention": ret, "contributors": contributors}
 
     # --- snapshot ----------------------------------------------------------
     def _status(self, sig: str, active: set, released: set) -> str:
@@ -292,6 +308,7 @@ class Governor:
             "step": self.step, "steps": STEPS, "verify": self.verify,
             "clock": self.scenario.clock(now),
             "history": list(self.history), "pins": list(self.pins), "summary": self._summary(),
+            "quality_basis": self._quality_basis(by),
             "throughput_per_sec": round(msgs_per_sec, 3),
             "dollars_per_message": round(governed_dpm, 6),
             "baseline_dollars_per_message": round(baseline_dpm, 6),
