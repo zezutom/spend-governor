@@ -355,8 +355,18 @@ function AskPanel({ open, state, onClose }) {
     es.onmessage = (e) => {
       const s = JSON.parse(e.data)
       if (s.type === 'question') setQuestion(s.question)
-      else if (s.type === 'tool_call') setSteps((x) => [...x, { kind: 'tool', name: s.name, args: s.args, mcp: s.mcp }])
-      else if (s.type === 'tool_result') setSteps((x) => [...x, { kind: 'result', name: s.name, mcp: s.mcp, summary: s.summary }])
+      else if (s.type === 'tool_call') setSteps((x) => {
+        // flash sometimes emits the same call twice in parallel — show it once
+        const last = x[x.length - 1]
+        if (last && last.kind === 'tool' && last.name === s.name &&
+            JSON.stringify(last.args) === JSON.stringify(s.args)) return x
+        return [...x, { kind: 'tool', name: s.name, args: s.args, mcp: s.mcp }]
+      })
+      else if (s.type === 'tool_result') setSteps((x) => {
+        const last = x[x.length - 1]
+        if (last && last.kind === 'result' && last.name === s.name && last.summary === s.summary) return x
+        return [...x, { kind: 'result', name: s.name, mcp: s.mcp, summary: s.summary }]
+      })
       else if (s.type === 'text') setAnswer((a) => a + s.text)
       else if (s.type === 'error') { setSteps((x) => [...x, { kind: 'error', error: s.error }]); setStatus('error'); es.close() }
       else if (s.type === 'done') { setStatus('done'); es.close() }
@@ -432,7 +442,10 @@ function AskPanel({ open, state, onClose }) {
 
           {status === 'running' && !answer && (
             <div style={{ fontSize: 13.8, color: MCP, marginTop: 4 }}>
-              <span style={{ animation: 'pulse 1s infinite' }}>●</span> the agent is reasoning + calling Phoenix MCP…
+              <span style={{ animation: 'pulse 1s infinite' }}>●</span>{' '}
+              {steps.some((s) => s.kind === 'result')
+                ? 'reading the trace’s spans — composing the answer…'
+                : 'calling the Phoenix MCP server…'}
               <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
             </div>
           )}

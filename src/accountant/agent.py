@@ -1,6 +1,7 @@
 import os
 
 from google.adk.agents import LlmAgent
+from google.genai import types
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from mcp import StdioServerParameters
@@ -105,21 +106,34 @@ Tools:
 - summarize_project_cost(hours_back) — by-task-class cost summary. Start here.
 - find_cost_anomalies(hours_back) — detected cost anomalies.
 - get-trace(trace_identifier, project_identifier) — the Phoenix MCP tool: fetch
-  one trace's raw spans. ALWAYS pull at least one representative trace this way
-  to ground your answer in real span data before you conclude.
+  one trace's raw spans. Pull EXACTLY ONE representative trace this way to ground
+  your answer in real span data, then answer — do not call it again.
 - list-projects, get-project, get-span-annotations — Phoenix inventory/annotations.
 
-Answer in 3-5 sentences. Quote concrete numbers and the trace id you inspected.
-Do not write any report file. Be direct and decision-useful."""
+Call at most one tool, then answer in 3-5 sentences. Quote concrete numbers and
+the trace id you inspected. Do not write any report file. Be direct."""
 
 
-def build_agent(instruction: str | None = None, include_report: bool = True) -> LlmAgent:
+def build_agent(
+    instruction: str | None = None,
+    include_report: bool = True,
+    model: str = "gemini-2.5-pro",
+    disable_thinking: bool = False,
+) -> LlmAgent:
     tools = [build_phoenix_mcp_toolset(), summarize_project_cost, find_cost_anomalies]
     if include_report:
         tools.append(write_report)
+    cfg = None
+    if disable_thinking:
+        # The live panel just reads a trace and explains it — adaptive thinking
+        # (on by default for flash) adds many seconds for no quality gain here.
+        cfg = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
+        )
     return LlmAgent(
         name="accountant",
-        model="gemini-2.5-pro",
+        model=model,
         instruction=instruction or INSTRUCTION,
         tools=tools,
+        generate_content_config=cfg,
     )
