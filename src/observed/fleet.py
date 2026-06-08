@@ -1,8 +1,8 @@
-"""The observed FLEET — several distinct agents under one Accountant.
+"""The observed FLEET — several distinct agents under one Governor.
 
 Instead of one support agent with four ticket types, the demo company runs a
 small fleet of specialized agents, each with a different job and ONE signature
-cost-waste pattern. The Accountant watches the whole fleet and fixes each with
+cost-waste pattern. The Governor watches the whole fleet and fixes each with
 a different real lever:
 
   Support Co-Pilot  — resolves tickets       — redundant web_search ×3   → CACHE
@@ -20,7 +20,7 @@ boundary.
 
 from google.adk.agents import LlmAgent
 
-from accountant.wrapper.wrapper import (
+from governor.wrapper.wrapper import (
     cost_after_model_callback,
     model_routing_callback,
     trace_finalize_callback,
@@ -47,7 +47,7 @@ procedure below."""
 
 # --- the four agents -------------------------------------------------------
 # Each profile's `waste` paragraph is the intentional anti-pattern. It is real
-# behavior the agent performs at runtime — the Accountant detects it from the
+# behavior the agent performs at runtime — the Governor detects it from the
 # traces and fixes it with a lever, never by editing this text.
 FLEET = {
     "support_copilot": {
@@ -164,7 +164,7 @@ def _make_classifier(agent_id: str):
 
 def build_fleet_agent(agent_id: str) -> LlmAgent:
     """Build one observed agent from its fleet profile. Tools + callbacks flow
-    through the Accountant wrapper exactly as the single agent did."""
+    through the Governor wrapper exactly as the single agent did."""
     prof = FLEET[agent_id]
     tools = wrap_tools([
         _make_classifier(agent_id),

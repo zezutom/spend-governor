@@ -1,6 +1,6 @@
 from google.adk.agents import LlmAgent
 
-from accountant.wrapper.wrapper import (
+from governor.wrapper.wrapper import (
     cost_after_model_callback,
     model_routing_callback,
     trace_finalize_callback,
@@ -20,9 +20,9 @@ from observed.tools import (
 
 
 def build_agent() -> LlmAgent:
-    # Tool and model calls flow through the Accountant wrapper (the
+    # Tool and model calls flow through the Governor wrapper (the
     # enforcement-plane stand-in): active policies apply at the boundary
-    # and every span is annotated with the accountant.* schema. Harmless
+    # and every span is annotated with the governor.* schema. Harmless
     # when no policy is active. The instruction is the baseline; the
     # wrapper never edits it.
     tools = wrap_tools([
@@ -44,7 +44,7 @@ def build_agent() -> LlmAgent:
         before_model_callback=model_routing_callback,
         after_model_callback=cost_after_model_callback,
         # Open a per-trace savings accumulator and flush it onto the root
-        # span at finalization (trace-level accountant.* rollups).
+        # span at finalization (trace-level governor.* rollups).
         before_agent_callback=trace_start_callback,
         after_agent_callback=trace_finalize_callback,
     )

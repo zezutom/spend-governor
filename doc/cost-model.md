@@ -53,7 +53,7 @@ output         = candidates_token_count + thoughts_token_count
 
 ### Models
 
-`src/accountant/pricing/gemini.py` defines `GEMINI_2_5_FLASH` and
+`src/governor/pricing/gemini.py` defines `GEMINI_2_5_FLASH` and
 `GEMINI_2_5_PRO` as `ModelPrice` dataclass instances. Each has
 three rates: input uncached, input cached, output. Rates are per
 1M tokens, in USD.
@@ -67,7 +67,7 @@ explicitly when needed.
 
 ### Tools
 
-`src/accountant/pricing/tools.py` defines `TOOL_PRICES` — a flat
+`src/governor/pricing/tools.py` defines `TOOL_PRICES` — a flat
 dict of tool name → per-call USD rate.
 
 The internal Stratus Forms APIs (`kb_lookup`, `customer_lookup`,
@@ -136,7 +136,7 @@ layer surfaces.
 `usage_metadata` dict and prints the breakdown:
 
 ```
-uv run python -m accountant.cli.verify_cost
+uv run python -m governor.cli.verify_cost
 ```
 
 Use this as a regression check whenever pricing rates change.

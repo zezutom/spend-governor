@@ -7,8 +7,8 @@ Phoenix's native cost and the trust-through-data contract breaks.
 | What | Source of truth | Used for |
 |------|-----------------|----------|
 | Model pricing | **Phoenix UI** (Settings → Models) | Phoenix's native LLM `cost` field — the actual cost of every LLM call |
-| Tool pricing | **Code** — `src/accountant/pricing/tools.py` (`TOOL_PRICES`) | `accountant.cost.actual_usd` on tool spans (Phoenix doesn't price tools) |
-| Counterfactual / baseline | **Code** — `src/accountant/pricing/gemini.py` (mirrors the Phoenix UI) + `TOOL_PRICES` | `accountant.cost.baseline_usd` on modified spans |
+| Tool pricing | **Code** — `src/governor/pricing/tools.py` (`TOOL_PRICES`) | `accountant.cost.actual_usd` on tool spans (Phoenix doesn't price tools) |
+| Counterfactual / baseline | **Code** — `src/governor/pricing/gemini.py` (mirrors the Phoenix UI) + `TOOL_PRICES` | `accountant.cost.baseline_usd` on modified spans |
 
 If anyone asks why a cost number is what it is, the answer is in this
 doc.
@@ -52,7 +52,7 @@ use them only to spot-check if a future reconciliation drifts.
 |-------|------------------------|----------------------|---------------|-------|
 | `gemini-2.5-flash` | $0.30 | $0.030 | $2.50 | Default observed-agent model |
 | `gemini-2.5-flash-lite` | $0.10 | $0.010 | $0.40 | The cheaper tier the wrapper routes simple requests to |
-| `gemini-2.5-pro` | $1.25 | $0.125 | $10.00 | Small-context tier (≤200k input tokens); used for Accountant reasoning. **Add a large-context tier if any call exceeds 200k input tokens** — the rate doubles. |
+| `gemini-2.5-pro` | $1.25 | $0.125 | $10.00 | Small-context tier (≤200k input tokens); used for Governor reasoning. **Add a large-context tier if any call exceeds 200k input tokens** — the rate doubles. |
 
 ### If a future reconciliation drifts
 If a later run shows Phoenix's `cost` disagreeing with our number, only
@@ -63,12 +63,12 @@ the GraphQL reconciliation to confirm.
 
 ### Cross-check against our code
 Our local model price table lives in
-[`src/accountant/pricing/gemini.py`](../src/accountant/pricing/gemini.py).
+[`src/governor/pricing/gemini.py`](../src/governor/pricing/gemini.py).
 It is the **counterfactual engine** — Phoenix can't price calls the
 wrapper *prevented* (model swaps, suppressed tool calls), so the wrapper
 uses this table to compute baseline/savings. It must stay in agreement
 with Phoenix's effective rates (verified 2026-05-30 — they agree). The
-worker's INTERIM local "actual" mirror (`src/accountant/pipeline/worker.py`)
+worker's INTERIM local "actual" mirror (`src/governor/pipeline/worker.py`)
 also uses it until refactor #2 wires Phoenix as the dashboard's actual
 source. If Phoenix's defaults ever change, update this table to match.
 
@@ -79,7 +79,7 @@ source. If Phoenix's defaults ever change, update this table to match.
 Phoenix's pricing table is for models. Tool calls have a flat per-call
 rate that we set ourselves. The table:
 
-[`src/accountant/pricing/tools.py`](../src/accountant/pricing/tools.py)
+[`src/governor/pricing/tools.py`](../src/governor/pricing/tools.py)
 defines `TOOL_PRICES`:
 
 | Tool | Per-call USD | Rationale |
@@ -114,14 +114,14 @@ Model rates come from **Phoenix's built-in defaults** — you don't
 normally edit them. Our `gemini.py` table must agree with those defaults
 (verified 2026-05-30). So when prices change:
 
-1. `src/accountant/pricing/gemini.py` — update to match Phoenix's current
+1. `src/governor/pricing/gemini.py` — update to match Phoenix's current
    default rates (this is the counterfactual engine).
-2. `src/accountant/pricing/tools.py` — tool rates only (Phoenix doesn't
+2. `src/governor/pricing/tools.py` — tool rates only (Phoenix doesn't
    price tools).
 3. Phoenix UI → Settings → Models — **only if** reconciliation shows
    Phoenix's defaults are wrong for a model (rare); override there.
 
-Then re-run `uv run python -m accountant.cli.verify_cost` for a token-math
+Then re-run `uv run python -m governor.cli.verify_cost` for a token-math
 sanity check, and re-run the GraphQL reconciliation
 (`getSpanByOtelId(spanId).costSummary` vs our number on the same tokens)
 on a recent trace.

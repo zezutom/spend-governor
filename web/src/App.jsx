@@ -43,8 +43,8 @@ function RootNode({ data }) {
     <div style={{ position: 'relative', border: `2px solid ${INK}`, background: INK, color: '#fff',
       borderRadius: 16, padding: '14px 22px', minWidth: 230, textAlign: 'center',
       boxShadow: '0 10px 30px rgba(0,0,0,.22)' }}>
-      <div style={{ fontSize: 12.6, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the accountant</div>
-      <div style={{ fontSize: 23, fontWeight: 800, marginTop: 2 }}>Cost Governor</div>
+      <div style={{ fontSize: 12.6, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the governor</div>
+      <div style={{ fontSize: 23, fontWeight: 800, marginTop: 2 }}>Spend Governor</div>
       <div style={{ fontSize: 14.4, color: '#cfece3', marginTop: 3 }}>{data.sub}</div>
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
     </div>
@@ -325,7 +325,7 @@ function AgentPopup({ agentId, state, onClose, onDebug, onAsk, act }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
           <div style={{ fontSize: 14.4, color: DIM }}>Want to be sure before you commit?</div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <Btn onClick={() => onAsk(a.id)} label="🔍 ask the accountant →" color={MCP} big />
+            <Btn onClick={() => onAsk(a.id)} label="🔍 ask the governor →" color={MCP} big />
             <Btn onClick={() => onDebug(a.id)} label="🔬 open debugger →" color={GREEN} primary big />
           </div>
         </div>
@@ -334,7 +334,7 @@ function AgentPopup({ agentId, state, onClose, onDebug, onAsk, act }) {
   )
 }
 
-// Live "Ask the Accountant" — runs the real ADK agent, which introspects its own
+// Live "Ask the Governor" — runs the real ADK agent, which introspects its own
 // Phoenix operational data AT RUNTIME via the Phoenix MCP server. Every MCP call
 // is rendered as a step, so the agentic loop + the MCP integration are on screen.
 const ASK_SUGGESTIONS = [
@@ -398,7 +398,7 @@ function Turn({ t, phoenixBase }) {
         <div style={{ marginTop: 8, padding: '12px 14px', borderRadius: 11, background: '#eef5f1',
           border: `1px solid ${GREEN}33` }}>
           <div style={{ fontSize: 12.6, fontWeight: 800, color: GREEN, letterSpacing: '.05em' }}>
-            THE ACCOUNTANT {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
+            THE GOVERNOR {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
           </div>
           <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{linkifyTraces(t.answer, phoenixBase)}</div>
         </div>
@@ -468,7 +468,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
           <div>
             <span style={{ fontSize: 12.6, fontWeight: 800, color: MCP, background: '#eaf2f6',
               border: `1px solid ${MCP}33`, borderRadius: 999, padding: '3px 10px' }}>◇ live · Phoenix MCP</span>
-            <div style={{ fontSize: 23, fontWeight: 800, marginTop: 8 }}>Ask the Accountant</div>
+            <div style={{ fontSize: 23, fontWeight: 800, marginTop: 8 }}>Ask the Governor</div>
             <div style={{ fontSize: 14.4, color: DIM }}>The agent introspects its own traces in Phoenix at runtime via the MCP server. Follow-up questions keep the context.</div>
           </div>
           <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none',
@@ -480,7 +480,7 @@ function AskPanel({ open, state, onClose, onDebug }) {
           borderTop: '1px solid #eceae0', paddingTop: 12 }}>
           {turns.length === 0 && (
             <div style={{ color: DIM, fontSize: 14.4 }}>
-              Ask a cost question — the Accountant will call the Phoenix MCP tools to check the real traces before answering.
+              Ask a cost question — the Governor will call the Phoenix MCP tools to check the real traces before answering.
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {ASK_SUGGESTIONS.map((s) => (
                   <button key={s} onClick={() => start({ q: s }, s)}
@@ -650,7 +650,7 @@ function VerifyCard({ text, state }) {
   )
 }
 
-// The defer card names the SPECIFIC agent the Accountant stopped on, and frames
+// The defer card names the SPECIFIC agent the Governor stopped on, and frames
 // the ask by the fix type + (for routing) its real pre-run verdict.
 function DeferCard({ route, act, state, onExperiment, openProof }) {
   const agents = state?.agents || []
@@ -742,8 +742,8 @@ function TopBar({ state, onLab, onPin, onFF }) {
     <div style={{ borderBottom: '1px solid #eceae0', background: '#fff' }}>
       <div style={{ padding: '12px 24px 6px', display: 'flex', alignItems: 'baseline', gap: 16 }}>
         <div style={{ fontSize: 24.1, fontWeight: 800, letterSpacing: '-.01em', color: INK }}>
-          AI cost governance
-          <span style={{ fontSize: 17.8, fontWeight: 500, color: DIM }}> · one Accountant governing a fleet</span>
+          Spend Governor
+          <span style={{ fontSize: 17.8, fontWeight: 500, color: DIM }}> · one governor over a fleet of AI agents</span>
         </div>
         <div style={{ marginLeft: 'auto' }}><MindLoop step={state?.step} steps={state?.steps} /></div>
       </div>
@@ -1958,7 +1958,7 @@ function opSub(op, lever) {
   if (op.kind === 'model') return lever ? 'premium · routable' : 'premium model'
   return lever ? 'paying — the agent will cache' : 'paying'
 }
-// The FLEET TREE: the Accountant on top, each observed agent a node below it.
+// The FLEET TREE: the Governor on top, each observed agent a node below it.
 function buildGraph(state, act, onInspect) {
   const agents = state?.agents || []
   if (!agents.length) return { nodes: [], edges: [] }

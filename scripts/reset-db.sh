@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Reset the Accountant cache so the next launch is treated as a NEW
+# Reset the Governor cache so the next launch is treated as a NEW
 # account (triggers the Phoenix onboarding backfill).
 #
 #   1. Stops the dashboard (:8501) and ingest server (:8765).
@@ -9,12 +9,12 @@
 # The backup means an undo is instant instead of a slow Phoenix
 # re-import. Relaunch yourself afterwards to watch the backfill live:
 #
-#   uv run streamlit run src/accountant/ui/dashboard.py
+#   uv run streamlit run src/governor/ui/dashboard.py
 #
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB="${ACCOUNTANT_DB:-$REPO_ROOT/data/accountant.db}"
+DB="${GOVERNOR_DB:-$REPO_ROOT/data/accountant.db}"
 
 # 1. Stop the app.
 PIDS="$(lsof -ti :8765 -i :8501 2>/dev/null | sort -u || true)"
@@ -37,4 +37,4 @@ else
   echo "No DB at $DB — already empty (will onboard as a new account)."
 fi
 
-echo "Relaunch:  uv run streamlit run src/accountant/ui/dashboard.py"
+echo "Relaunch:  uv run streamlit run src/governor/ui/dashboard.py"

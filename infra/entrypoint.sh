@@ -9,5 +9,5 @@ if [ -f /app/data/accountant.db ]; then
 fi
 
 # Cloud Run injects $PORT (default 8080). Bind there.
-exec uv run --no-sync uvicorn accountant.api.server:app \
+exec uv run --no-sync uvicorn governor.api.server:app \
   --host 0.0.0.0 --port "${PORT:-8080}" --log-level warning

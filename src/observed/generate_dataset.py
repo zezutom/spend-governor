@@ -2,7 +2,7 @@
 
 Drives EACH agent in the fleet (Support Co-Pilot, Refund Auditor, Sales
 Assistant, Docs Bot) through its own messages, so every agent's signature
-waste pattern lands in the traces for the Accountant to detect. Each agent
+waste pattern lands in the traces for the Governor to detect. Each agent
 stamps its identity as the grouping key, so downstream aggregation groups by
 agent. customer_id is passed as the ADK user_id for per-customer rollups.
 

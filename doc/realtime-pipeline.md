@@ -13,7 +13,7 @@ This starts the control-plane API (`:8800`), the ingest server (`:8765`),
 and the React cockpit (Vite, `:5173`; open this). On first run it:
 
 1. Probes `127.0.0.1:8765`; if nothing is listening, spawns the ingest
-   server (`uvicorn accountant.pipeline.ingest_server:app`) as a background
+   server (`uvicorn governor.pipeline.ingest_server:app`) as a background
    subprocess.
 2. Checks the SQLite cache. If empty (a new account), POSTs
    `/backfill/start` to import history from Phoenix.
@@ -26,21 +26,21 @@ No separate processes to start, no manual buttons in the common path.
 `src/observed/telemetry.py` registers Phoenix's OTEL exporter as usual,
 then adds a second `BatchSpanProcessor` wired to
 `AccountantHTTPExporter` (`src/observed/accountant_exporter.py`). The
-same spans go to Phoenix (durable store) and to the Accountant
+same spans go to Phoenix (durable store) and to the Governor
 (`POST /ingest`, real-time) simultaneously.
 
-The second exporter activates only when `ACCOUNTANT_INGEST_URL` is set.
+The second exporter activates only when `GOVERNOR_INGEST_URL` is set.
 When it's unset, the agent logs a one-line notice and emits to Phoenix
 only — so a missing env var is visible, not a silent no-op.
 
 > **Gotcha:** Phoenix's `TracerProvider.add_span_processor` defaults to
 > `replace_default_processor=True`, which shuts down Phoenix's own
 > exporter when you add a second one. We pass
-> `replace_default_processor=False` so both Phoenix and the Accountant
+> `replace_default_processor=False` so both Phoenix and the Governor
 > receive every span — Phoenix is the system of record and the audit
 > proof, so it must keep receiving traffic.
 
-Export is best-effort: if the Accountant is down, the export fails, OTel
+Export is best-effort: if the Governor is down, the export fails, OTel
 logs a warning, and Phoenix still receives everything. (A production
 emitter would need a durable local queue; in this setup both processes
 run side by side.)
@@ -158,7 +158,7 @@ writes a `accountant_policies` row (e.g. `cache_tool:web_search`,
 `route_model:simple`) with the activation timestamp. No prompt or source
 change — a runtime control the customer can grant.
 
-**Enforce** (`src/accountant/wrapper/`) — the wrapper runs inline in the
+**Enforce** (`src/governor/wrapper/`) — the wrapper runs inline in the
 observed agent's call path. On an active policy it:
 - **Caches tools** — before executing a governed tool (e.g. `web_search`),
   it checks the semantic cache (`cache.py`). On a hit (query embedding
@@ -178,7 +178,7 @@ cached calls are priced $0 and routed calls carry the cheaper model, the
 "after" cost genuinely drops. The dashboard shows this beside the
 wrapper's own realized-savings log; when they agree, the number is
 trustworthy. Optimized calls are filterable in Phoenix by the
-`accountant.*` tags.
+`governor.*` tags.
 
 ## Accuracy
 
@@ -190,7 +190,7 @@ silently filtered out of the count.
 
 ## Ports
 
-- `8765` — Accountant ingest server (FastAPI). No UI; `/ingest`,
+- `8765` — Governor ingest server (FastAPI). No UI; `/ingest`,
   `/backfill/start`, `/health`.
 - `8800` — control-plane API (FastAPI): cockpit state + SSE + `/api/ask`.
 - `5173` — React cockpit (Vite). The UI.

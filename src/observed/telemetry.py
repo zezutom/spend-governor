@@ -26,8 +26,8 @@ def init_telemetry() -> None:
     project_name = os.environ.get("PHOENIX_PROJECT_NAME", "agent-accountant")
     tracer_provider = register(project_name=project_name, auto_instrument=True)
 
-    # If ACCOUNTANT_INGEST_URL is set, fan-out the same spans to the
-    # Accountant's real-time ingest endpoint as a SECOND processor.
+    # If GOVERNOR_INGEST_URL is set, fan-out the same spans to the
+    # Governor's real-time ingest endpoint as a SECOND processor.
     # Crucial: replace_default_processor=False — Phoenix's TracerProvider
     # otherwise removes its own exporter when you add one, which would
     # stop traces reaching Phoenix entirely. The observed agent must keep

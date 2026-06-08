@@ -1,4 +1,4 @@
-# Streamlit configuration for the Agent Accountant dashboard.
+# Streamlit configuration for the Spend Governor dashboard.
 [browser]
 # Disable Streamlit's anonymous usage telemetry (the POSTs to
 # webhooks.fivetran.com). Keeps the demo free of cross-site beacons and

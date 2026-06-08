@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy Agent Accountant as a single Cloud Run service (FastAPI serves the built
+# Deploy Spend Governor as a single Cloud Run service (FastAPI serves the built
 # cockpit + /api + the live Phoenix-MCP introspection).
 #
 # Prereqs: `gcloud auth login`, a GCP project with billing, and the secrets below

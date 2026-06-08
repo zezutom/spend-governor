@@ -1,6 +1,6 @@
 # Architecture
 
-Agent Accountant is a runtime FinOps **platform**, not an analytics
+Spend Governor is a runtime FinOps **platform**, not an analytics
 tool. It works in two planes: a **learning plane** that reads traces and
 decides what to govern, and an **enforcement plane** — a thin **wrapper**
 the observed agent's tool/LLM traffic flows through — that intervenes in
@@ -30,7 +30,7 @@ through.
 
 ### The wrapper (enforcement plane)
 
-`src/accountant/wrapper/` — the inline layer that acts on execution in
+`src/governor/wrapper/` — the inline layer that acts on execution in
 real time. Policy-driven, with no access to the observed agent's prompt,
 tool logic, or internals.
 
@@ -41,7 +41,7 @@ tool logic, or internals.
 - `wrapper.py` — wraps tool calls (semantic-cache interception, tagging
   the span `accountant.cache_hit` and pricing it $0), routes simple
   requests to a cheaper model (tagging `accountant.modification =
-  model_swap`), and writes the per-span/per-trace `accountant.*` cost
+  model_swap`), and writes the per-span/per-trace `governor.*` cost
   schema. Policy-driven; no prompt/source access.
 - `store.py` — operator-activated policies + an append-only intervention
   log (every action, with cost avoided) + policy activation timestamps.
@@ -59,18 +59,18 @@ instance) is the durable, queryable store of record. Project name:
 `@arizeai/phoenix-mcp` MCP server.
 
 Phoenix has no outbound webhooks or streaming, so it can't push new
-spans to the Accountant. That's why the observed agent fans out
-directly (real-time path) and the Accountant backfills from Phoenix
+spans to the Governor. That's why the observed agent fans out
+directly (real-time path) and the Governor backfills from Phoenix
 on first run (historical path).
 
-### The Accountant (learning plane)
+### The Governor (learning plane)
 
 Attaches cost to every span, aggregates to per-task-type unit
 economics, detects economically irrational patterns, quantifies the
 savings of a runtime policy, and — once a policy is active —
 **verifies the savings from the traces**.
 
-`src/accountant/` is one loose module — `agent.py` (the ADK agent that
+`src/governor/` is one loose module — `agent.py` (the ADK agent that
 reads traces via Phoenix MCP and writes a report) — and six packages:
 
 **`pricing/`** — the cost model (pure, no I/O):
@@ -116,7 +116,7 @@ See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
 ┌─────────────────────────────┐   ┌──────────────────────────────────┐
 │  Phoenix Cloud              │   │  POST /ingest  (FastAPI :8765)    │
 │  durable store · MCP · SDK  │   │  → outbox INSERT → 200            │
-│  (filter accountant.* tags) │   └───────────────┬──────────────────┘
+│  (filter governor.* tags) │   └───────────────┬──────────────────┘
 └───────────────┬─────────────┘                   │ worker.py drains;
                 │ backfill (new account)           │ cached calls priced $0
                 ▼                                  ▼
@@ -138,7 +138,7 @@ See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
 
 The loop: traces → detect & quantify → operator activates a policy →
 the wrapper enforces it on live traffic → the optimized calls are
-re-traced (tagged) → the Accountant re-measures the before/after from
+re-traced (tagged) → the Governor re-measures the before/after from
 those traces. The savings are proven from the system of record, not
 claimed.
 
