@@ -629,7 +629,7 @@ def _lab_setup():
 
 def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
                   baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
-                  max_workers: int = 6):
+                  max_workers: int = 2):  # low concurrency so replay spans actually export to Phoenix
     """Execute N replays LIVE and yield each captured row as it completes — for a
     real, visible re-measure. REPLAY samples real past tickets; SYNTHETIC generates
     plausible ones. Every span tagged 'test' (+ the source); sandbox, never touches
@@ -649,29 +649,40 @@ def iter_lab_rows(use_case: str, n: int, source: str = "replay", *,
     instr = _fleet_instruction(use_case)
     tag = {"accountant.run_type": "test", "accountant.lab.use_case": use_case,
            "accountant.lab.candidate": "route_economy", "accountant.lab.source": source}
-    with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = [ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
-                          gid, tag, rates, baseline_model, economy_model, instr)
-                for i, t in enumerate(tickets)]
-        for f in cf.as_completed(futs):
-            try:
-                yield f.result()
-            except Exception:
-                continue
+    # Run SERIALLY and flush each replay as it lands — a live experiment is small,
+    # so paced export keeps every span under Phoenix's burst limit, and each row's
+    # tool spans reliably resolve via /redirects/spans/<otel-id>.
+    from opentelemetry import trace as _ot
+    for i, t in enumerate(tickets):
+        try:
+            row = _lab_eval_ticket(t["ticket"], t["sub_type"], str(1200 + i),
+                                   gid, tag, rates, baseline_model, economy_model, instr)
+        except Exception:
+            continue
+        try:
+            _ot.get_tracer_provider().force_flush()
+        except Exception:
+            pass
+        yield row
 
 
 def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
                    baseline_model: str = BASELINE_MODEL, economy_model: str = ECONOMY_MODEL,
-                   max_workers: int = 3) -> dict:
+                   max_workers: int = 1, gid: str | None = None) -> dict:
     """Replay N real past conversations through the candidate in a sandbox (every
     span tagged 'test', live policies untouched) and return the quality
     DISTRIBUTION + per-conversation call sequences (for step-mode) + cost
-    projection + recommendation."""
+    projection + recommendation. Pass a known `gid` to avoid a flaky re-resolve."""
     from observed.telemetry import init_telemetry
     from accountant.pipeline import phoenix_cost
     from accountant import service
     init_telemetry()
-    gid = phoenix_cost.project_gid()
+    for _ in range(5):  # transient Phoenix miss would null every deep-link — retry w/ backoff
+        if gid:
+            break
+        gid = phoenix_cost.project_gid()
+        if not gid:
+            time.sleep(2)
     rates = service.default_tool_rates()
     tickets = _sample_with_subtype(use_case, n)
     instr = _fleet_instruction(use_case)
@@ -679,12 +690,19 @@ def run_replay_lab(use_case: str, *, n: int = 24, candidate: str = "economy",
            "accountant.lab.candidate": f"route_{candidate}"}
     t0 = time.monotonic()
     rows: list[dict] = []
-    with cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(_lab_eval_ticket, t["ticket"], t["sub_type"], str(1200 + i),
-                          gid, tag, rates, baseline_model, economy_model, instr): i
-                for i, t in enumerate(tickets)}
-        for f in cf.as_completed(futs):
-            rows.append(f.result())
+    from opentelemetry import trace as _ot
+    # Run SERIALLY and flush each replay's spans to Phoenix on its own — a burst of
+    # all replays' spans at once 429s Phoenix's OTLP ingest and the BatchSpanProcessor
+    # drops the batch silently (no retry), so the traces never land. Small, spaced
+    # flushes get every trace in. (Slower, but correctness > speed for the pre-run.)
+    for i, t in enumerate(tickets):
+        rows.append(_lab_eval_ticket(t["ticket"], t["sub_type"], str(1200 + i),
+                                     gid, tag, rates, baseline_model, economy_model, instr))
+        try:
+            _ot.get_tracer_provider().force_flush()
+        except Exception:
+            pass
+        time.sleep(1.0)  # space out the ingest so Phoenix doesn't rate-limit + drop
     rows.sort(key=lambda r: int(r["conv_id"]))
     _resolve_span_urls(rows, gid)  # attach each call's exact Phoenix span deep-link
     return {

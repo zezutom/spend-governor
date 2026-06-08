@@ -1,20 +1,20 @@
 {
-  "held_pct": 0.25,
-  "degraded_pct": 0.75,
+  "held_pct": 0.0,
+  "degraded_pct": 1.0,
   "degraded_dominant_sub": "simple",
   "held_by_sub": {
-    "simple": 0.25
+    "simple": 0.0
   },
   "use_case": "sales_assistant",
   "candidate": "economy",
-  "n": 8,
+  "n": 4,
   "recommendation": "Breaks across the variety \u2014 keep the premium model here. The small eval looked fine; at scale it doesn't hold.",
   "cost": {
     "baseline": 0.0116,
     "projected": 0.0062,
     "pct": 46
   },
-  "elapsed_sec": 38.8,
+  "elapsed_sec": 50.9,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -28,7 +28,7 @@
       "clarified": false,
       "refused_escalated": false,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ba38e9e8457b1390ca7505a21ceb292b",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/03f34a716872790dd478fa06a0b06ea7",
       "baseline_answer": "The Pro plan offers advanced features like conditional logic, file uploads, and integrations with popular services. The Enterprise plan includes everything in Pro, plus dedicated support, custom branding, audit logs, and advanced security f",
       "economy_answer": "The Pro plan is designed for growing businesses needing advanced features like custom branding and priority support. The Enterprise plan is for large organizations requiring dedicated infrastructure, advanced security, and a Service Level A",
       "baseline_model_cost": 0.00064,
@@ -45,7 +45,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/plan-changes\"}",
           "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "d98e4986f50b36e4"
+          "span_id": "7a07790e44241ccd"
         },
         {
           "kind": "tool",
@@ -54,7 +54,7 @@
           "dup": false,
           "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
           "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "6d649f9e479b04ed"
+          "span_id": "f6b9d4ab2252f6a9"
         },
         {
           "kind": "model",
@@ -62,7 +62,7 @@
           "cost": 0.0002,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 6019,
+          "latency_ms": 6020,
           "in_tokens": 1484,
           "out_tokens": 130
         },
@@ -82,7 +82,7 @@
       "clarified": true,
       "refused_escalated": false,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/07c9c98cc3ccda19215869e816a9d41a",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e48de5a5307cc63046380b06812cd344",
       "baseline_answer": "Our Enterprise plan is custom-quoted based on your specific needs. Please contact our sales team for a personalized quote. Competitor pricing varies widely, but we strive to offer competitive rates and superior features.",
       "economy_answer": "The Enterprise plan is custom-priced. To get a quote, please provide your specific needs. Our competitors typically charge between $50-$150/month for comparable plans, but we offer more features and better support.",
       "baseline_model_cost": 0.000464,
@@ -99,7 +99,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/plan-changes\"}",
           "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "27d5a1c6fdacd0ff"
+          "span_id": "84af0227b49fbad5"
         },
         {
           "kind": "tool",
@@ -108,7 +108,7 @@
           "dup": false,
           "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
           "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "063951b77ca21ded"
+          "span_id": "1f3bc0dbeb604a77"
         },
         {
           "kind": "model",
@@ -116,7 +116,7 @@
           "cost": 0.000166,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 4515,
+          "latency_ms": 3738,
           "in_tokens": 1478,
           "out_tokens": 46
         },
@@ -136,7 +136,7 @@
       "clarified": false,
       "refused_escalated": true,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/65724733457f6e7ae3a8f23407f0db0e",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/56765e6345f0c8fcab282f976a617962",
       "baseline_answer": "We accept all major credit cards, including Visa, Mastercard, American Express, and Discover. We also support payments via PayPal.",
       "economy_answer": "The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard payment methods commonly used by SaaS businesses. For a definitive",
       "baseline_model_cost": 0.000506,
@@ -153,7 +153,7 @@
           "dup": false,
           "input": "{\"path\": \"/billing/general\"}",
           "output": "{\"result\": {\"status\": \"not_found\"}}",
-          "span_id": "4a59ccbce1cba422"
+          "span_id": "8cf1d4fddf911331"
         },
         {
           "kind": "tool",
@@ -162,16 +162,16 @@
           "dup": false,
           "input": "{\"query\": \"Stratus Forms accepted payment methods\"}",
           "output": "{\"result\": [{\"title\": \"Stratus Forms accepted payment methods \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_accepted_payment_methods\", \"snippet\": \"This article provides a general overview o\u2026",
-          "span_id": "f4b4d10249c75b22"
+          "span_id": "39a060f5c794695e"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"ticket_id\": \"1701\", \"customer_reply\": \"The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard payme\u2026",
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard paym\u2026",
           "output": "{\"result\": {\"status\": \"ok\", \"ticket_id\": \"1701\"}}",
-          "span_id": "c2a4c0c58c66e731"
+          "span_id": "a3c0ff14bafac15e"
         },
         {
           "kind": "model",
@@ -179,7 +179,7 @@
           "cost": 0.000156,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5377,
+          "latency_ms": 5332,
           "in_tokens": 1559,
           "out_tokens": 0
         },
@@ -199,7 +199,7 @@
       "clarified": false,
       "refused_escalated": true,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9ec3d04d422a111f665deb41992c6445",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/83e5ba0b2a9eb7238be2760cac1d3963",
       "baseline_answer": "We offer a Pro plan at $25 per user per month. For 50 seats, that would be $1250 per month. This includes all Pro features such as advanced analytics, custom branding, and priority support.\n\nOur competitors generally offer similar pricing s",
       "economy_answer": "(no answer)",
       "baseline_model_cost": 0.000767,
@@ -215,243 +215,9 @@
           "cost": 0.000117,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 1107,
+          "latency_ms": 1085,
           "in_tokens": 1170,
           "out_tokens": 0
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1204",
-      "ticket": "Is there an annual discount?",
-      "sub_type": "simple",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 3,
-      "clarified": false,
-      "refused_escalated": false,
-      "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/968061014dc293caf06445778258c90f",
-      "baseline_answer": "We offer a 10% discount for annual subscriptions on all our plans. This is automatically applied when you choose the annual billing option during checkout or when changing your plan.",
-      "economy_answer": "We offer discounts on annual billing for all our plans. Would you like me to draft a quote for you?",
-      "baseline_model_cost": 0.00053,
-      "economy_model_cost": 0.00016,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"Is there an annual discount?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/billing/plan-changes\"}",
-          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "ef23e16228b790f1"
-        },
-        {
-          "kind": "tool",
-          "tool": "web_search",
-          "cost": 0.005,
-          "dup": false,
-          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
-          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "9545324219a69bc6"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.00016,
-          "bites": true,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 3015,
-          "in_tokens": 1508,
-          "out_tokens": 22
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1205",
-      "ticket": "What does the Pro plan include?",
-      "sub_type": "simple",
-      "equivalent": false,
-      "baseline_quality": 4,
-      "economy_quality": 4,
-      "clarified": false,
-      "refused_escalated": false,
-      "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9ec754f225e6de94e36b260055618b53",
-      "baseline_answer": "Our Pro plan includes unlimited forms, unlimited submissions, advanced analytics, and priority support. It costs $49 per month or $490 per year. Competitor offerings vary, but generally, similar plans range from $30 to $70 per month.",
-      "economy_answer": "The Pro plan includes:\n\n*   **Unlimited forms:** Create as many forms as you need.\n*   **Unlimited responses:** Collect unlimited submissions.\n*   **Custom branding:** Add your logo and customize the look and feel.\n*   **Advanced reporting:",
-      "baseline_model_cost": 0.000602,
-      "economy_model_cost": 0.000196,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"What does the Pro plan include?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/billing/plan-changes\"}",
-          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "0b428f585af147fb"
-        },
-        {
-          "kind": "tool",
-          "tool": "web_search",
-          "cost": 0.005,
-          "dup": false,
-          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
-          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "9956a9c6c5e90bec"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000196,
-          "bites": false,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 3266,
-          "in_tokens": 1478,
-          "out_tokens": 120
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1206",
-      "ticket": "How much to upgrade ACME-001 from Pro to Enterprise?",
-      "sub_type": "simple",
-      "equivalent": false,
-      "baseline_quality": 4,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/28c0a557acab6bf5cd2968a5e2c46c57",
-      "baseline_answer": "To upgrade ACME-001 from Pro to Enterprise, the prorated difference for the remainder of the current billing cycle will be charged immediately. Downgrades issue a prorated credit. I'll need to know the current billing cycle and the exact da",
-      "economy_answer": "I need the ticket ID to update the ticket. Could you please provide it?",
-      "baseline_model_cost": 0.000603,
-      "economy_model_cost": 0.000226,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"How much to upgrade ACME-001 from Pro to Enterprise?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/billing/plan-changes\"}",
-          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "b63ca57d8ea6e155"
-        },
-        {
-          "kind": "tool",
-          "tool": "customer_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"customer_id\": \"ACME-001\"}",
-          "output": "{\"result\": {\"name\": \"ACME Corp\", \"plan\": \"pro\", \"mrr\": 49.0, \"signup_date\": \"2025-08-12\", \"recent_ticket_count\": 3}}",
-          "span_id": "640a3d3a1e942da6"
-        },
-        {
-          "kind": "tool",
-          "tool": "web_search",
-          "cost": 0.005,
-          "dup": false,
-          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
-          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "865ab6a344afa212"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"customer_reply\": \"Here is a quote for upgrading ACME Corp from the Pro plan to the Enterprise plan.\\n\\n**Current Plan:** Pro\\n**New Plan:** Enterprise\\n\\n**Pricing:**\\n*   Enterprise Plan: $299/month\\n*   Pro Plan: $99\u2026",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'Here is a quote for upgrading ACME Corp from the Pro plan to the Enterprise plan.\\\\n\\\\n**Current Plan:\u2026",
-          "span_id": "7432978520745ba9"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000226,
-          "bites": true,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 5196,
-          "in_tokens": 2195,
-          "out_tokens": 16
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1207",
-      "ticket": "Do you offer a nonprofit discount?",
-      "sub_type": "simple",
-      "equivalent": true,
-      "baseline_quality": 4,
-      "economy_quality": 4,
-      "clarified": false,
-      "refused_escalated": false,
-      "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/183da8983d6e6b1507dcd30afe5224c1",
-      "baseline_answer": "We do not currently offer a specific nonprofit discount. Our standard pricing applies to all organizations. You can find details on our plans and pricing at [link to pricing page - if I had one].\n\nI've also looked into competitor pricing to",
-      "economy_answer": "We do not currently offer a specific nonprofit discount. Our pricing is listed on our website, and we aim to be competitive with other SaaS form builders. You can find detailed information on our plans and features to see which best fits yo",
-      "baseline_model_cost": 0.000494,
-      "economy_model_cost": 0.000176,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"Do you offer a nonprofit discount?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/billing/plan-changes\"}",
-          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
-          "span_id": "7a9543697aabdeac"
-        },
-        {
-          "kind": "tool",
-          "tool": "web_search",
-          "cost": 0.005,
-          "dup": false,
-          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
-          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
-          "span_id": "b722187914e57eb6"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000176,
-          "bites": false,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 3448,
-          "in_tokens": 1478,
-          "out_tokens": 70
         },
         {
           "kind": "reply",

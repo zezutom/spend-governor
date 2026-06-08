@@ -149,6 +149,7 @@ export default function App() {
   const [inspectTc, setInspectTc] = useState(null) // per-box inspector — DEFAULT click
   const [lab, setLab] = useState(null)             // {uc} when the debugger is open (sandbox)
   const [sessionId, setSessionId] = useState(null) // debug-session metadata popup (#DS-…)
+  const [agentDetail, setAgentDetail] = useState(null) // agent metrics popup (id)
   const [hideSummary, setHideSummary] = useState(false)  // dismiss the closing takeaway
   // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
@@ -190,8 +191,8 @@ export default function App() {
     else act('accept', rt.sig)                                        // account: lab is the evidence
   }, [act])
 
-  const openDebugger = useCallback((id) => setLab({ uc: id }), [])  // full replay lab for an agent
-  const { nodes, edges } = useMemo(() => buildGraph(state, act, openDebugger), [state, act, openDebugger])
+  const openAgent = useCallback((id) => setAgentDetail(id), [])  // metrics popup, not the lab directly
+  const { nodes, edges } = useMemo(() => buildGraph(state, act, openAgent), [state, act, openAgent])
   const scene = useMemo(() => sceneFor(state, feed), [state, feed])
   const decision = scene.kind === 'defer' ? scene : null
 
@@ -220,7 +221,7 @@ export default function App() {
               ? <div style={{ padding: 24, color: DIM }}>connecting to the live stream…</div>
               : <ReactFlow key={decision ? 'decide' : 'idle'} nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   style={{ width: '100%', height: '100%' }}
-                  onNodeClick={(e, node) => node.data.agent && setLab({ uc: node.data.agent.id })}
+                  onNodeClick={(e, node) => node.data.agent && setAgentDetail(node.data.agent.id)}
                   proOptions={{ hideAttribution: true }} nodesDraggable={false}
                   nodesConnectable={false} elementsSelectable={false} panOnDrag={false}
                   zoomOnScroll={false} zoomOnDoubleClick={false}>
@@ -237,6 +238,90 @@ export default function App() {
       {evalView && <EvalPopup view={evalView} onClose={() => setEvalView(null)} />}
       {lab && <ReplayLab initialUc={lab.uc} onClose={() => setLab(null)} />}
       {sessionId && <SessionPopup id={sessionId} onClose={() => setSessionId(null)} />}
+      {agentDetail && <AgentPopup agentId={agentDetail} state={state}
+        onClose={() => setAgentDetail(null)} act={act}
+        onDebug={(id) => { setAgentDetail(null); setLab({ uc: id }) }} />}
+    </div>
+  )
+}
+
+// Agent detail popup — open on a tree click. Useful metrics + a small traffic/cost
+// timeline + the option to open the full debugger. (Not the debugger itself.)
+function AgentPopup({ agentId, state, onClose, onDebug, act }) {
+  const a = (state?.agents || []).find((x) => x.id === agentId)
+  if (!a) return null
+  const st = _STATUS[a.status] || _STATUS.watching
+  const fix = a.fix || {}
+  const hist = state?.history || []
+  const vshare = a.vshare || 0, cpm = a.cost_per_message || 0
+  // per-agent traffic over the (time-compressed) window, from the seeded arrival
+  // curve × this agent's volume share; cost = events × its measured $/msg.
+  const pts = hist.slice(-48).map((h) => ({ t: h.t, ev: (h.volume || 0) * vshare }))
+  const evNow = pts.length ? pts[pts.length - 1].ev : 0
+  const evMax = Math.max(1, ...pts.map((p) => p.ev))
+  const W = 560, H = 96, PT = 8, PB = 14
+  const X = (i) => (i / Math.max(1, pts.length - 1)) * W
+  const Y = (v) => PT + (1 - v / evMax) * (H - PT - PB)
+  let area = pts.length ? `M 0 ${H - PB}` : ''
+  pts.forEach((p, i) => { area += ` L ${X(i)} ${Y(p.ev)}` })
+  if (pts.length) area += ` L ${W} ${H - PB} Z`
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'} ${X(i)} ${Y(p.ev)}`).join(' ')
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 56 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 16, padding: '22px 26px',
+        width: 620, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 16px 50px rgba(0,0,0,.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: st.color, background: st.bg,
+              border: `1px solid ${st.color}33`, borderRadius: 999, padding: '3px 10px' }}>{st.icon} {st.label}</span>
+            <div style={{ fontSize: 24, fontWeight: 800, marginTop: 9 }}>{a.label}</div>
+            <div style={{ fontSize: 13.5, color: DIM }}>{a.purpose} · {a.model}</div>
+          </div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none',
+            fontSize: 26, cursor: 'pointer', color: DIM }}>×</button>
+        </div>
+        {/* metrics */}
+        <div style={{ display: 'flex', gap: 26, marginTop: 16 }}>
+          <Stat label="$ / message" main={`$${a.cost_per_message.toFixed(4)}`} sub="measured" color={INK} />
+          <Stat label="fleet spend" main={`${Math.round(a.share * 100)}%`} sub="of the bill" color={INK} />
+          <Stat label="traffic" main={`${Math.round(a.vshare * 100)}%`} sub="of volume" color={INK} />
+          <Stat label={fix.active ? 'saving / mo' : 'fix saves / mo (est.)'}
+            main={`$${Math.round(fix.monthly || 0).toLocaleString()}`} sub={`${_FIXNAME[fix.type] || 'fix'}`} color={GREEN} />
+        </div>
+        {/* traffic + cost timeline */}
+        <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
+          <span style={{ flex: 1 }}>TRAFFIC · events/min</span>
+          <span>{Math.round(evNow).toLocaleString()}/min now · ${(evNow * cpm).toFixed(2)}/min</span>
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+          style={{ width: '100%', height: H, display: 'block', marginTop: 4,
+            border: '1px solid #ece9df', borderRadius: 10, background: '#fcfcfa' }}>
+          {area && <path d={area} fill="rgba(181,121,26,.12)" stroke="none" />}
+          {line && <path d={line} fill="none" stroke={AMBER} strokeWidth="2" vectorEffect="non-scaling-stroke" />}
+        </svg>
+        <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>last 12h · time-compressed · cost = events × ${a.cost_per_message.toFixed(4)}/msg</div>
+        {/* what's wrong + the fix */}
+        <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 11, background: st.bg, border: `1px solid ${st.color}33` }}>
+          <div style={{ fontSize: 13.5, color: a.status === 'governed' ? GREEN : '#85540b', fontWeight: 600 }}>
+            {a.status === 'governed' ? '✓' : '⚠'} {a.waste}
+          </div>
+          <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 4 }}>
+            <b>{_FIXNAME[fix.type] || 'fix'}</b> — {fix.title} · <span style={{ color: GREEN, fontWeight: 700 }}>~${Math.round(fix.monthly || 0).toLocaleString()}/mo</span>
+          </div>
+          {fix.escalated && <div style={{ marginTop: 9, display: 'flex', gap: 8 }}>
+            <Btn onClick={() => act('accept', fix.sig)} label="arm it" color={AMBER} />
+            <Btn onClick={() => act('reject', fix.sig)} label="not now" color={DIM} />
+          </div>}
+          {fix.active && <div style={{ marginTop: 9 }}><Btn onClick={() => act('veto', fix.sig)} label="revert" color={DIM} /></div>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 18 }}>
+          <div style={{ fontSize: 12.5, color: DIM }}>Want to be sure before you commit?</div>
+          <div style={{ marginLeft: 'auto' }}>
+            <Btn onClick={() => onDebug(a.id)} label="🔬 open debugger →" color={GREEN} primary big />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -414,13 +499,11 @@ function DeferCard({ route, act, state, onExperiment, openProof }) {
         <Btn onClick={() => act('reject', route.sig)} label="not now" color={DIM} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
           <Btn onClick={() => act('accept', route.sig)} label="arm it anyway" color={AMBER} />
-          {route.eval_key
-            ? <Btn onClick={() => onExperiment(uc, route.eval_key)} label="see the eval →" color={GREEN} primary big />
-            : <Btn onClick={() => openProof(uc)} label="see the traces →" color={GREEN} primary big />}
+          <Btn onClick={() => onExperiment(uc, route.eval_key)} label="🔬 debug it →" color={GREEN} primary big />
         </div>
       </div>
       <div style={{ fontSize: 12, color: DIM, marginTop: 9, textAlign: 'right' }}>
-        can't prove it yet? check the evidence first — that's the honest move.
+        not sure? <b>debug it</b> — step a real conversation and load-test before you commit.
       </div>
     </Card>
   )
@@ -1271,7 +1354,9 @@ function ReplayLab({ onClose, initialUc }) {
                 </ReactFlow>
               </div>
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 8 }}>
-                <CallInspector call={call} row={selRow} />
+                <CallInspector call={call} row={selRow}
+                  corpus={{ tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }}
+                  live={runRows.length > 0} />
               </div>
             </div>
             {/* RIGHT — NEW: lever rail + run + impact + degraded */}
@@ -1360,7 +1445,7 @@ function ReplayLab({ onClose, initialUc }) {
                         <span style={{ color: AMBER, fontWeight: 600 }}>q{r.economy_quality}</span>
                         <button onClick={() => openDegraded(r._i)} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600,
                           background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>open</button>
-                        {r.phoenix_url && <SpanLink url={redirectUrl({}, r)} label="trace ↗" />}
+                        {r.phoenix_url && <SpanLink url={redirectUrl({}, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0)} label="trace ↗" />}
                       </div>
                     ))}
                   </>}
@@ -1417,12 +1502,13 @@ function ReplayLab({ onClose, initialUc }) {
 }
 // the shared inspector — renders whatever the cursor points at; the model call
 // is the payoff (premium vs economy side by side).
-function CallInspector({ call, row }) {
+function CallInspector({ call, row, corpus, live }) {
   if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
-  // each call links to its OWN span via Phoenix's /redirects/spans/<otel-id> route;
-  // user/reply and the model call (no captured span id) open the trace.
-  const span = redirectUrl(call, row)
-  const spanLabel = call.span_id ? 'open this span in Phoenix ↗' : 'open the trace in Phoenix ↗'
+  // a live-run conversation links to its exact span; a pre-run row to a durable
+  // corpus span of the same tool (its own bulk-exported span was dropped).
+  const span = redirectUrl(call, row, corpus, live)
+  const spanLabel = (live && call.span_id) ? 'open this span in Phoenix ↗'
+    : call.tool ? `open a real ${call.tool} span in Phoenix ↗` : 'open in Phoenix ↗'
   if (call.kind === 'user')
     return <InsShell title="user message" accent={DIM} span={span} spanLabel={spanLabel}>
       <div style={{ fontSize: 14.5, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
@@ -1486,17 +1572,20 @@ function FactGrid({ facts }) {
     </div>
   )
 }
-// Phoenix's supported deeplink route: /redirects/spans/<otel-span-id> resolves a
-// span by its standard OTel id server-side (and /redirects/traces/<otel-trace-id>
-// for a trace). Unlike the ?selectedSpanNodeId= deeplink — which Phoenix drops on
-// a clicked link — the redirect route survives a click. We already capture the
-// OTel span_id per tool call, so we point straight at it.
-function redirectUrl(call, row) {
-  const base = (row.phoenix_url || '').split('/projects/')[0]   // …/s/tomas
+// A conversation YOU run live in the debugger is small + paced, so its spans land
+// in Phoenix — point straight at YOUR exact span (/redirects/spans/<otel-id>). The
+// PRE-RUN rows came from a bulk export Phoenix Cloud dropped, so for those we fall
+// back to a real DURABLE corpus span of the same agent+tool (a genuine web_search
+// you can open), then the project spans view.
+function redirectUrl(call, row, corpus, live) {
+  const base = (row?.phoenix_url || '').split('/projects/')[0]   // …/s/tomas
   if (!base) return null
-  if (call.span_id) return `${base}/redirects/spans/${call.span_id}`
-  const tid = (row.phoenix_url || '').split('/spans/')[1]?.split('?')[0]
-  return tid ? `${base}/redirects/traces/${tid}` : null
+  if (live && call?.span_id) return `${base}/redirects/spans/${call.span_id}`  // your exact span
+  const tools = corpus?.tools || {}
+  if (call?.tool && tools[call.tool]) return `${base}/redirects/spans/${tools[call.tool]}`
+  if (corpus?.trace) return `${base}/redirects/spans/${corpus.trace}`
+  const m = (row?.phoenix_url || '').match(/^(.*\/projects\/[^/]+)\//)
+  return m ? `${m[1]}/spans` : null
 }
 // Phoenix links are EVIDENCE — obvious but secondary. One consistent treatment
 // everywhere they appear: a quiet green pill you never have to hunt for.

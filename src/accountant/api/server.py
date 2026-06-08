@@ -248,7 +248,39 @@ def lab_result(use_case: str) -> dict:
         r["monthly_volume"] = int(round(governor.volume * share))
     except Exception:
         r["monthly_volume"] = None
+    # The sandbox replay's spans are exported in a burst and dropped by Phoenix
+    # Cloud's ingest limit, so per-replay deep-links 404. The REAL corpus spans
+    # (generated paced → durable) DO resolve, so we link each tool call to a real
+    # corpus span of this agent+tool (OTel ids the /redirects/spans route resolves).
+    r["corpus_tool_spans"], r["corpus_trace_span"] = _corpus_span_ids(use_case)
     return r
+
+
+def _corpus_span_ids(agent: str) -> tuple[dict, str | None]:
+    """One representative DURABLE corpus span id per tool for an agent (+ a
+    representative model span for the conversation-level link), read from the
+    local span store. These are real spans that reliably resolve in Phoenix."""
+    from accountant.pipeline import db
+    tools: dict[str, str] = {}
+    trace_span = None
+    try:
+        with db.connect() as con:
+            sub = ("SELECT trace_id FROM spans WHERE tool_name='task_classifier' "
+                   "AND classifier_task_class=?")
+            for tool, sid in con.execute(
+                    f"SELECT w.tool_name, MIN(w.span_id) FROM spans w "
+                    f"JOIN ({sub}) c ON w.trace_id=c.trace_id "
+                    f"WHERE w.tool_name IS NOT NULL AND w.tool_name<>'task_classifier' "
+                    f"GROUP BY w.tool_name", (agent,)).fetchall():
+                if sid:
+                    tools[tool] = sid
+            row = con.execute(
+                f"SELECT m.span_id FROM spans m JOIN ({sub}) c ON m.trace_id=c.trace_id "
+                f"WHERE m.span_kind='LLM' AND m.span_id IS NOT NULL LIMIT 1", (agent,)).fetchone()
+            trace_span = row[0] if row else None
+    except Exception:
+        pass
+    return tools, trace_span
 
 
 @app.get("/api/lab/{use_case}/trickle")

@@ -7,14 +7,14 @@
   },
   "use_case": "docs_bot",
   "candidate": "economy",
-  "n": 8,
+  "n": 4,
   "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
   "cost": {
     "baseline": 0.0032,
     "projected": 0.0008,
     "pct": 76
   },
-  "elapsed_sec": 32.9,
+  "elapsed_sec": 48.8,
   "project_gid": "UHJvamVjdDo0",
   "test_tag": "accountant.run_type = test",
   "rows": [
@@ -25,14 +25,14 @@
       "equivalent": false,
       "baseline_quality": 2,
       "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
+      "clarified": false,
+      "refused_escalated": true,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/53b2b89429ade6700f5b806244171e22",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/0c02b2687171996d59279ffb25521e90",
       "baseline_answer": "To rename a form, navigate to Settings \u2192 Account, where you can manage various account settings.",
-      "economy_answer": "I can't resolve this ticket without a ticket ID. Please provide the ticket ID.",
+      "economy_answer": "I cannot fulfill this request. The `ticket_update` function is missing the `ticket_id` argument.",
       "baseline_model_cost": 0.000414,
-      "economy_model_cost": 0.00014,
+      "economy_model_cost": 0.000142,
       "calls": [
         {
           "kind": "user",
@@ -45,26 +45,26 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "2382f9e0090ae658"
+          "span_id": "b71fcaa9a09fa829"
         },
         {
           "kind": "tool",
           "tool": "ticket_update",
           "cost": 0.0001,
           "dup": false,
-          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can rename a form by going to Settings \u2192 Account.\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can rename a form by going to Settings \u2192 Account.'} from model returned function call argument {'s\u2026",
-          "span_id": "39d066c77da48cb8"
+          "input": "{\"customer_reply\": \"You can rename a form by going to Settings \u2192 Account.\", \"status\": \"resolved\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can rename a form by going to Settings \u2192 Account.'} from model returned function call argument {'c\u2026",
+          "span_id": "bf717d2ba9f2abe7"
         },
         {
           "kind": "model",
           "label": "model \u00b7 respond",
-          "cost": 0.00014,
+          "cost": 0.000142,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 4050,
-          "in_tokens": 1331,
-          "out_tokens": 18
+          "latency_ms": 4269,
+          "in_tokens": 1330,
+          "out_tokens": 23
         },
         {
           "kind": "reply",
@@ -82,7 +82,7 @@
       "clarified": false,
       "refused_escalated": false,
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/41fd6805bd48656d3d94ee7d70b6c27e",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d8902b810abeaef2c61c27a31b102d1a",
       "baseline_answer": "The dashboard is located under Settings \u2192 Account.",
       "economy_answer": "The dashboard and account settings can be found under Settings \u2192 Account.",
       "baseline_model_cost": 0.000388,
@@ -99,7 +99,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "cb27d7483057edb5"
+          "span_id": "85724d9f8d5f106c"
         },
         {
           "kind": "model",
@@ -107,7 +107,7 @@
           "cost": 0.000127,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2918,
+          "latency_ms": 2079,
           "in_tokens": 1218,
           "out_tokens": 13
         },
@@ -127,7 +127,7 @@
       "clarified": false,
       "refused_escalated": false,
       "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/860e9ec2cb761545b23de0bf85f49d6f",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9caf74136f3c3362579e9b9d131a8280",
       "baseline_answer": "To duplicate a form, navigate to your dashboard, select the form you wish to duplicate, and choose the \"Duplicate\" option from the form's action menu.",
       "economy_answer": "I can help with that. You can duplicate a form by going to Settings \u2192 Account.",
       "baseline_model_cost": 0.000449,
@@ -144,7 +144,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "0ed5436d0f19e19e"
+          "span_id": "8bb93d7a72726566"
         },
         {
           "kind": "model",
@@ -152,7 +152,7 @@
           "cost": 0.000127,
           "bites": true,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 3488,
+          "latency_ms": 2179,
           "in_tokens": 1201,
           "out_tokens": 18
         },
@@ -172,7 +172,7 @@
       "clarified": false,
       "refused_escalated": false,
       "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ad82eb6fe5ccbec398a197ea2785b1d8",
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/67765f5b507c5aee114a46445d7f5335",
       "baseline_answer": "To see who's on your team, navigate to Settings \u2192 Account, where you can manage team members and other account settings.",
       "economy_answer": "The Stratus Forms account settings, including team member management, are available under Settings \u2192 Account.",
       "baseline_model_cost": 0.000393,
@@ -189,7 +189,7 @@
           "dup": false,
           "input": "{\"path\": \"/account/general\"}",
           "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "8bfaedc4d9caf289"
+          "span_id": "8c0f632131455954"
         },
         {
           "kind": "model",
@@ -197,207 +197,9 @@
           "cost": 0.000131,
           "bites": false,
           "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2249,
+          "latency_ms": 2274,
           "in_tokens": 1230,
           "out_tokens": 19
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1204",
-      "ticket": "Where do I download an invoice?",
-      "sub_type": "simple",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/70d696c73e062055990712a7d87ef7f3",
-      "baseline_answer": "You can download your invoices under Settings \u2192 Account.",
-      "economy_answer": "The invoice download option is available under Settings \u2192 Account.",
-      "baseline_model_cost": 0.000392,
-      "economy_model_cost": 0.000127,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"Where do I download an invoice?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/account/general\"}",
-          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "3dc383545f1663e9"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000127,
-          "bites": false,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2142,
-          "in_tokens": 1222,
-          "out_tokens": 11
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1205",
-      "ticket": "How do I turn on email notifications?",
-      "sub_type": "simple",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9c1f5f082175eebc9e46003a7854481f",
-      "baseline_answer": "To turn on email notifications, navigate to Settings \u2192 Account in your Stratus Forms account. This section allows you to manage various account settings, including notification preferences.",
-      "economy_answer": "I can't resolve this ticket without a ticket ID. Could you please provide it?",
-      "baseline_model_cost": 0.000395,
-      "economy_model_cost": 0.00014,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"How do I turn on email notifications?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/account/general\"}",
-          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "a0eea3599869ef93"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"customer_reply\": \"You can manage your email notification settings under Settings \u2192 Account.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can manage your email notification settings under Settings \u2192 Account.'} from model returned functi\u2026",
-          "span_id": "ac3a58f775aafeac"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.00014,
-          "bites": true,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2823,
-          "in_tokens": 1332,
-          "out_tokens": 18
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1206",
-      "ticket": "How do I change my timezone?",
-      "sub_type": "simple",
-      "equivalent": true,
-      "baseline_quality": 5,
-      "economy_quality": 5,
-      "clarified": false,
-      "refused_escalated": false,
-      "held": true,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ee320ed33fab0649a35b371d13b79cb2",
-      "baseline_answer": "To change your timezone, navigate to Settings \u2192 Account. This section allows you to manage account settings, billing address, team members, and SSO configuration.",
-      "economy_answer": "To change your timezone, please navigate to Settings \u2192 Account.",
-      "baseline_model_cost": 0.000442,
-      "economy_model_cost": 0.000127,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"How do I change my timezone?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/account/general\"}",
-          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "39112c06511fa4b4"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000127,
-          "bites": false,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2206,
-          "in_tokens": 1222,
-          "out_tokens": 12
-        },
-        {
-          "kind": "reply",
-          "label": "reply sent"
-        }
-      ]
-    },
-    {
-      "conv_id": "1207",
-      "ticket": "Where are my form analytics?",
-      "sub_type": "simple",
-      "equivalent": false,
-      "baseline_quality": 5,
-      "economy_quality": 1,
-      "clarified": true,
-      "refused_escalated": false,
-      "held": false,
-      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/d184530ca19e408dbf916e4c392f44c3",
-      "baseline_answer": "Your form analytics can be found under Settings \u2192 Account.",
-      "economy_answer": "I can't resolve this ticket without a ticket ID. Could you please provide it?",
-      "baseline_model_cost": 0.000393,
-      "economy_model_cost": 0.000142,
-      "calls": [
-        {
-          "kind": "user",
-          "label": "user: \"Where are my form analytics?\""
-        },
-        {
-          "kind": "tool",
-          "tool": "kb_lookup",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"path\": \"/account/general\"}",
-          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
-          "span_id": "783d6d7d5e0c09c5"
-        },
-        {
-          "kind": "tool",
-          "tool": "ticket_update",
-          "cost": 0.0001,
-          "dup": false,
-          "input": "{\"customer_reply\": \"You can find your form analytics under the 'Analytics' tab in your Stratus Forms dashboard.\", \"status\": \"resolved\"}",
-          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': \\\"You can find your form analytics under the 'Analytics' tab in your Stratus Forms dashboard.\\\"} from m\u2026",
-          "span_id": "8e0d7fccecdddd7a"
-        },
-        {
-          "kind": "model",
-          "label": "model \u00b7 respond",
-          "cost": 0.000142,
-          "bites": true,
-          "model": "gemini-2.5-flash-lite",
-          "latency_ms": 2775,
-          "in_tokens": 1349,
-          "out_tokens": 18
         },
         {
           "kind": "reply",

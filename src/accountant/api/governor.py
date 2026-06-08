@@ -235,9 +235,9 @@ class Governor:
         active_sigs = {p["signature"] for p in service.active_policies()}
         released = self.scenario.released_sigs(now)
 
-        _TOOL_LEVER = {}  # the wasteful tool per agent maps to that agent's fix
         agents, levers, saved = [], [], 0.0
         rows_by = {r["tc"]: r for r in rows}
+        total_n = sum((by.get(a) or {}).get("n", 0) or 0 for a in _FLEET_ORDER) or 1
         for aid in _FLEET_ORDER:
             r = rows_by.get(aid)
             if not r:
@@ -272,6 +272,7 @@ class Governor:
             agents.append({
                 "id": aid, "label": fx["label"], "purpose": fx["purpose"], "model": fx["model"],
                 "cost_per_message": round(r["cost"], 5), "share": round(r["share"], 3),
+                "vshare": round(((by.get(aid) or {}).get("n", 0) or 0) / total_n, 4),  # volume share
                 "mult": round(r["mult"], 1), "baseline": r["is_base"], "governed": active,
                 "status": self._status(sig, active_sigs, released), "waste": fx["trigger"],
                 "fix": lever, "ops": ops,
