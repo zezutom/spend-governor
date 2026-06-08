@@ -244,7 +244,8 @@ export default function App() {
         onClose={() => setAgentDetail(null)} act={act}
         onAsk={(id) => { setAgentDetail(null); setAsk({ agent: id }) }}
         onDebug={(id) => { setAgentDetail(null); setLab({ uc: id }) }} />}
-      {ask && <AskPanel open={ask} state={state} onClose={() => setAsk(null)} />}
+      {ask && <AskPanel open={ask} state={state} onClose={() => setAsk(null)}
+        onDebug={(id) => { setAsk(null); setLab({ uc: id }) }} />}
     </div>
   )
 }
@@ -339,7 +340,7 @@ const ASK_SUGGESTIONS = [
   'Find the biggest cost anomaly and verify it against one real trace.',
   'Is the repeated web_search on the refund auditor genuine waste?',
 ]
-function AskPanel({ open, state, onClose }) {
+function AskPanel({ open, state, onClose, onDebug }) {
   const [q, setQ] = useState('')
   const [steps, setSteps] = useState([])   // interleaved tool calls + results
   const [answer, setAnswer] = useState('')
@@ -460,8 +461,10 @@ function AskPanel({ open, state, onClose }) {
           )}
         </div>
 
-        {/* free-form ask */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {/* free-form ask + jump to the debugger */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+          {open?.agent && LAB_USE_CASES.some((u) => u.key === open.agent) &&
+            <Btn onClick={() => onDebug(open.agent)} label="🔬 debugger →" color={GREEN} />}
           <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()}
             placeholder="Ask a cost question…" style={{ flex: 1, fontSize: 15, padding: '10px 12px',
               borderRadius: 9, border: '1px solid #d8d6cc', outline: 'none' }} />
