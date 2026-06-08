@@ -1,6 +1,6 @@
-# Agent Accountant — single Cloud Run service: FastAPI serves the built React
+# Spend Governor — single Cloud Run service: FastAPI serves the built React
 # cockpit + the /api control plane, and spawns the Phoenix MCP server for the
-# live "Ask the Accountant" introspection.
+# live "Ask the Governor" introspection.
 
 # ---- stage 1: build the React cockpit ----
 FROM node:20-slim AS webbuild

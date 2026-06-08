@@ -32,7 +32,7 @@ __pycache__/
 # Project
 data/traces/
 
-# Accountant local cache (regenerated from Phoenix on first run)
+# Governor local cache (regenerated from Phoenix on first run)
 data/accountant.db
 data/accountant.db-wal
 data/accountant.db-shm
