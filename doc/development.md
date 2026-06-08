@@ -77,16 +77,16 @@ try again.
 
 ## Common commands
 
-### Launch the live dashboard (the main entry point)
+### Launch the cockpit (the main entry point)
 
 ```bash
-uv run streamlit run src/accountant/ui/dashboard.py
+./scripts/start-cockpit.sh
 ```
 
-This one command boots the whole Accountant stack: it auto-spawns the
-ingest server (`:8765`) as a subprocess if it isn't already running,
-imports history from Phoenix on first run (empty cache = new account),
-and opens the dashboard at `http://localhost:8501`. See
+This one command boots the whole stack: the control-plane API (`:8800`),
+the trace-ingest server (`:8765`), and the React cockpit (Vite, `:5173`).
+**Open http://localhost:5173.** On first run it imports history from
+Phoenix (empty cache = new account). See
 [realtime-pipeline.md](./realtime-pipeline.md) for what happens under
 the hood.
 

@@ -6,10 +6,11 @@ the pieces are shaped the way they are.
 ## One command boots everything
 
 ```bash
-uv run streamlit run src/accountant/ui/dashboard.py
+./scripts/start-cockpit.sh
 ```
 
-The dashboard is the single entry point. On first render it:
+This starts the control-plane API (`:8800`), the ingest server (`:8765`),
+and the React cockpit (Vite, `:5173`; open this). On first run it:
 
 1. Probes `127.0.0.1:8765`; if nothing is listening, spawns the ingest
    server (`uvicorn accountant.pipeline.ingest_server:app`) as a background
@@ -191,4 +192,5 @@ silently filtered out of the count.
 
 - `8765` — Accountant ingest server (FastAPI). No UI; `/ingest`,
   `/backfill/start`, `/health`.
-- `8501` — Streamlit dashboard. The UI.
+- `8800` — control-plane API (FastAPI): cockpit state + SSE + `/api/ask`.
+- `5173` — React cockpit (Vite). The UI.
