@@ -1,0 +1,469 @@
+{
+  "held_pct": 0.0,
+  "degraded_pct": 1.0,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "simple": 0.0
+  },
+  "use_case": "sales_assistant",
+  "candidate": "economy",
+  "n": 4,
+  "recommendation": "Breaks across the variety \u2014 keep the premium model here. The small eval looked fine; at scale it doesn't hold.",
+  "cost": {
+    "baseline": 0.0116,
+    "projected": 0.0062,
+    "pct": 46
+  },
+  "elapsed_sec": 85.3,
+  "project_gid": "UHJvamVjdDo0",
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "conv_id": "1200",
+      "ticket": "What's the difference between Pro and Enterprise?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 2,
+      "clarified": false,
+      "refused_escalated": false,
+      "span_id": "f8431e23c57a6745",
+      "held": false,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 3,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3afe164092f1e1639e1d07e041918d25",
+      "baseline_answer": "The Pro plan offers advanced features like conditional logic, file uploads, and integrations with popular services. The Enterprise plan includes everything in Pro, plus dedicated support, custom branding, audit logs, and advanced security f",
+      "economy_answer": "The Pro plan is designed for growing businesses needing advanced features like custom branding and priority support. The Enterprise plan is for large organizations requiring dedicated infrastructure, advanced security, and a Service Level A",
+      "baseline_model_cost": 0.00064,
+      "economy_model_cost": 0.0002,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What's the difference between Pro and Enterprise?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/billing/plan-changes\"}",
+          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
+          "span_id": "7e9470b30a13bbfd"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
+          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
+          "span_id": "da8744f2d2dd09a0"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.0002,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 7379,
+          "in_tokens": 1484,
+          "out_tokens": 130,
+          "span_id": "f8431e23c57a6745",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 3,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1201",
+      "ticket": "How much is Enterprise per month?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "span_id": "9d15d0802282373e",
+      "held": false,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 2,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/756e457dcf1fa483d1fcab09faf20cde",
+      "baseline_answer": "Our Enterprise plan is custom-quoted based on your specific needs. Please contact our sales team for a personalized quote. Competitor pricing varies widely, but we strive to offer competitive rates and superior features.",
+      "economy_answer": "The Enterprise plan is custom-priced. To get a quote, please provide your specific needs. Our competitors typically charge between $50-$150/month for comparable plans, but we offer more features and better support.",
+      "baseline_model_cost": 0.000464,
+      "economy_model_cost": 0.000166,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How much is Enterprise per month?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/billing/plan-changes\"}",
+          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
+          "span_id": "c9a18e3ac3da48b4"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"competitor SaaS form builder pricing\"}",
+          "output": "{\"result\": [{\"title\": \"competitor SaaS form builder pricing \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/competitor_SaaS_form_builder_pricing\", \"snippet\": \"This article provides a general overview of co\u2026",
+          "span_id": "33b8ed8f6a98e6be"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000166,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4725,
+          "in_tokens": 1478,
+          "out_tokens": 46,
+          "span_id": "9d15d0802282373e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 2,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1202",
+      "ticket": "What payment methods do you accept?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "span_id": "8dfbbd94522e6cb6",
+      "held": false,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1f3ec5b424c1db4985107d2733eb34a8",
+      "baseline_answer": "We accept all major credit cards, including Visa, Mastercard, American Express, and Discover. We also support payments via PayPal.",
+      "economy_answer": "The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we accept standard payment methods commonly used by SaaS businesses. For a definitive",
+      "baseline_model_cost": 0.000506,
+      "economy_model_cost": 0.000156,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What payment methods do you accept?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/billing/general\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "516f3cc237547d21"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms accepted payment methods\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms accepted payment methods \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_accepted_payment_methods\", \"snippet\": \"This article provides a general overview o\u2026",
+          "span_id": "f3d3284af9986065"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"ticket_id\": \"1701\", \"customer_reply\": \"The Stratus Forms knowledge base doesn't have specific documentation on accepted payment methods. However, based on general web search results, it appears we\u2026",
+          "output": "{\"result\": {\"status\": \"ok\", \"ticket_id\": \"1701\"}}",
+          "span_id": "6a19bb87afb5d1de"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000156,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4909,
+          "in_tokens": 1559,
+          "out_tokens": 0,
+          "span_id": "8dfbbd94522e6cb6",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1203",
+      "ticket": "Can I get a quote for 50 seats on Pro?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "span_id": "2f0c4cbcaf073d0e",
+      "held": false,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3866e7e93da15e83da64ef6592174862",
+      "baseline_answer": "We offer a Pro plan at $25 per user per month. For 50 seats, that would be $1250 per month. This includes all Pro features such as advanced analytics, custom branding, and priority support.\n\nOur competitors generally offer similar pricing s",
+      "economy_answer": "(no answer)",
+      "baseline_model_cost": 0.000767,
+      "economy_model_cost": 0.000117,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I get a quote for 50 seats on Pro?\""
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000117,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 2066,
+          "in_tokens": 1170,
+          "out_tokens": 0,
+          "span_id": "2f0c4cbcaf073d0e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    }
+  ]
+}

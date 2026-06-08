@@ -7,7 +7,18 @@ from phoenix.otel import register
 from observed.accountant_exporter import build_accountant_exporter
 
 
+_INITED = False
+
+
 def init_telemetry() -> None:
+    # Idempotent: OTel refuses to override the global TracerProvider on a second
+    # register() ("Overriding ... not allowed"), which leaves span export broken.
+    # Callers (run_replay_lab, iter_lab_rows, generate_dataset) may each call this,
+    # so register exactly once per process.
+    global _INITED
+    if _INITED:
+        return
+    _INITED = True
     api_key = os.environ.get("PHOENIX_API_KEY_OBSERVED_WRITE")
     if api_key:
         os.environ["PHOENIX_API_KEY"] = api_key

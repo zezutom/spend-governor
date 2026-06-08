@@ -1,0 +1,52 @@
+{
+  "baseline_model": "gemini-2.5-flash",
+  "economy_model": "gemini-2.5-flash-lite",
+  "n": 4,
+  "equivalent_rate": 0.25,
+  "mean_quality_baseline": 4.5,
+  "mean_quality_economy": 2.0,
+  "quality_drift": 2.5,
+  "clarification_rate": 0.5,
+  "refusal_escalation_rate": 0.25,
+  "verdict": "revert",
+  "elapsed_sec": 35.9,
+  "project_gid": "UHJvamVjdDo0",
+  "rows": [
+    {
+      "ticket": "Please refund me. Account GLOBEX-001, charged $49 last month.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1ed99cca9b59a8f2dcbe787efc5fa30e"
+    },
+    {
+      "ticket": "I want a refund. My account is ACME-001. The charge was $49 on May 1.",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/14baf41fd81a05988f7f2cf6066b7340"
+    },
+    {
+      "ticket": "Refund $49 from my Pro subscription. Account INITECH-001.",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/ab8a0dfe7eb853de7bea233dab8d7110"
+    },
+    {
+      "ticket": "Account STARK-001, refund the $49 charge from last month.",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/306ac3be8970509bf7f0e993ef305eef"
+    }
+  ]
+}

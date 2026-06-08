@@ -636,68 +636,148 @@ def _fix_text(issue: dict):
             f"Serve the duplicate `{tool}` from cache — the paid call never fires.")
 
 
-def _render_bill(recs, totals, default_mt, n_active, realized) -> None:
-    """Calm hero (refinements #1, #2): recoverable dollars/month, large and
-    green, as the headline; % and per-ticket cost demoted to a subline. The
-    volume slider + the dollar figure live in ONE client-side island so the
-    money tracks the slider continuously (st.slider only fires on release)."""
-    _hero_island(totals, default_mt, n_active, realized,
-                 _observed_hours(recs), totals["total_n"])
+# ===========================================================================
+# CTO rebuild — the page is organized around MECHANISM and PROOF, not a dollar
+# total. Regions: 1 identity/live-state · 2 trace race · 3 evidence at scale ·
+# 4 diagnosis map · 5 governance control plane · 6 verification · 7 economics
+# + roadmap footer. No large dollar figure opens the page.
+# ===========================================================================
+
+def _render_identity(live: dict, n_active: int, total_n: int) -> None:
+    """Region 1 — what it is + that it's doing it now. Mechanism and aliveness,
+    no dollar hero."""
+    proj = os.environ.get("PHOENIX_PROJECT_NAME") or "your Phoenix"
+    st.markdown(
+        "<div style='font-size:1.7rem;font-weight:800;line-height:1.18'>"
+        "An agent that governs another agent — at runtime.</div>"
+        "<div style='color:#444;margin-top:4px;max-width:760px'>It reads the observed "
+        "agent's traces from Phoenix, finds the calls it can avoid, and intercepts them "
+        "inline at the gateway — <b>never touching your prompts or code</b>. Every claim "
+        "below traces back to spans in your own Phoenix.</div>",
+        unsafe_allow_html=True)
+    live_dot = _GREEN if n_active > 0 else "#9ca3af"
+    state = "Governing live" if n_active > 0 else "Watching — no policies active yet"
+    c1, c2, c3 = st.columns([2, 1, 2])
+    c1.markdown(f"<div style='font-size:1.05rem'><span style='color:{live_dot}'>●</span> "
+                f"<b>{state}</b></div>", unsafe_allow_html=True)
+    c2.markdown(f"<div style='font-size:1.05rem'><b>{n_active}</b> "
+                f"polic{'y' if n_active == 1 else 'ies'} active</div>", unsafe_allow_html=True)
+    c3.markdown(f"<div style='font-size:1.05rem;color:#444'>reading <b>{proj}</b> · "
+                f"{total_n:,} traces analyzed</div>", unsafe_allow_html=True)
 
 
-def _hero_island(totals, default_mt, n_active, realized, hours, total_n) -> None:
-    rpt = float(totals["recoverable_per_ticket"])
-    cpt = float(totals["cost_per_ticket"])
-    pct = int(round(totals["pct_avoidable"] * 100))
-    dflt = int(default_mt or 1000)
-    mx = max(100000, dflt * 3)
-    cfg = json.dumps({"rpt": rpt, "dflt": dflt, "min": 1000, "max": mx, "step": 1000})
-    measured = (f"Measured over {total_n:,} real tickets (~{hours:.0f}h of traffic). "
-                f"A measured per-ticket ratio × the volume you set — not an assumed rate.")
-    slider = f"""
-      <div style="display:flex;align-items:center;gap:14px;margin-top:4px">
-        <label style="color:#374151;white-space:nowrap;font-size:0.92rem">Your monthly tickets</label>
-        <input id="vol" type="range" min="{1000}" max="{mx}" step="1000" value="{dflt}"
-               style="flex:1;accent-color:{_GREEN};height:4px">
-        <span id="volout" style="font-variant-numeric:tabular-nums;font-weight:700;
-              min-width:72px;text-align:right;color:#111">{dflt:,}</span>
-      </div>"""
-    if n_active == 0:
-        head = f"""
-          <div style="color:#6b7280;font-size:0.9rem">Recoverable on this agent</div>
-          <div id="money" style="font-size:2.7rem;font-weight:800;color:{_GREEN};line-height:1.04">
-            ${rpt * dflt:,.0f}/mo</div>
-          <div style="color:#374151;margin:2px 0 12px">
-            about <b>{pct}%</b> of this agent's per-ticket cost · <b>${cpt:.4f}</b> per ticket today
-            <span style="color:#9ca3af;font-size:0.78rem;float:right">upper bound, patterns overlap</span>
-          </div>"""
-        js_target, js_expr = "money", "C.rpt*v"
+def _race_row_html(r: dict) -> str:
+    op = r["op"]
+    if r["status"] == "cached":
+        gov = (f"<span style='color:{_GREEN};font-weight:600'>⊘ served from cache · $0</span>"
+               f" <span style='color:#9ca3af'>(saved ${r['baseline']['cost']:.4f})</span>")
+        base = f"<span style='color:#b45309'>${r['baseline']['cost']:.4f} paid</span>"
+        bg = "#fbf6ee"
+    elif r["status"] == "swapped":
+        gov = (f"<span style='color:{_BLUE}'>→ {r['governed'].get('model') or 'cheaper model'} "
+               f"· ${r['governed']['cost']:.4f}</span>")
+        base = f"${r['baseline']['cost']:.4f}"
+        bg = "#eef3fb"
     else:
-        head = f"""
-          <div style="color:#6b7280;font-size:0.9rem">Saved so far on this agent</div>
-          <div style="font-size:2.7rem;font-weight:800;color:{_GREEN};line-height:1.04">
-            ${realized:,.4f}</div>
-          <div style="color:#374151;margin:2px 0 12px">
-            <b id="money" style="color:{_GREEN}">${rpt * dflt:,.0f}/mo</b> projected once fully governed
-            · {pct}% of per-ticket spend still avoidable
-          </div>"""
-        js_target, js_expr = "money", "C.rpt*v"
-    html = f"""
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-        {head}{slider}
-        <div style="color:#6b7280;font-size:0.78rem;margin-top:10px">{measured}</div>
-      </div>
-      <script>
-        const C = {cfg};
-        const s = document.getElementById('vol');
-        const money = document.getElementById('{js_target}');
-        const volout = document.getElementById('volout');
-        function fmtMo(n){{ return '$' + Math.round(n).toLocaleString() + '/mo'; }}
-        function upd(){{ const v = +s.value; money.textContent = fmtMo({js_expr});
-                        volout.textContent = v.toLocaleString(); }}
-        s.addEventListener('input', upd); upd();
-      </script>"""
-    components.html(html, height=210 if n_active == 0 else 215)
+        gov = f"<span style='color:#666'>${r['governed']['cost']:.4f}</span>"
+        base = f"<span style='color:#666'>${r['baseline']['cost']:.4f}</span>"
+        bg = "transparent"
+    return (f"<tr style='background:{bg}'>"
+            f"<td style='padding:3px 10px;font-family:monospace;font-size:0.82rem'>{op}</td>"
+            f"<td style='padding:3px 10px;text-align:right;font-variant-numeric:tabular-nums'>{base}</td>"
+            f"<td style='padding:3px 10px;font-variant-numeric:tabular-nums'>{gov}</td>"
+            f"<td style='padding:3px 10px;text-align:right;color:#9ca3af;font-size:0.8rem'>"
+            f"${r['base_cum']:.4f} / ${r['gov_cum']:.4f}</td></tr>")
+
+
+def _render_trace_race() -> None:
+    """Region 2 — the centerpiece. Renders the captured baseline-vs-governed
+    race from the replay fixture: the legible row-by-row diff, the cost
+    divergence, the cached calls, the same-answer proof. (Synchronized clock
+    animation is layered on next; this is the already-aligned diff it plays.)"""
+    from accountant.trace_race.fixture import load_fixture
+    st.subheader("The trace race — the same ticket, run two ways")
+    fx = load_fixture()
+    if not fx:
+        st.info("**Seeded race pending.** Capture one with ingest on:\n\n"
+                "`ACCOUNTANT_INGEST_URL=http://localhost:8765 uv run python -m "
+                "accountant.trace_race.capture \"<a refund ticket>\"`\n\n"
+                "It runs the ticket policies-off (baseline) then policies-on (governed), "
+                "captures both real traces, and drops them here.")
+        return
+    if not fx.get("seeded"):
+        st.warning("Dev preview — built from two real refund traces that are **not the same "
+                   "ticket**, so the same-answer proof is withheld. The shipped race uses a "
+                   "same-ticket capture.")
+    b, g = fx["baseline"], fx["governed"]
+    st.caption(f"Ticket: {fx.get('ticket', '')[:140]}")
+    rows = "".join(_race_row_html(r) for r in fx["rows"])
+    st.markdown(
+        f"<table style='width:100%;border-collapse:collapse;font-size:0.9rem'>"
+        f"<thead><tr style='color:#6b7280;font-size:0.78rem;text-align:left'>"
+        f"<th style='padding:2px 10px'>call</th>"
+        f"<th style='padding:2px 10px;text-align:right'>baseline</th>"
+        f"<th style='padding:2px 10px'>governed</th>"
+        f"<th style='padding:2px 10px;text-align:right'>cumulative b / g</th>"
+        f"</tr></thead><tbody>{rows}</tbody></table>", unsafe_allow_html=True)
+    cols = st.columns([1, 1, 1])
+    cols[0].metric("Baseline cost", f"${b['total_usd']:.4f}")
+    cols[1].metric("Governed cost", f"${g['total_usd']:.4f}",
+                   delta=f"-${fx['saved_usd']:.4f}", delta_color="inverse")
+    cols[2].metric("Paid calls skipped", f"{fx['skipped_calls']}")
+    if fx.get("same_answer"):
+        st.markdown(f"<span style='background:#e3f4e8;color:{_GREEN};padding:3px 10px;"
+                    f"border-radius:10px;font-weight:700'>✓ Same final answer — verified "
+                    f"identical on both lanes</span>", unsafe_allow_html=True)
+    elif fx.get("seeded"):
+        st.markdown(f"<span style='background:#fdecd2;color:{_AMBER};padding:3px 10px;"
+                    f"border-radius:10px;font-weight:700'>⚠ Outputs differ — preservation "
+                    f"not claimed</span>", unsafe_allow_html=True)
+    lc = st.columns(2)
+    if b.get("phoenix_url"):
+        lc[0].link_button("Open baseline in Phoenix ↗", b["phoenix_url"], use_container_width=True)
+    if g.get("phoenix_url"):
+        lc[1].link_button("Open governed in Phoenix ↗", g["phoenix_url"], use_container_width=True)
+
+
+def _render_evidence(gid) -> None:
+    """Region 3 — verifiable evidence at scale. Verifiability is the feature."""
+    st.subheader("Verifiable evidence — across all your traces")
+    st.caption("Every figure here is re-derived from Phoenix-reconciled per-span data, and "
+               "opens the underlying spans in your own Phoenix. Don't take our word for it.")
+    _render_realized_savings()
+
+
+def _render_governance(recs, default_mt, rates, total_n, gov_store) -> None:
+    """Region 5 — the control plane: the levers + the guarantees that make
+    flipping them safe (as prominent as the savings)."""
+    st.subheader("Runtime governance — your control plane")
+    st.markdown(
+        f"<div style='background:#f6f8f4;border-left:3px solid {_GREEN};padding:8px 14px;"
+        f"border-radius:4px;margin-bottom:8px'>"
+        f"Intercepts at the gateway · <b>never changes your prompts or code</b> · "
+        f"reversible in one click · quality-guarded with auto-rollback.</div>",
+        unsafe_allow_html=True)
+    _render_fixes(recs, default_mt, rates, total_n, gov_store)
+
+
+def _render_economics_roadmap(recs, totals, default_mt) -> None:
+    """Region 7 — subordinate footer. Money present but quiet; the waste essay
+    collapses to one honest caveat; the Margin Agent is one roadmap line."""
+    st.subheader("Economics & roadmap")
+    cpt = float(totals["cost_per_ticket"])
+    rpt = float(totals["recoverable_per_ticket"])
+    vol = st.slider("Monthly volume (your number)", 1000,
+                    max(100000, int(default_mt or 1000) * 3), int(default_mt or 1000),
+                    1000, key="econ_vol")
+    st.markdown(
+        f"Measured **\\${cpt:.4f}/ticket**, of which **\\${rpt:.4f}/ticket** is avoidable → "
+        f"projected **\\${rpt * vol:,.0f}/mo** recoverable at {vol:,} tickets.")
+    st.caption("Per-ticket figures are **measured** from Phoenix; the monthly figure is a "
+               "**projection** at the volume you set (upper bound — patterns overlap on shared "
+               "ticket types).")
+    st.caption("Roadmap — **Margin Agent**: turns this measured cost into credit pricing and "
+               "per-segment margin defense. The CFO-facing extension.")
 
 
 def _render_breakdown(rows, recs) -> None:
@@ -705,13 +785,13 @@ def _render_breakdown(rows, recs) -> None:
     row per PROBLEM class: badge + name + reason + a slim measured/estimated
     bar + a $/ticket caption. Baseline + minor classes collapse to one muted
     line. One legend, once (refinements #4, #5)."""
-    st.subheader("Where the money goes")
+    st.subheader("Where the waste lives — and why")
     st.markdown(
-        f"<span style='font-size:0.85rem;color:#555'>Tokens are metered exactly. Tools "
-        f"are call count × your configured rates "
-        f"<span style='background:{_BLUE};color:#fff;padding:0 6px;border-radius:3px'>tokens (Phoenix)</span> "
-        f"<span style='background:#e0a44a;color:#fff;padding:0 6px;border-radius:3px'>tools (your rates)</span> "
-        f"— editable in <i>Show the math</i>.</span>", unsafe_allow_html=True)
+        f"<span style='font-size:0.85rem;color:#555'>Per-ticket cost by task class, and the "
+        f"pattern driving it. Split by certainty: "
+        f"<span style='background:{_BLUE};color:#fff;padding:0 6px;border-radius:3px'>tokens — metered by Phoenix</span> "
+        f"<span style='background:#e0a44a;color:#fff;padding:0 6px;border-radius:3px'>tools — call count × your rates</span>. "
+        f"These patterns are what the policies below act on.</span>", unsafe_allow_html=True)
     reasons = _class_reasons(recs)
     maxv = max((r["cost"] for r in rows), default=1e-9)
     minor = []
@@ -741,8 +821,8 @@ def _render_fixes(recs, default_mt, rates, total_n, gov_store) -> None:
     """Promoted fix cards (refinement #1/#5). Each shows the measured per-ticket
     saving (the slider-independent atom) and its projection at the observed rate;
     the live what-if total lives in the hero. Activate is a calm neutral button,
-    never alarm-red."""
-    st.subheader("The fixes")
+    never alarm-red. (Header + safety guarantees are supplied by the governance
+    region that wraps this.)"""
     items = []
     for r in recs:
         i = _issue_of(r)
@@ -790,14 +870,17 @@ def _render_fixes(recs, default_mt, rates, total_n, gov_store) -> None:
                "(~{:,}/mo); use the slider up top to project your own volume.".format(default_mt))
 
 
-def _render_math_drawer(recs, gid, rates) -> None:
+def _render_verification_layer(recs, gid, rates) -> None:
+    """Region 6 — auditability as a feature: verify any number above against
+    your own spans. (Realized savings moved up to region 3.)"""
     from accountant.pipeline.db import savings_summary
     from accountant.wrapper import store as gov_store
     saved = savings_summary()
-    with st.expander("Show the math — Phoenix traces, per-ticket proof, tool rates"):
+    st.subheader("Verify any number against your own spans")
+    st.caption("Trace IDs, Phoenix-measured LLM cost, counted tool calls, and the rates you set "
+               "— and a link out to each trace. You set the tool prices; Phoenix counts the calls.")
+    with st.expander("Open the audit surface — proof tables, tool rates, per-policy detail"):
         _render_tool_pricing(rates)
-        st.divider()
-        _render_realized_savings()
         st.divider()
         _render_waste_breakdown(recs, gid)
         st.divider()
@@ -847,19 +930,32 @@ def render_dashboard() -> None:
     realized = savings_summary().get("total_savings_usd", 0) or 0
     gid = _project_gid()
 
-    _render_bill(recs, totals, default_mt, n_active, realized)
+    # CTO frame — mechanism and proof first; money subordinate. The trace race
+    # is the visual center (region 2); no large dollar figure opens the page.
+    _render_identity(live, n_active, totals["total_n"])           # R1
     st.divider()
-    _render_breakdown(rows, recs)
+    _render_trace_race()                                          # R2 (centerpiece)
     st.divider()
-    _render_math_drawer(recs, gid, rates)
+    _render_evidence(gid)                                         # R3
     st.divider()
-    _render_fixes(recs, default_mt, rates, totals["total_n"], gov_store)
+    _render_breakdown(rows, recs)                                 # R4 (diagnosis map)
+    st.divider()
+    _render_governance(recs, default_mt, rates, totals["total_n"], gov_store)  # R5
+    st.divider()
+    _render_verification_layer(recs, gid, rates)                 # R6
+    st.divider()
+    _render_economics_roadmap(recs, totals, default_mt)          # R7
 
 
 def main() -> None:
     st.title("Agent Accountant")
-    st.caption("Live unit economics for the observed agent — measured from Phoenix.")
+    st.caption("A runtime economic governor for AI agents — mechanism and proof, measured from Phoenix.")
     render_dashboard()
 
 
-main()
+# ARCHIVED v5 (control-plane migration, Phase 1). Frozen reference for parity
+# diffing. The only change from the live file is this __main__ guard, so the
+# view-model functions can be imported for the Phase 2 parity check without
+# launching the app. To run v5 visually, check out a pre-archive commit.
+if __name__ == "__main__":
+    main()

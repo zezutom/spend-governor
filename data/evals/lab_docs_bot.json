@@ -1,0 +1,451 @@
+{
+  "held_pct": 0.75,
+  "degraded_pct": 0.25,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "simple": 0.75
+  },
+  "use_case": "docs_bot",
+  "candidate": "economy",
+  "n": 4,
+  "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
+  "cost": {
+    "baseline": 0.0032,
+    "projected": 0.0008,
+    "pct": 76
+  },
+  "elapsed_sec": 64.1,
+  "project_gid": "UHJvamVjdDo0",
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "conv_id": "1200",
+      "ticket": "How do I rename a form?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "span_id": "5715f21d82d59b78",
+      "held": true,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": true,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 1,
+          "held": true,
+          "clarified": true,
+          "refused": true,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/5a50e2755d7324c972b60bc39f40bf37",
+      "baseline_answer": "To rename a form, navigate to Settings \u2192 Account, where you can manage various account settings.",
+      "economy_answer": "I can't resolve this ticket without a ticket ID. Please provide the ticket ID.",
+      "baseline_model_cost": 0.000414,
+      "economy_model_cost": 0.00014,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I rename a form?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "c5f3e3c1e9c05cbc"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can rename a form by going to Settings \u2192 Account.\"}",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'customer_reply': 'You can rename a form by going to Settings \u2192 Account.'} from model returned function call argument {'s\u2026",
+          "span_id": "6bc732781224b2ac"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00014,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4092,
+          "in_tokens": 1331,
+          "out_tokens": 18,
+          "span_id": "5715f21d82d59b78",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": true,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 1,
+              "held": false,
+              "clarified": true,
+              "refused": true,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1201",
+      "ticket": "Where is the dashboard?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "span_id": "38ace024d06af488",
+      "held": true,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/fecb2dd10f191df3f86900cd3d85ed55",
+      "baseline_answer": "The dashboard is located under Settings \u2192 Account.",
+      "economy_answer": "The dashboard and account settings can be found under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000388,
+      "economy_model_cost": 0.000127,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where is the dashboard?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "ea7529cc622f25a4"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000127,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 2839,
+          "in_tokens": 1218,
+          "out_tokens": 13,
+          "span_id": "38ace024d06af488",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1202",
+      "ticket": "How do I duplicate a form?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "span_id": "61992bf5c4960cd4",
+      "held": false,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 1,
+          "baseline_quality": 5,
+          "held": false,
+          "clarified": false,
+          "refused": false,
+          "equivalent": false
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3d87299cf233d3c99e0a1ef91a6a04fb",
+      "baseline_answer": "To duplicate a form, navigate to your dashboard, select the form you wish to duplicate, and choose the \"Duplicate\" option from the form's action menu.",
+      "economy_answer": "I can help with that. You can duplicate a form by going to Settings \u2192 Account.",
+      "baseline_model_cost": 0.000449,
+      "economy_model_cost": 0.000127,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I duplicate a form?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "11f605be1447b41b"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000127,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 2847,
+          "in_tokens": 1201,
+          "out_tokens": 18,
+          "span_id": "61992bf5c4960cd4",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 1,
+              "baseline_quality": 5,
+              "held": false,
+              "clarified": false,
+              "refused": false,
+              "equivalent": false
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1203",
+      "ticket": "How do I see who's on my team?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "span_id": "d5781d165158793e",
+      "held": true,
+      "judge_votes": [
+        {
+          "lens": "resolution",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "customer",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        },
+        {
+          "lens": "support_lead",
+          "economy_quality": 5,
+          "baseline_quality": 5,
+          "held": true,
+          "clarified": false,
+          "refused": false,
+          "equivalent": true
+        }
+      ],
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4e9f4b2244d423dd6571309f85469352",
+      "baseline_answer": "To see who's on your team, navigate to Settings \u2192 Account, where you can manage team members and other account settings.",
+      "economy_answer": "The Stratus Forms account settings, including team member management, are available under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000393,
+      "economy_model_cost": 0.000131,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I see who's on my team?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "b9c62b94d11c66fb"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000131,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 2644,
+          "in_tokens": 1230,
+          "out_tokens": 19,
+          "span_id": "d5781d165158793e",
+          "votes": [
+            {
+              "lens": "resolution",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "customer",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            },
+            {
+              "lens": "support_lead",
+              "economy_quality": 5,
+              "baseline_quality": 5,
+              "held": true,
+              "clarified": false,
+              "refused": false,
+              "equivalent": true
+            }
+          ]
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    }
+  ]
+}

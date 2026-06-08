@@ -1,0 +1,1149 @@
+{
+  "held_pct": 0.444,
+  "degraded_pct": 0.556,
+  "degraded_dominant_sub": "simple",
+  "held_by_sub": {
+    "complex": 0.6,
+    "simple": 0.38
+  },
+  "use_case": "account_question",
+  "candidate": "economy",
+  "n": 18,
+  "recommendation": "Mixed \u2014 holds barely over half, with no clean safe subset. Too inconsistent to route wholesale; the small eval was optimistic. Keep premium for now.",
+  "cost": {
+    "baseline": 0.0044,
+    "projected": 0.002,
+    "pct": 55
+  },
+  "elapsed_sec": 100.9,
+  "project_gid": "UHJvamVjdDo0",
+  "test_tag": "accountant.run_type = test",
+  "rows": [
+    {
+      "conv_id": "1200",
+      "ticket": "How do I add a teammate to my account?",
+      "sub_type": "complex",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0",
+      "baseline_answer": "To add a teammate, go to Settings \u2192 Account. You'll find team member management options there.",
+      "economy_answer": "I encountered an issue when trying to resolve your ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000195,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I add a teammate to my account?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "11ee5d885fc4a0e7",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTkzNA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"The ability to add a teammate to your account can be found under Settings \u2192 Account. Account owners can also transfer ownership and billing contacts can update payment methods there. If you have any f\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket t\u2026",
+          "span_id": "65d8d05f160c5dc3",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0MQ%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000195,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6051,
+          "in_tokens": 1872,
+          "out_tokens": 19,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/80d7b82cc6c2f28058f5af86c535cbe0?selectedSpanNodeId=U3BhbjozMTk0NA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1201",
+      "ticket": "Where do I update my billing address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43",
+      "baseline_answer": "To update your billing address, navigate to Settings \u2192 Account.",
+      "economy_answer": "The billing address can be updated under Settings \u2192 Account.",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000158,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I update my billing address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "171081222c73b8a6",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNQ%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000158,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4298,
+          "in_tokens": 1535,
+          "out_tokens": 11,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/586f6fb113d109c41139b174b66f1a43?selectedSpanNodeId=U3BhbjozMTkzNw%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1202",
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "sub_type": "complex",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036",
+      "baseline_answer": "To transfer ownership of your account, please go to Settings \u2192 Account. You should find the option to transfer ownership there.",
+      "economy_answer": "The account owner can transfer ownership of the account under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I transfer ownership of my account to a colleague?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "550b60d6055793bd",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzNg%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4413,
+          "in_tokens": 1543,
+          "out_tokens": 14,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/1d77fd801873df1e123ef8f02240e036?selectedSpanNodeId=U3BhbjozMTkzOA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1203",
+      "ticket": "How do I enable SSO?",
+      "sub_type": "complex",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52",
+      "baseline_answer": "You can enable SSO in your account settings. Go to Settings -> Account to configure it.",
+      "economy_answer": "I can help with that! You can enable SSO under Settings \u2192 Account. The Account owner can manage this setting.",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.000183,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I enable SSO?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "5978ae9800c261a7",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk1OA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked how to enable SSO. KB article /account/general provided the answer. Updated ticket status to resolved.\", \"status\": \"resolved\", \"customer_reply\": \"You can enable SSO under Settings \u2192 Acco\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to enable SSO. KB article /account/general provided the answer. Updated ticket statu\u2026",
+          "span_id": "6bbd17c3c6a16244",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2Mw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000183,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6850,
+          "in_tokens": 1739,
+          "out_tokens": 23,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bf1a226fccc4722206ea559019ebc52?selectedSpanNodeId=U3BhbjozMTk2NQ%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1204",
+      "ticket": "Where's my invoice from last month?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e",
+      "baseline_answer": "I can help with that! Invoices are available in your account settings. Please log in to Stratus Forms, then navigate to Settings -> Account. You should find your past invoices there.\n\nIf you have any trouble finding it, please let me know!",
+      "economy_answer": "I can help with that. You can find your invoice from last month in your account settings. Navigate to \"Settings\" and then \"Account\" to view your billing history and invoices.",
+      "baseline_model_cost": 0.000506,
+      "economy_model_cost": 0.000196,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where's my invoice from last month?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "4edeb7a96f6797b0",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Mg%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"You can find your invoice from last month in your account settings. Navigate to \\\"Settings\\\" and then \\\"Account\\\" to view your billing history and invoices.\", \"status\": \"resolved\", \"internal_note\": \"C\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked for last month\\\\'s invoice. Provided KB article on account settings, directing them to t\u2026",
+          "span_id": "753de2a4df19c09e",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2Nw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000196,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 7845,
+          "in_tokens": 1811,
+          "out_tokens": 37,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/a321739a48eca704c8e94f836330c17e?selectedSpanNodeId=U3BhbjozMTk2OA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1205",
+      "ticket": "How do I change my email address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718",
+      "baseline_answer": "To change your email address, navigate to Settings \u2192 Account in your Stratus Forms account. If you have any trouble finding it, let me know!",
+      "economy_answer": "The Stratus Forms account settings, including email address, are available under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000493,
+      "economy_model_cost": 0.000161,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I change my email address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "1bc5ff80637f58ab",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3Mw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000161,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6639,
+          "in_tokens": 1535,
+          "out_tokens": 18,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/db061e7c461c890a25f4aad923d87718?selectedSpanNodeId=U3BhbjozMTk3NQ%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1206",
+      "ticket": "Where do I find my API key?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89",
+      "baseline_answer": "Your API key can be found in your account settings under the 'API' tab. If you have trouble finding it, please let us know!",
+      "economy_answer": "It seems I missed the ticket ID. Could you please provide it so I can resolve this ticket?",
+      "baseline_model_cost": 0.000629,
+      "economy_model_cost": 0.000193,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I find my API key?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "0e52d2020e6042ea",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Mw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"internal_note\": \"Customer asked for API key location. KB lookup for /account/general did not contain this information. Advised customer to check developer docs or contact technical support.\", \"cus\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked for API key location. KB lookup for /account/general did not contain this information. A\u2026",
+          "span_id": "2e17e8b2a7c9bc42",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5NQ%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000193,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5632,
+          "in_tokens": 1852,
+          "out_tokens": 20,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/7a9d842595af54c9d284653cdf6edc89?selectedSpanNodeId=U3BhbjozMTk5Nw%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1207",
+      "ticket": "Can I export all my form responses?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657",
+      "baseline_answer": "Yes, you can export all your form responses. This feature is available in your account settings.",
+      "economy_answer": "I am sorry, I cannot resolve this request without a ticket ID. Please provide the ticket ID.",
+      "baseline_model_cost": 0.000604,
+      "economy_model_cost": 0.0002,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I export all my form responses?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "b1d89844b0ec73b3",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMTk5OA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "912397c5c589d1cb",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwMQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"Yes, you can export all of your form responses. You can find this option in your account settings. If you need further assistance, please let us know.\", \"internal_note\": \"Customer asked about exportin\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about exporting form responses. KB article /account/general was relevant for general acc\u2026",
+          "span_id": "ed42aa305c9eeb04",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwNQ%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.0002,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 8188,
+          "in_tokens": 1918,
+          "out_tokens": 20,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/e7ca5c446744969caba0769deb0e0657?selectedSpanNodeId=U3BhbjozMjAwOA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1208",
+      "ticket": "How do I delete a form?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca",
+      "baseline_answer": "To delete a form, navigate to the forms list in your Stratus Forms account. Hover over the form you wish to delete, and a 'Delete' option should appear. Click on it and confirm your decision.",
+      "economy_answer": "I can help with that. You can manage your forms under the \"My Forms\" section of your account. To delete a form, navigate to \"My Forms\", click the three dots next to the form you wish to delete, and select \"Delete\". If you encounter any issu",
+      "baseline_model_cost": 0.000502,
+      "economy_model_cost": 0.000216,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I delete a form?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "8741e65e485f1d0e",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwMA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"internal_note\": \"Customer asked how to delete a form. KB article /account/general was relevant for general account management, but a more specific article on form management would be ideal. Provid\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to delete a form. KB article /account/general was relevant for general account manag\u2026",
+          "span_id": "82ef93292a583b73",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNA%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000216,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4578,
+          "in_tokens": 1912,
+          "out_tokens": 62,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/239d0b3ba389867297597594fff838ca?selectedSpanNodeId=U3BhbjozMjAwNw%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1209",
+      "ticket": "What's the difference between Pro and Enterprise?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 3,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c",
+      "baseline_answer": "I can't find specific documentation comparing Pro and Enterprise plans. I'd recommend checking our pricing page or contacting sales for a detailed breakdown of features.",
+      "economy_answer": "I can't resolve this ticket without a ticket ID. Could you please provide it?",
+      "baseline_model_cost": 0.000665,
+      "economy_model_cost": 0.0002,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What's the difference between Pro and Enterprise?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "067e3d854e732863",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAyOA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/billing/plan-changes\"}",
+          "output": "{\"result\": {\"article\": \"Plan changes take effect immediately. Upgrades are billed the prorated difference for the remainder of the current cycle. Downgrades issue a prorated credit toward the next invoice; no cash refund\u2026",
+          "span_id": "d44662761071343b",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzMA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"customer_reply\": \"The Pro and Enterprise plans offer different features and support levels. For a detailed comparison, please refer to our pricing page: [link to pricing page]. If you have specific questions about whic\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about Pro vs. Enterprise plans. Provided general info and link to pricing page. No speci\u2026",
+          "span_id": "51ccc7475c0abd35",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzNA%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.0002,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 8266,
+          "in_tokens": 1929,
+          "out_tokens": 18,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/81e8b9adc7eefe4b412ee764d140527c?selectedSpanNodeId=U3BhbjozMjAzOA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1210",
+      "ticket": "Can I use a custom domain for my forms?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 2,
+      "clarified": false,
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039",
+      "baseline_answer": "Yes, Stratus Forms supports custom domains for your forms. You can configure this in your account settings.",
+      "economy_answer": "I can't seem to find specific documentation on using custom domains with Stratus Forms. However, based on general knowledge and a quick web search, it's a common feature for form builders. I recommend checking the \"Account Settings\" or \"Bra",
+      "baseline_model_cost": 0.000607,
+      "economy_model_cost": 0.000258,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I use a custom domain for my forms?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "0686a44cb8158a62",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzMw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/account/custom-domains\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "3074336a87839226",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzNg%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/features/custom-domains\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "ebe0a8117c4ca5f3",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjAzOQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/features/domains\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "d96135cd69c55815",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Mw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/features/branding\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "926051b51261225f",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA0Ng%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"stratus forms custom domain support\"}",
+          "output": "{\"result\": [{\"title\": \"stratus forms custom domain support \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/stratus_forms_custom_domain_support\", \"snippet\": \"This article provides a general overview of stra\u2026",
+          "span_id": "32fad9fc7115272e",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1MQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"status\": \"resolved\", \"customer_reply\": \"You can use a custom domain for your forms with Stratus Forms. For more information on how to set this up, please refer to our documentation on custom domains. If you have any fu\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about custom domains. KB lookup for /account/custom-domains, /features/custom-domains, /\u2026",
+          "span_id": "5e55c60fc64172d9",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1Mw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000258,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 14924,
+          "in_tokens": 2211,
+          "out_tokens": 91,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c53b9a9db071f9bfb982886765342039?selectedSpanNodeId=U3BhbjozMjA1NQ%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1211",
+      "ticket": "Where do I see analytics for my forms?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 2,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e",
+      "baseline_answer": "I've escalated your ticket to a human agent who can provide more specific information about where to find analytics for your forms within Stratus Forms. They will be able to assist you further.",
+      "economy_answer": "I can't resolve this ticket without a ticket ID. Please provide the ticket ID.",
+      "baseline_model_cost": 0.000649,
+      "economy_model_cost": 0.00022,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I see analytics for my forms?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "b159d137a5e5579c",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/account/analytics\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "f8714ed78617e05a",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjAzNw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/features/analytics\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "6a53b426ae0860a6",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0MQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/product/forms\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "c5b28d038d6c1fc5",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0NA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/product/analytics\"}",
+          "output": "{\"result\": {\"status\": \"not_found\"}}",
+          "span_id": "8a02812d4ee326fd",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0Nw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms form analytics location\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms form analytics location \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_form_analytics_location\", \"snippet\": \"This article provides a general overview of \u2026",
+          "span_id": "24334f76c52c4bac",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA0OQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked about form analytics location. KB articles for /account/general were found, but specific articles for analytics were not. Web search provided general guidance. Responded with dashboard l\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about form analytics location. KB articles for /account/general were found, but specific\u2026",
+          "span_id": "9c056a2d77fd2757",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1NA%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00022,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 14661,
+          "in_tokens": 2132,
+          "out_tokens": 18,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/b2fd7727e79aff1ea848a7cf5232239e?selectedSpanNodeId=U3BhbjozMjA1Ng%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1212",
+      "ticket": "How do I integrate Stratus Forms with Zapier?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b",
+      "baseline_answer": "Stratus Forms integrates with Zapier! You can find more information on how to set it up in our knowledge base or by searching online for 'Stratus Forms Zapier integration guide'.",
+      "economy_answer": "I encountered an error when trying to resolve the ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.000653,
+      "economy_model_cost": 0.000251,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I integrate Stratus Forms with Zapier?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "bd5471ef116fb949",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3NQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "web_search",
+          "cost": 0.005,
+          "dup": false,
+          "input": "{\"query\": \"Stratus Forms Zapier integration guide\"}",
+          "output": "{\"result\": [{\"title\": \"Stratus Forms Zapier integration guide \u2014 Overview | Wikipedia\", \"url\": \"https://en.wikipedia.org/wiki/Stratus_Forms_Zapier_integration_guide\", \"snippet\": \"This article provides a general overview o\u2026",
+          "span_id": "c8e1e869ba90b0f9",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA3OA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked about Zapier integration. KB lookup for /account/general returned general account info. Web search provided several external resources. Provided both to customer and closed ticket.\", \"cu\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about Zapier integration. KB lookup for /account/general returned general account info. \u2026",
+          "span_id": "51125e06f254e4ca",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Mg%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000251,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5755,
+          "in_tokens": 2432,
+          "out_tokens": 19,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/201dbd03e95402abf5b1d23edb63ec0b?selectedSpanNodeId=U3BhbjozMjA4Ng%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1213",
+      "ticket": "Can I embed forms in my website?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 4,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0",
+      "baseline_answer": "Yes, you can embed forms in your website. Please refer to our documentation for detailed instructions.",
+      "economy_answer": "I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.0006,
+      "economy_model_cost": 0.000196,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Can I embed forms in my website?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "d793ca92a8afe1ae",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4Mw%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "b0cd1840bb9c119d",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4NQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": true,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "cacfdc4ec3c905dc",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA4OQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked about embedding forms. KB article /account/general was relevant. Provided a customer-facing reply and updated ticket status.\", \"status\": \"resolved\", \"customer_reply\": \"Yes, you can embed\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about embedding forms. KB article /account/general was relevant. Provided a customer-fac\u2026",
+          "span_id": "fecd4f90a02ef969",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Mg%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000196,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5042,
+          "in_tokens": 1897,
+          "out_tokens": 16,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/bbe20e16b516e948892b93b17ad156b0?selectedSpanNodeId=U3BhbjozMjA5Nw%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1214",
+      "ticket": "What payment methods do you accept?",
+      "sub_type": "simple",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c",
+      "baseline_answer": "We accept major credit cards, including Visa, Mastercard, American Express, and Discover. You can update your payment methods in your account settings under Settings \u2192 Account.",
+      "economy_answer": "I need the ticket ID to update its status. Could you please provide it?",
+      "baseline_model_cost": 0.000608,
+      "economy_model_cost": 0.000186,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"What payment methods do you accept?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "1b7d85ffb1f5e66f",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA4OA%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked about accepted payment methods. KB article /account/general provided relevant information about updating payment methods. Marked ticket as resolved.\", \"customer_reply\": \"The article stat\u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked about accepted payment methods. KB article /account/general provided relevant informatio\u2026",
+          "span_id": "12e3a2d7c2492ee7",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5MQ%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000186,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 4235,
+          "in_tokens": 1798,
+          "out_tokens": 16,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/3a64d7ba5456a3c78f01f3fe48e97d9c?selectedSpanNodeId=U3BhbjozMjA5NA%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1215",
+      "ticket": "How do I add a teammate to my account?",
+      "sub_type": "complex",
+      "equivalent": false,
+      "baseline_quality": 5,
+      "economy_quality": 1,
+      "clarified": true,
+      "refused_escalated": true,
+      "held": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf",
+      "baseline_answer": "To add a teammate, go to Settings \u2192 Account. You'll find team member management options there.",
+      "economy_answer": "I encountered an error while trying to resolve the ticket. Could you please provide the ticket ID?",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000195,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I add a teammate to my account?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "636251e74c64902c",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNQ%3D%3D"
+        },
+        {
+          "kind": "tool",
+          "tool": "ticket_update",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"internal_note\": \"Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket to resolved.\", \"customer_reply\": \"The ability to add a teammate to your account can be found under \u2026",
+          "output": "{\"error\": \"Failed to invoke function ticket_update with converted arguments {'status': 'resolved', 'internal_note': 'Customer asked how to add a teammate. KB article /account/general provided the answer. Updated ticket t\u2026",
+          "span_id": "0a09d2bb26f53137",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjExNw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000195,
+          "bites": true,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 6284,
+          "in_tokens": 1871,
+          "out_tokens": 19,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8bb42e0ed3f507f48e228c5bfefc04bf?selectedSpanNodeId=U3BhbjozMjEyMQ%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1216",
+      "ticket": "Where do I update my billing address?",
+      "sub_type": "simple",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357",
+      "baseline_answer": "To update your billing address, navigate to Settings \u2192 Account.",
+      "economy_answer": "The billing address can be updated under Settings \u2192 Account.",
+      "baseline_model_cost": 0.00049,
+      "economy_model_cost": 0.000158,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"Where do I update my billing address?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "1df1b8a67e3653ef",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMA%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.000158,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5103,
+          "in_tokens": 1535,
+          "out_tokens": 11,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/57e81de941f2dcfc21eeebd59044e357?selectedSpanNodeId=U3BhbjozMjEyMw%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    },
+    {
+      "conv_id": "1217",
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "sub_type": "complex",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "held": true,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d",
+      "baseline_answer": "To transfer ownership of your account, please go to Settings \u2192 Account. You should find the option to transfer ownership there.",
+      "economy_answer": "The account owner can transfer ownership of the account under Settings \u2192 Account.",
+      "baseline_model_cost": 0.000523,
+      "economy_model_cost": 0.00016,
+      "calls": [
+        {
+          "kind": "user",
+          "label": "user: \"How do I transfer ownership of my account to a colleague?\""
+        },
+        {
+          "kind": "tool",
+          "tool": "kb_lookup",
+          "cost": 0.0001,
+          "dup": false,
+          "input": "{\"path\": \"/account/general\"}",
+          "output": "{\"result\": {\"article\": \"Stratus Forms account settings, billing address, team member management, and SSO configuration are all available under Settings \u2192 Account. Account owners can transfer ownership; billing contacts c\u2026",
+          "span_id": "bfea1a945c9218e5",
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEyNw%3D%3D"
+        },
+        {
+          "kind": "model",
+          "label": "model \u00b7 respond",
+          "cost": 0.00016,
+          "bites": false,
+          "model": "gemini-2.5-flash-lite",
+          "latency_ms": 5536,
+          "in_tokens": 1543,
+          "out_tokens": 14,
+          "span_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/6cb6f2b19ceb246121955eecc59b537d?selectedSpanNodeId=U3BhbjozMjEzMQ%3D%3D"
+        },
+        {
+          "kind": "reply",
+          "label": "reply sent"
+        }
+      ]
+    }
+  ]
+}

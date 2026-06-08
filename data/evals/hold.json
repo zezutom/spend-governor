@@ -1,0 +1,52 @@
+{
+  "baseline_model": "gemini-2.5-flash",
+  "economy_model": "gemini-2.5-flash-lite",
+  "n": 4,
+  "equivalent_rate": 0.75,
+  "mean_quality_baseline": 4.0,
+  "mean_quality_economy": 4.0,
+  "quality_drift": 0.0,
+  "clarification_rate": 0.0,
+  "refusal_escalation_rate": 0.0,
+  "verdict": "hold",
+  "elapsed_sec": 31.8,
+  "project_gid": "UHJvamVjdDo0",
+  "rows": [
+    {
+      "ticket": "Where do I update my billing address?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/9b79fb2dc647ea4ac2a5bbd4b3ead34a"
+    },
+    {
+      "ticket": "How do I transfer ownership of my account to a colleague?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/4e8d63523aff08473fb4274d800859c2"
+    },
+    {
+      "ticket": "How do I add a teammate to my account?",
+      "equivalent": false,
+      "baseline_quality": 1,
+      "economy_quality": 1,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/8608ee5a41db71230ac4c3c4fbe08fcc"
+    },
+    {
+      "ticket": "How do I enable SSO?",
+      "equivalent": true,
+      "baseline_quality": 5,
+      "economy_quality": 5,
+      "clarified": false,
+      "refused_escalated": false,
+      "phoenix_url": "https://app.phoenix.arize.com/s/tomas/projects/UHJvamVjdDo0/spans/c5c1855e82c86804e6de5a412f922c94"
+    }
+  ]
+}

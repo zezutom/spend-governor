@@ -95,7 +95,12 @@ def span_deeplink(project_gid: str, trace_id: str, node_id: str | None) -> str |
     if not (ui_base and project_gid and trace_id):
         return None
     base = f"{ui_base}/projects/{project_gid}/spans/{trace_id}"
-    return f"{base}?selectedSpanNodeId={node_id}" if node_id else base
+    if not node_id:
+        return base
+    # URL-encode the node id — it's base64 ('==' padding); Phoenix's router drops
+    # the param if the '=' isn't percent-encoded, falling back to the whole trace.
+    from urllib.parse import quote
+    return f"{base}?selectedSpanNodeId={quote(node_id, safe='')}"
 
 
 _EXPERIMENT_COST_QUERY = """
