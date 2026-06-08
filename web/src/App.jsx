@@ -40,9 +40,9 @@ function RootNode({ data }) {
     <div style={{ position: 'relative', border: `2px solid ${INK}`, background: INK, color: '#fff',
       borderRadius: 16, padding: '14px 22px', minWidth: 230, textAlign: 'center',
       boxShadow: '0 10px 30px rgba(0,0,0,.22)' }}>
-      <div style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the accountant</div>
-      <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>Cost Governor</div>
-      <div style={{ fontSize: 12.5, color: '#cfece3', marginTop: 3 }}>{data.sub}</div>
+      <div style={{ fontSize: 12.6, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b9f5e2', fontWeight: 800 }}>the accountant</div>
+      <div style={{ fontSize: 23, fontWeight: 800, marginTop: 2 }}>Cost Governor</div>
+      <div style={{ fontSize: 14.4, color: '#cfece3', marginTop: 3 }}>{data.sub}</div>
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
     </div>
   )
@@ -62,27 +62,27 @@ function AgentNode({ data }) {
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       {/* header: status pill + cost */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: st.color, background: st.bg,
+        <span style={{ fontSize: 12.6, fontWeight: 800, color: st.color, background: st.bg,
           border: `1px solid ${st.color}33`, borderRadius: 999, padding: '2px 9px',
           display: 'inline-flex', alignItems: 'center', gap: 4 }}>{st.icon} {st.label}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 800, color: INK }}>
-          ${a.cost_per_message.toFixed(4)}<span style={{ fontSize: 10.5, fontWeight: 600, color: DIM }}>/msg</span></span>
+        <span style={{ marginLeft: 'auto', fontSize: 18.4, fontWeight: 800, color: INK }}>
+          ${a.cost_per_message.toFixed(4)}<span style={{ fontSize: 12.1, fontWeight: 600, color: DIM }}>/msg</span></span>
       </div>
-      <div style={{ fontSize: 17, fontWeight: 800, color: INK, marginTop: 8 }}>{a.label}</div>
-      <div style={{ fontSize: 12.5, color: DIM, marginTop: 1 }}>{a.purpose}</div>
+      <div style={{ fontSize: 19.5, fontWeight: 800, color: INK, marginTop: 8 }}>{a.label}</div>
+      <div style={{ fontSize: 14.4, color: DIM, marginTop: 1 }}>{a.purpose}</div>
       {/* waste line */}
-      <div style={{ fontSize: 12.5, marginTop: 9, color: a.status === 'governed' ? GREEN : AMBER,
+      <div style={{ fontSize: 14.4, marginTop: 9, color: a.status === 'governed' ? GREEN : AMBER,
         fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
         <span>{a.status === 'governed' ? '✓' : '⚠'}</span>{a.waste}
       </div>
       {/* fix block */}
       <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid #f0eee6' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', textTransform: 'uppercase',
+          <span style={{ fontSize: 12.6, fontWeight: 800, letterSpacing: '.05em', textTransform: 'uppercase',
             color: fix.safe ? GREEN : AMBER }}>{_FIXNAME[fix.type] || 'fix'}</span>
-          <span style={{ fontSize: 12.5, color: '#3b3b37' }}>{fix.title}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 13.5, fontWeight: 800, color: GREEN }}>
-            ${Math.round(fix.monthly || 0).toLocaleString()}<span style={{ fontSize: 10, color: DIM, fontWeight: 600 }}>/mo</span></span>
+          <span style={{ fontSize: 14.4, color: '#3b3b37' }}>{fix.title}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 15.5, fontWeight: 800, color: GREEN }}>
+            ${Math.round(fix.monthly || 0).toLocaleString()}<span style={{ fontSize: 11.5, color: DIM, fontWeight: 600 }}>/mo</span></span>
         </div>
         <div style={{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           {fix.escalated && <>
@@ -92,7 +92,7 @@ function AgentNode({ data }) {
           {fix.active && <Btn onClick={() => act('veto', fix.sig)} label="revert" color={DIM} />}
           {fix.vetoed && <Btn onClick={() => act('enable', fix.sig)} label="re-enable" color={AMBER} primary />}
           {!fix.escalated && !fix.active && !fix.vetoed &&
-            <span style={{ fontSize: 11.5, color: DIM }}>{a.status === 'problem' ? 'agent acting…' : 'watching the traffic'}</span>}
+            <span style={{ fontSize: 13.2, color: DIM }}>{a.status === 'problem' ? 'agent acting…' : 'watching the traffic'}</span>}
         </div>
       </div>
     </div>
@@ -108,8 +108,8 @@ function StepNode({ data }) {
     <div style={{ border: `1.5px solid ${c}`, background: fill, borderRadius: 9, padding: '8px 11px', minWidth: 128,
       boxShadow: lit ? `0 0 0 3px ${AMBER}22` : '0 1px 3px rgba(0,0,0,.05)' }}>
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
-      <div style={{ fontWeight: 700, fontSize: 13, fontFamily: 'monospace', color: INK }}>{data.label}</div>
-      <div style={{ fontSize: 11, color: c, marginTop: 1 }}>{data.sub}</div>
+      <div style={{ fontWeight: 700, fontSize: 14.9, fontFamily: 'monospace', color: INK }}>{data.label}</div>
+      <div style={{ fontSize: 12.6, color: c, marginTop: 1 }}>{data.sub}</div>
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
     </div>
   )
@@ -273,13 +273,13 @@ function AgentPopup({ agentId, state, onClose, onDebug, act }) {
         width: 620, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 16px 50px rgba(0,0,0,.3)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div>
-            <span style={{ fontSize: 11.5, fontWeight: 800, color: st.color, background: st.bg,
+            <span style={{ fontSize: 13.2, fontWeight: 800, color: st.color, background: st.bg,
               border: `1px solid ${st.color}33`, borderRadius: 999, padding: '3px 10px' }}>{st.icon} {st.label}</span>
-            <div style={{ fontSize: 24, fontWeight: 800, marginTop: 9 }}>{a.label}</div>
-            <div style={{ fontSize: 13.5, color: DIM }}>{a.purpose} · {a.model}</div>
+            <div style={{ fontSize: 27.6, fontWeight: 800, marginTop: 9 }}>{a.label}</div>
+            <div style={{ fontSize: 15.5, color: DIM }}>{a.purpose} · {a.model}</div>
           </div>
           <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none',
-            fontSize: 26, cursor: 'pointer', color: DIM }}>×</button>
+            fontSize: 29.9, cursor: 'pointer', color: DIM }}>×</button>
         </div>
         {/* metrics */}
         <div style={{ display: 'flex', gap: 26, marginTop: 16 }}>
@@ -290,7 +290,7 @@ function AgentPopup({ agentId, state, onClose, onDebug, act }) {
             main={`$${Math.round(fix.monthly || 0).toLocaleString()}`} sub={`${_FIXNAME[fix.type] || 'fix'}`} color={GREEN} />
         </div>
         {/* traffic + cost timeline */}
-        <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
+        <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
           <span style={{ flex: 1 }}>TRAFFIC · events/min</span>
           <span>{Math.round(evNow).toLocaleString()}/min now · ${(evNow * cpm).toFixed(2)}/min</span>
         </div>
@@ -300,13 +300,13 @@ function AgentPopup({ agentId, state, onClose, onDebug, act }) {
           {area && <path d={area} fill="rgba(181,121,26,.12)" stroke="none" />}
           {line && <path d={line} fill="none" stroke={AMBER} strokeWidth="2" vectorEffect="non-scaling-stroke" />}
         </svg>
-        <div style={{ fontSize: 11.5, color: DIM, marginTop: 3 }}>last 12h · time-compressed · cost = events × ${a.cost_per_message.toFixed(4)}/msg</div>
+        <div style={{ fontSize: 13.2, color: DIM, marginTop: 3 }}>last 12h · time-compressed · cost = events × ${a.cost_per_message.toFixed(4)}/msg</div>
         {/* what's wrong + the fix */}
         <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 11, background: st.bg, border: `1px solid ${st.color}33` }}>
-          <div style={{ fontSize: 13.5, color: a.status === 'governed' ? GREEN : '#85540b', fontWeight: 600 }}>
+          <div style={{ fontSize: 15.5, color: a.status === 'governed' ? GREEN : '#85540b', fontWeight: 600 }}>
             {a.status === 'governed' ? '✓' : '⚠'} {a.waste}
           </div>
-          <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 4 }}>
+          <div style={{ fontSize: 15.5, color: '#3b3b37', marginTop: 4 }}>
             <b>{_FIXNAME[fix.type] || 'fix'}</b> — {fix.title} · <span style={{ color: GREEN, fontWeight: 700 }}>~${Math.round(fix.monthly || 0).toLocaleString()}/mo</span>
           </div>
           {fix.escalated && <div style={{ marginTop: 9, display: 'flex', gap: 8 }}>
@@ -316,7 +316,7 @@ function AgentPopup({ agentId, state, onClose, onDebug, act }) {
           {fix.active && <div style={{ marginTop: 9 }}><Btn onClick={() => act('veto', fix.sig)} label="revert" color={DIM} /></div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: 18 }}>
-          <div style={{ fontSize: 12.5, color: DIM }}>Want to be sure before you commit?</div>
+          <div style={{ fontSize: 14.4, color: DIM }}>Want to be sure before you commit?</div>
           <div style={{ marginLeft: 'auto' }}>
             <Btn onClick={() => onDebug(a.id)} label="🔬 open debugger →" color={GREEN} primary big />
           </div>
@@ -340,11 +340,11 @@ function SessionPopup({ id, onClose }) {
       <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '20px 22px',
         width: 460, boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div><b style={{ fontSize: 16 }}>#{id}</b> <span style={{ color: DIM, fontSize: 12.5 }}>· debug session</span></div>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 22, cursor: 'pointer', color: DIM }}>×</button>
+          <div><b style={{ fontSize: 18.4 }}>#{id}</b> <span style={{ color: DIM, fontSize: 14.4 }}>· debug session</span></div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 25.3, cursor: 'pointer', color: DIM }}>×</button>
         </div>
         {!s ? <div style={{ color: DIM, padding: 14 }}>loading…</div> : <>
-          <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 10 }}>{s.use_case}</div>
+          <div style={{ fontSize: 16.7, fontWeight: 700, marginTop: 10 }}>{s.use_case}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginTop: 12 }}>
             <Stat2 k="levers applied" v={(s.levers || []).join(', ') || 'none'} />
             <Stat2 k="source" v={`${s.source} · N=${s.n ?? '—'}`} />
@@ -353,13 +353,13 @@ function SessionPopup({ id, onClose }) {
             <Stat2 k="quality held" v={pct(s.held_pct)} color={GREEN} />
             <Stat2 k="degraded" v={pct(s.degraded_pct)} color={AMBER} />
           </div>
-          {s.advice_against && <div style={{ fontSize: 12.5, color: '#85540b', background: '#faeeda',
+          {s.advice_against && <div style={{ fontSize: 14.4, color: '#85540b', background: '#faeeda',
             border: `1px solid ${AMBER}`, borderRadius: 9, padding: '9px 11px', marginTop: 12 }}>
             ⚑ I advised against the economy lever; applied at your direction — <b>watching live</b>, I'll flag if quality slips.
           </div>}
-          {!s.advice_against && <div style={{ fontSize: 12.5, color: '#1a4f40', marginTop: 12 }}>● status: watching live.</div>}
+          {!s.advice_against && <div style={{ fontSize: 14.4, color: '#1a4f40', marginTop: 12 }}>● status: watching live.</div>}
           <div style={{ marginTop: 14, borderTop: '1px solid #eceae0', paddingTop: 10 }}>
-            <a href={phoenixTestUrl(s.project_gid)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>this session's 'test' traces in Phoenix ↗</a>
+            <a href={phoenixTestUrl(s.project_gid)} target="_blank" rel="noreferrer" style={{ fontSize: 13.8, color: GREEN, fontWeight: 600 }}>this session's 'test' traces in Phoenix ↗</a>
           </div>
         </>}
       </div>
@@ -369,8 +369,8 @@ function SessionPopup({ id, onClose }) {
 function Stat2({ k, v, color }) {
   return (
     <div>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{k}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: color || INK }}>{v}</div>
+      <div style={{ fontSize: 12.1, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{k}</div>
+      <div style={{ fontSize: 16.1, fontWeight: 600, color: color || INK }}>{v}</div>
     </div>
   )
 }
@@ -411,7 +411,7 @@ function Card({ accent, kicker, children, glow }) {
   return (
     <div style={{ background: '#fff', border: `1.5px solid ${accent}`, borderRadius: 16,
       padding: '20px 22px', boxShadow: glow ? `0 12px 44px ${accent}33` : '0 8px 30px rgba(0,0,0,.14)' }}>
-      <div style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase',
+      <div style={{ fontSize: 12.6, letterSpacing: '.1em', textTransform: 'uppercase',
         fontWeight: 800, color: accent }}>{kicker}</div>
       {children}
     </div>
@@ -422,7 +422,7 @@ function DiagnoseCard({ text, state, openProof }) {
   const top = state?.classes?.find((c) => !c.baseline) || state?.classes?.[0]
   return (
     <Card accent={AMBER} kicker="◇ Diagnose · where the money leaks">
-      <div style={{ fontSize: 22, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      <div style={{ fontSize: 25.3, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
       {top && (
         <div style={{ display: 'flex', gap: 22, marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6' }}>
           <Stat label={top.label} main={`$${top.cost_per_ticket.toFixed(4)}`} sub="per message" color={AMBER} />
@@ -440,10 +440,10 @@ function DiagnoseCard({ text, state, openProof }) {
 function ActCard({ text, openProof }) {
   return (
     <Card accent={GREEN} kicker="✓ Act · safe, hands-off" glow>
-      <div style={{ fontSize: 22, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      <div style={{ fontSize: 25.3, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14,
         paddingTop: 12, borderTop: '1px solid #eef4f0' }}>
-        <div style={{ fontSize: 13.5, color: '#3b3b37' }}>
+        <div style={{ fontSize: 15.5, color: '#3b3b37' }}>
           The repeated paid call never runs — served from cache, same result.
         </div>
         <div style={{ marginLeft: 'auto' }}>
@@ -458,7 +458,7 @@ function VerifyCard({ text, state }) {
   const v = state?.verify
   return (
     <Card accent={GREEN} kicker="✦ Verify · re-measured from the traffic">
-      <div style={{ fontSize: 20, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
+      <div style={{ fontSize: 23, lineHeight: 1.34, color: INK, marginTop: 7 }}>{text}</div>
       {v && (
         <div style={{ display: 'flex', gap: 22, marginTop: 14, paddingTop: 12, borderTop: '1px solid #eef4f0' }}>
           <Stat label="$ / message" main={`$${v.baseline_dollars_per_message.toFixed(4)} → $${v.dollars_per_message.toFixed(4)}`} sub="baseline → governed" color={GREEN} />
@@ -485,14 +485,14 @@ function DeferCard({ route, act, state, onExperiment, openProof }) {
     : "the KB likely covers it, but dropping it could still change a quote — your call."
   return (
     <Card accent={RED} kicker={`⚑ Decide · ${label} — your call`} glow>
-      <div style={{ fontSize: 23, lineHeight: 1.36, color: INK, marginTop: 8 }}>
+      <div style={{ fontSize: 26.4, lineHeight: 1.36, color: INK, marginTop: 8 }}>
         On <b>{label}</b>, {verb} could <b style={{ color: RED }}>change the answers</b> — {line}
       </div>
       {/* evidence line — grounds the ask */}
-      <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
+      <div style={{ fontSize: 15.5, color: '#3b3b37', marginTop: 14, paddingTop: 12, borderTop: '1px solid #f0eee6',
         display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ color: DIM }}>~{vol != null ? vol.toLocaleString() : '—'} msgs/mo on this agent</span>
-        <span style={{ color: GREEN, fontWeight: 700 }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 11, fontWeight: 400 }}>(est.)</span></span>
+        <span style={{ color: GREEN, fontWeight: 700 }}>~${saving != null ? Math.round(saving).toLocaleString() : '—'}/mo if it holds <span style={{ color: DIM, fontSize: 12.6, fontWeight: 400 }}>(est.)</span></span>
         <Btn onClick={() => openProof(uc)} label="sample traces ↗" color={DIM} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
@@ -502,7 +502,7 @@ function DeferCard({ route, act, state, onExperiment, openProof }) {
           <Btn onClick={() => onExperiment(uc, route.eval_key)} label="🔬 debug it →" color={GREEN} primary big />
         </div>
       </div>
-      <div style={{ fontSize: 12, color: DIM, marginTop: 9, textAlign: 'right' }}>
+      <div style={{ fontSize: 13.8, color: DIM, marginTop: 9, textAlign: 'right' }}>
         not sure? <b>debug it</b> — step a real conversation and load-test before you commit.
       </div>
     </Card>
@@ -512,9 +512,9 @@ function DeferCard({ route, act, state, onExperiment, openProof }) {
 function Stat({ label, main, sub, color }) {
   return (
     <div>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
-      <div style={{ fontSize: 10.5, color: DIM }}>{sub}</div>
+      <div style={{ fontSize: 12.1, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 20.7, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
+      <div style={{ fontSize: 12.1, color: DIM }}>{sub}</div>
     </div>
   )
 }
@@ -531,13 +531,13 @@ function MindLoop({ step, steps }) {
         const on = s === step
         return (
           <React.Fragment key={s}>
-            <div style={{ fontSize: 10.5, fontWeight: on ? 800 : 500, letterSpacing: '.03em',
+            <div style={{ fontSize: 12.1, fontWeight: on ? 800 : 500, letterSpacing: '.03em',
               padding: '3px 8px', borderRadius: 999, textTransform: 'uppercase',
               color: on ? '#fff' : DIM, background: on ? GREEN : '#f0efe9',
               border: `1px solid ${on ? GREEN : '#e6e4da'}`, transition: 'all .25s' }}>
               {_STEP_LABEL[s] || s.toLowerCase()}
             </div>
-            {i < seq.length - 1 && <span style={{ color: '#cfcdc2', fontSize: 11 }}>→</span>}
+            {i < seq.length - 1 && <span style={{ color: '#cfcdc2', fontSize: 12.6 }}>→</span>}
           </React.Fragment>
         )
       })}
@@ -560,9 +560,9 @@ function TopBar({ state, onLab, onPin, onFF }) {
   return (
     <div style={{ borderBottom: '1px solid #eceae0', background: '#fff' }}>
       <div style={{ padding: '12px 24px 6px', display: 'flex', alignItems: 'baseline', gap: 16 }}>
-        <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: '-.01em', color: INK }}>
+        <div style={{ fontSize: 24.1, fontWeight: 800, letterSpacing: '-.01em', color: INK }}>
           AI cost governance
-          <span style={{ fontSize: 15.5, fontWeight: 500, color: DIM }}> · one Accountant governing a fleet</span>
+          <span style={{ fontSize: 17.8, fontWeight: 500, color: DIM }}> · one Accountant governing a fleet</span>
         </div>
         <div style={{ marginLeft: 'auto' }}><MindLoop step={state?.step} steps={state?.steps} /></div>
       </div>
@@ -579,14 +579,14 @@ function TopBar({ state, onLab, onPin, onFF }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 4 }}>
             <Legend />
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12.5, color: DIM }}>
+              <span style={{ fontSize: 14.4, color: DIM }}>
                 {clock ? `${clock.disclosure} · ${clock.label}` : 'time-compressed'}
               </span>
               <button onClick={onFF} title="advance the clock ~2h"
-                style={{ fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid #d8d6cc',
+                style={{ fontSize: 14.4, fontWeight: 700, cursor: 'pointer', border: '1px solid #d8d6cc',
                   borderRadius: 8, padding: '5px 11px', color: '#5a5852', background: '#fff' }}>⏩ +2h</button>
               <button onClick={onLab}
-                style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: `1px solid ${GREEN}`,
+                style={{ fontSize: 14.9, fontWeight: 700, cursor: 'pointer', border: `1px solid ${GREEN}`,
                   borderRadius: 8, padding: '6px 14px', color: '#fff', background: GREEN }}>🔬 debugger</button>
             </div>
           </div>
@@ -606,19 +606,19 @@ function ClosingCard({ summary, onClose, onOpenSession }) {
       border: `2px solid ${GREEN}`, borderRadius: 18, padding: '18px 22px',
       boxShadow: '0 16px 50px rgba(0,0,0,.18)', animation: 'rise .5s ease-out' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: GREEN }}>
+        <div style={{ fontSize: 13.2, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: GREEN }}>
           ✦ the run, end to end
         </div>
-        <button onClick={onClose} style={{ marginLeft: 'auto', fontSize: 12.5, color: DIM, cursor: 'pointer',
+        <button onClick={onClose} style={{ marginLeft: 'auto', fontSize: 14.4, color: DIM, cursor: 'pointer',
           border: '1px solid #e6e4da', borderRadius: 8, padding: '5px 11px', background: '#fff' }}>dismiss</button>
       </div>
-      <div style={{ fontSize: 23, lineHeight: 1.42, color: INK, marginTop: 9, fontWeight: 500 }}>
+      <div style={{ fontSize: 26.4, lineHeight: 1.42, color: INK, marginTop: 9, fontWeight: 500 }}>
         Started at <b>${(start_dpm || 0).toFixed(4)}</b>/msg, now <b style={{ color: GREEN }}>${(now_dpm || 0).toFixed(4)}</b>
         {' '}— <b style={{ color: GREEN }}>down {pct_down}%</b>. Quality {quality_note}. Every step proven safe and <b>reversible</b>.
       </div>
       {decisions && decisions.length > 0 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 12.5, color: DIM }}>your decisions:</span>
+          <span style={{ fontSize: 14.4, color: DIM }}>your decisions:</span>
           {decisions.map((d, i) => (
             <DsLink key={i} id={d.session} onOpenSession={onOpenSession} />
           ))}
@@ -631,16 +631,16 @@ function ClosingCard({ summary, onClose, onOpenSession }) {
 function BigReadout({ label, main, sub, color, subColor, big }) {
   return (
     <div>
-      <div style={{ fontSize: 11.5, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 13.2, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
       <div style={{ fontSize: big ? 34 : 26, fontWeight: 800, lineHeight: 1.0, color, letterSpacing: '-.02em' }}>{main}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: subColor }}>{sub}</div>
+      <div style={{ fontSize: 14.9, fontWeight: 700, color: subColor }}>{sub}</div>
     </div>
   )
 }
 
 function Legend() {
   const Item = ({ children, dash, sq }) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#54524c', fontWeight: 600 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14.4, color: '#54524c', fontWeight: 600 }}>
       {sq ? <span style={{ width: 11, height: 11, background: 'rgba(181,121,26,.32)', borderRadius: 2 }} />
         : <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke={dash ? DIM : GREEN}
             strokeWidth="2.5" strokeDasharray={dash ? '4 3' : '0'} /></svg>}
@@ -674,7 +674,7 @@ function Spine({ state, onPin }) {
   const pins = state?.pins || []
   if (history.length < 2) {
     return <div style={{ height: _H, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: DIM, fontSize: 14, border: '1px dashed #e6e4da', borderRadius: 10 }}>
+      color: DIM, fontSize: 16.1, border: '1px dashed #e6e4da', borderRadius: 10 }}>
       watching the live traffic — the value line builds as the agent works…</div>
   }
   const start = state?.summary?.start_dpm ?? history[0].dollars_per_message
@@ -723,9 +723,9 @@ function Spine({ state, onPin }) {
     <div style={{ display: 'flex' }}>
       {/* y-axis: $/message */}
       <div style={{ position: 'relative', width: 52, height: _H, flexShrink: 0 }}>
-        <div style={{ position: 'absolute', right: 5, top: -2, fontSize: 10, color: DIM }}>${ymax.toFixed(4)}</div>
-        <div style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 9.5, fontWeight: 700, color: DIM, letterSpacing: '.02em' }}>$/msg</div>
-        <div style={{ position: 'absolute', right: 5, bottom: -2, fontSize: 10, color: DIM }}>$0</div>
+        <div style={{ position: 'absolute', right: 5, top: -2, fontSize: 11.5, color: DIM }}>${ymax.toFixed(4)}</div>
+        <div style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 10.9, fontWeight: 700, color: DIM, letterSpacing: '.02em' }}>$/msg</div>
+        <div style={{ position: 'absolute', right: 5, bottom: -2, fontSize: 11.5, color: DIM }}>$0</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ position: 'relative', height: _H }}>
@@ -758,7 +758,7 @@ function Spine({ state, onPin }) {
           {xticks.map(([x, t], i) => (
             <span key={i} style={{ position: 'absolute', left: `${_xpct(x)}%`,
               transform: i === 0 ? 'none' : i === xticks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-              fontSize: 10, color: DIM }}>{t}</span>
+              fontSize: 11.5, color: DIM }}>{t}</span>
           ))}
         </div>
         <div style={{ position: 'relative', height: 26, marginTop: 2 }}>
@@ -768,10 +768,10 @@ function Spine({ state, onPin }) {
               <button key={i} onClick={() => onPin && onPin(p)}
                 title={`${p.label_time || ''} — ${p.label || ''}${p.trigger ? ' · ' + p.trigger : ''}`}
                 style={{ position: 'absolute', left: `${_xpct(p.t)}%`, transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: c, background: _pinBg(p.kind),
+                  whiteSpace: 'nowrap', fontSize: 13.2, fontWeight: 700, color: c, background: _pinBg(p.kind),
                   border: `1px solid ${c}44`, borderRadius: 999, padding: '3px 9px',
                   cursor: p.session ? 'pointer' : 'default', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
-                <span style={{ fontSize: 10 }}>{_pinIcon(p.kind)}</span>{_pinText(p)}
+                <span style={{ fontSize: 11.5 }}>{_pinIcon(p.kind)}</span>{_pinText(p)}
                 {p.session ? <span style={{ opacity: .6 }}>›</span> : null}
               </button>
             )
@@ -784,9 +784,9 @@ function Spine({ state, onPin }) {
 function Metric({ label, main, unit, color, unitColor, small }) {
   return (
     <div style={{ textAlign: 'right' }}>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 12.1, color: DIM, letterSpacing: '.03em', textTransform: 'uppercase' }}>{label}</div>
       <div style={{ fontSize: small ? 16 : 24, fontWeight: 800, lineHeight: 1.05, color }}>
-        {main}<span style={{ fontSize: 12, fontWeight: 600, color: unitColor || DIM }}> {unit}</span>
+        {main}<span style={{ fontSize: 13.8, fontWeight: 600, color: unitColor || DIM }}> {unit}</span>
       </div>
     </div>
   )
@@ -822,7 +822,7 @@ function relTime(ts) {
 function DsLink({ id, onOpenSession, label }) {
   if (!id) return null
   return <button onClick={() => onOpenSession && onOpenSession(id)}
-    style={{ marginTop: 4, fontSize: 12.5, fontWeight: 700, color: GREEN, background: 'none',
+    style={{ marginTop: 4, fontSize: 14.4, fontWeight: 700, color: GREEN, background: 'none',
       border: 'none', cursor: 'pointer', padding: 0, display: 'block' }}>
     {label ? `${label} ` : ''}#{id} ›</button>
 }
@@ -833,17 +833,17 @@ function TimelineCard({ c, onOpenSession }) {
     <div style={{ display: 'flex', gap: 11, padding: '12px 0', borderTop: '1px solid #f1efe7' }}>
       <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: s.bg,
         border: `1px solid ${s.accent}33`, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', fontSize: 14, color: s.accent }}>{s.icon}</div>
+        justifyContent: 'center', fontSize: 16.1, color: s.accent }}>{s.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          {s.tag && <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '.06em',
+          {s.tag && <span style={{ fontSize: 12.1, fontWeight: 800, letterSpacing: '.06em',
             textTransform: 'uppercase', color: s.accent }}>{s.tag}</span>}
-          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: DIM }}>{relTime(c.ts)}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 13.2, color: DIM }}>{relTime(c.ts)}</span>
         </div>
-        <div style={{ fontSize: 14.5, color: '#2e2e2b', lineHeight: 1.4, marginTop: 2 }}>
+        <div style={{ fontSize: 16.7, color: '#2e2e2b', lineHeight: 1.4, marginTop: 2 }}>
           {c.kind === 'user' ? <b>You: </b> : null}{c.text}
         </div>
-        {c.trigger && <div style={{ fontSize: 12.5, color: DIM, marginTop: 3 }}>↳ {c.trigger}</div>}
+        {c.trigger && <div style={{ fontSize: 14.4, color: DIM, marginTop: 3 }}>↳ {c.trigger}</div>}
         <DsLink id={c.session} onOpenSession={onOpenSession} label="reopen session" />
       </div>
     </div>
@@ -862,8 +862,8 @@ function MindRail({ feed, step, onOpenSession }) {
     <div style={{ width: 396, borderRight: '1px solid #eceae0', background: '#fff',
       display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div style={{ padding: '16px 18px 8px' }}>
-        <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: '-.01em' }}>The agent's mind</div>
-        <div style={{ fontSize: 12.5, color: DIM, marginTop: 2 }}>
+        <div style={{ fontWeight: 800, fontSize: 23, letterSpacing: '-.01em' }}>The agent's mind</div>
+        <div style={{ fontSize: 14.4, color: DIM, marginTop: 2 }}>
           today · {feed.length} events · {applied} applied · {reverted} reverted ·
           <span style={{ color: GREEN, fontWeight: 700 }}> watching live</span>
         </div>
@@ -872,30 +872,30 @@ function MindRail({ feed, step, onOpenSession }) {
       <div style={{ padding: '4px 18px 8px' }}>
         {now ? (
           <div style={{ border: `2px solid ${s.accent}`, background: s.bg, borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 800,
+            <div style={{ fontSize: 12.1, letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 800,
               color: s.accent, display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontSize: 13 }}>{s.icon}</span>
+              <span style={{ fontSize: 14.9 }}>{s.icon}</span>
               reasoning live · {(step || 'observe').toLowerCase()}
             </div>
-            <div style={{ fontSize: 18.5, lineHeight: 1.4, color: INK, marginTop: 7, fontWeight: 500 }}>
+            <div style={{ fontSize: 21.3, lineHeight: 1.4, color: INK, marginTop: 7, fontWeight: 500 }}>
               {now.kind === 'user' ? <b>You: </b> : null}{now.text}
             </div>
-            {now.trigger && <div style={{ fontSize: 13, color: '#6b6962', marginTop: 6 }}>↳ {now.trigger}</div>}
+            {now.trigger && <div style={{ fontSize: 14.9, color: '#6b6962', marginTop: 6 }}>↳ {now.trigger}</div>}
             <DsLink id={now.session} onOpenSession={onOpenSession} label="reopen session" />
           </div>
-        ) : <div style={{ color: DIM, fontSize: 17, padding: '10px 0' }}>Reading the live traffic…</div>}
+        ) : <div style={{ color: DIM, fontSize: 19.5, padding: '10px 0' }}>Reading the live traffic…</div>}
       </div>
       {/* the timeline rail */}
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '0 18px 8px' }}>
         {shown.map((c) => <TimelineCard key={c.seq} c={c} onOpenSession={onOpenSession} />)}
-        {!shown.length && <div style={{ color: DIM, fontSize: 13, padding: '14px 0' }}>
+        {!shown.length && <div style={{ color: DIM, fontSize: 14.9, padding: '14px 0' }}>
           {q ? 'nothing matches.' : 'the timeline fills as the agent works…'}</div>}
       </div>
       {/* search — a quiet line at the bottom */}
       <div style={{ padding: '8px 18px 14px', borderTop: '1px solid #f1efe7' }}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  search the agent's history…"
           style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', border: '1px solid #e6e4da',
-            borderRadius: 9, fontSize: 13, color: '#54524c', background: '#fcfcfa' }} />
+            borderRadius: 9, fontSize: 14.9, color: '#54524c', background: '#fcfcfa' }} />
       </div>
     </div>
   )
@@ -946,17 +946,17 @@ function EvalPopup({ view, onClose }) {
         width: 660, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 14px 50px rgba(0,0,0,.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 11, letterSpacing: '.09em', color: trip ? RED : AMBER, fontWeight: 800 }}>
+            <div style={{ fontSize: 12.6, letterSpacing: '.09em', color: trip ? RED : AMBER, fontWeight: 800 }}>
               {trip ? 'DELIBERATELY RISKIER CALL · the agent is checking it' : 'YOUR DECISION · ARMED & LIVE'}
             </div>
-            <div style={{ fontSize: 21, fontWeight: 800, marginTop: 2 }}>
+            <div style={{ fontSize: 24.1, fontWeight: 800, marginTop: 2 }}>
               {trip ? 'Route refunds → economy model' : 'Route simple tickets → economy model'}
             </div>
-            <div style={{ fontSize: 13, color: DIM, marginTop: 3 }}>
+            <div style={{ fontSize: 14.9, color: DIM, marginTop: 3 }}>
               Accelerated eval · real replays, LLM-judge scored · clock compressed to ~10s
             </div>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 27.6, cursor: 'pointer', color: DIM }}>×</button>
         </div>
 
         {err && <div style={{ color: AMBER, padding: '16px 0' }}>No cached eval yet — pre-run it off-stage.</div>}
@@ -981,14 +981,14 @@ function EvalPopup({ view, onClose }) {
             <div style={{ border: '1px solid #eceae0', borderRadius: 10, overflow: 'hidden' }}>
               {shown.map((r, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px',
-                  borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 14.5 }}>
+                  borderTop: i ? '1px solid #f1efe8' : 'none', fontSize: 16.7 }}>
                   <span style={{ flex: 1, color: '#23231f' }}>{r.ticket.replace(/Account [A-Z]+-\d+\.?/g, '').slice(0, 50)}</span>
                   <span style={{ fontWeight: 700, color: qColor(r.baseline_quality, r.economy_quality) }}>
                     {r.baseline_quality} → {r.economy_quality}
                   </span>
                   {r.equivalent
-                    ? <span style={{ fontSize: 12, color: GREEN }}>● equivalent</span>
-                    : <span style={{ fontSize: 12, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
+                    ? <span style={{ fontSize: 13.8, color: GREEN }}>● equivalent</span>
+                    : <span style={{ fontSize: 13.8, color: AMBER }}>● {r.clarified ? 'clarified' : r.refused_escalated ? 'escalated' : 'differs'}</span>}
                   {r.phoenix_url && <SpanLink url={r.phoenix_url} label="trace" />}
                 </div>
               ))}
@@ -997,13 +997,13 @@ function EvalPopup({ view, onClose }) {
             {done && (
               <div style={{ marginTop: 16, border: `1.5px solid ${accent}`,
                 background: hold ? '#eef7f1' : '#f9ede9', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11.5, letterSpacing: '.08em', fontWeight: 800, color: accent }}>THE AGENT'S VERDICT</div>
-                <div style={{ fontSize: 18, color: INK, marginTop: 5, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 13.2, letterSpacing: '.08em', fontWeight: 800, color: accent }}>THE AGENT'S VERDICT</div>
+                <div style={{ fontSize: 20.7, color: INK, marginTop: 5, lineHeight: 1.4 }}>
                   {hold
                     ? '✦ Quality held — keep it live, the agent keeps watching.'
                     : '⚑ Quality collapses on refunds — the agent recommends against this call.'}
                 </div>
-                <div style={{ fontSize: 12, color: DIM, marginTop: 7 }}>
+                <div style={{ fontSize: 13.8, color: DIM, marginTop: 7 }}>
                   My judgment over the signals — Phoenix surfaces the evidence, I render the verdict.
                 </div>
                 {!hold && <div style={{ marginTop: 12 }}>
@@ -1020,9 +1020,9 @@ function EvalPopup({ view, onClose }) {
 function Tile({ label, main, sub, color }) {
   return (
     <div style={{ flex: 1, border: '1px solid #eceae0', borderRadius: 10, padding: '10px 12px' }}>
-      <div style={{ fontSize: 11, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
-      <div style={{ fontSize: 11, color: DIM }}>{sub}</div>
+      <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 25.3, fontWeight: 800, color, lineHeight: 1.2 }}>{main}</div>
+      <div style={{ fontSize: 12.6, color: DIM }}>{sub}</div>
     </div>
   )
 }
@@ -1040,7 +1040,7 @@ function RateInput({ value, onCommit }) {
   return (
     <input value={v} onChange={(e) => setV(e.target.value)} onBlur={commit}
       onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
-      style={{ width: 72, padding: '2px 6px', fontSize: 13, textAlign: 'right',
+      style={{ width: 72, padding: '2px 6px', fontSize: 14.9, textAlign: 'right',
         border: `1px solid ${AMBER}55`, borderRadius: 6, color: '#5a4815', background: '#fdfaf3' }} />
   )
 }
@@ -1060,23 +1060,23 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
         {!d ? <div style={{ color: DIM, padding: 16 }}>Dropping into the box…</div> : <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: '#5a4815',
+              <span style={{ fontSize: 12.1, fontWeight: 800, color: '#fff', background: '#5a4815',
                 borderRadius: 9, padding: '3px 10px', letterSpacing: '.06em' }}>INSPECT</span>
-              <div style={{ fontSize: 23, fontWeight: 800, marginTop: 10 }}>{d.title}</div>
-              {d.purpose && <div style={{ fontSize: 13.5, color: DIM, marginTop: 1 }}>{d.purpose}</div>}
-              <div style={{ fontSize: 13.5, color: '#3b3b37', marginTop: 3 }}>
+              <div style={{ fontSize: 26.4, fontWeight: 800, marginTop: 10 }}>{d.title}</div>
+              {d.purpose && <div style={{ fontSize: 15.5, color: DIM, marginTop: 1 }}>{d.purpose}</div>}
+              <div style={{ fontSize: 15.5, color: '#3b3b37', marginTop: 3 }}>
                 {Math.round(d.share * 100)}% of fleet spend · <b>${d.cost_per_message.toFixed(4)}</b> / message
               </div>
             </div>
-            <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+            <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 27.6, cursor: 'pointer', color: DIM }}>×</button>
           </div>
 
           {d.pattern && <>
-            <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>WHAT'S HAPPENING</div>
-            <div style={{ fontSize: 15, color: INK, marginTop: 5 }} dangerouslySetInnerHTML={{ __html: mdCode(d.pattern) }} />
+            <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>WHAT'S HAPPENING</div>
+            <div style={{ fontSize: 17.2, color: INK, marginTop: 5 }} dangerouslySetInnerHTML={{ __html: mdCode(d.pattern) }} />
           </>}
 
-          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
+          <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.06em', marginTop: 18, display: 'flex' }}>
             <span style={{ flex: 1 }}>CALLS &amp; COST · this conversation</span>
             <span style={{ width: 80, textAlign: 'right' }}>cost</span>
             <span style={{ width: 168, textAlign: 'right' }}>source</span>
@@ -1084,9 +1084,9 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
           <div style={{ borderTop: '1px solid #e6e1d4', marginTop: 6 }}>
             {/* LLM — measured by Phoenix */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #efe9da' }}>
-              <span style={{ flex: 1, fontSize: 14.5, color: INK }}>premium model · LLM</span>
-              <span style={{ width: 80, textAlign: 'right', fontSize: 14.5, color: INK }}>${d.llm_cost.toFixed(4)}</span>
-              <span style={{ width: 184, textAlign: 'right', fontSize: 12, color: DIM,
+              <span style={{ flex: 1, fontSize: 16.7, color: INK }}>premium model · LLM</span>
+              <span style={{ width: 80, textAlign: 'right', fontSize: 16.7, color: INK }}>${d.llm_cost.toFixed(4)}</span>
+              <span style={{ width: 184, textAlign: 'right', fontSize: 13.8, color: DIM,
                 display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'flex-end' }}>
                 measured {d.llm_url && <SpanLink url={d.llm_url} label="Phoenix" />}
               </span>
@@ -1094,9 +1094,9 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
             {/* tools — your editable rates */}
             {d.tool_rows.map((r) => (
               <div key={r.tool} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #efe9da' }}>
-                <span style={{ flex: 1, fontSize: 14.5, color: INK }}>{r.tool} ×{r.count} · tool</span>
-                <span style={{ width: 80, textAlign: 'right', fontSize: 14.5, color: INK }}>${r.cost.toFixed(4)}</span>
-                <span style={{ width: 168, textAlign: 'right', fontSize: 12.5, color: AMBER,
+                <span style={{ flex: 1, fontSize: 16.7, color: INK }}>{r.tool} ×{r.count} · tool</span>
+                <span style={{ width: 80, textAlign: 'right', fontSize: 16.7, color: INK }}>${r.cost.toFixed(4)}</span>
+                <span style={{ width: 168, textAlign: 'right', fontSize: 14.4, color: AMBER,
                   display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                   your rate <RateInput value={r.rate} onCommit={(n) => setRate(r.tool, n)} /> ✎
                 </span>
@@ -1104,26 +1104,26 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
             ))}
             {/* total */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '10px 0' }}>
-              <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: INK }}>total</span>
-              <span style={{ width: 80, textAlign: 'right', fontSize: 15.5, fontWeight: 700, color: INK }}>${d.cost_per_message.toFixed(4)}</span>
-              <span style={{ width: 168, textAlign: 'right', fontSize: 11.5, color: DIM }}>LLM measured · tools your rate</span>
+              <span style={{ flex: 1, fontSize: 16.7, fontWeight: 700, color: INK }}>total</span>
+              <span style={{ width: 80, textAlign: 'right', fontSize: 17.8, fontWeight: 700, color: INK }}>${d.cost_per_message.toFixed(4)}</span>
+              <span style={{ width: 168, textAlign: 'right', fontSize: 13.2, color: DIM }}>LLM measured · tools your rate</span>
             </div>
           </div>
 
-          <div style={{ fontSize: 11, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>TAKE MANUAL CONTROL</div>
+          <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.06em', marginTop: 18 }}>TAKE MANUAL CONTROL</div>
           <div style={{ display: 'flex', gap: 10, marginTop: 9 }}>
             {/* the agent's ONE fix — safe (force-on) or risky (eval-gated) */}
             {d.cache && (d.cache.active
-              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: GREEN, border: `1.5px solid ${GREEN}`,
+              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 16.1, fontWeight: 700, color: GREEN, border: `1.5px solid ${GREEN}`,
                   borderRadius: 9, padding: '11px 14px', background: '#eef7f1' }}>✓ {d.cache.label} — active</div>
               : <button onClick={() => onForceCache(d.cache.sig)} style={mbtn(GREEN)}>{d.cache.label}</button>)}
             {d.route && (d.route.active
-              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: AMBER, border: `1.5px solid ${AMBER}`,
+              ? <div style={{ flex: 1, textAlign: 'center', fontSize: 16.1, fontWeight: 700, color: AMBER, border: `1.5px solid ${AMBER}`,
                   borderRadius: 9, padding: '11px 14px', background: '#fbf0db' }}>✓ {d.route.label} — live</div>
               : <button onClick={() => onForceRoute(d.route)} style={mbtn(d.route.eval_key ? RED : AMBER)}>
                   {d.route.label}{d.route.eval_key ? ' — see the eval →' : ' →'}</button>)}
           </div>
-          <div style={{ fontSize: 13, color: '#3b3b37', marginTop: 12 }}>
+          <div style={{ fontSize: 14.9, color: '#3b3b37', marginTop: 12 }}>
             The agent keeps watching — it re-measures from the traffic and flags you if quality drops.
           </div>
         </>}
@@ -1132,7 +1132,7 @@ function DebuggerPanel({ tc, onClose, onForceCache, onForceRoute }) {
   )
 }
 function mbtn(color) {
-  return { flex: 1, fontSize: 14.5, fontWeight: 700, cursor: 'pointer', color, background: '#fff',
+  return { flex: 1, fontSize: 16.7, fontWeight: 700, cursor: 'pointer', color, background: '#fff',
     border: `1.5px solid ${color}`, borderRadius: 9, padding: '11px 14px' }
 }
 function mdCode(s) {
@@ -1224,8 +1224,8 @@ function Toggle({ on, onClick, title, sub, risky }) {
         <div style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 999, background: '#fff', transition: 'left .2s' }} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: INK }}>{title}</div>
-        <div style={{ fontSize: 11.5, color: on ? (risky ? '#85540b' : '#1a4f40') : DIM }}>{sub}</div>
+        <div style={{ fontSize: 15.5, fontWeight: 600, color: INK }}>{title}</div>
+        <div style={{ fontSize: 13.2, color: on ? (risky ? '#85540b' : '#1a4f40') : DIM }}>{sub}</div>
       </div>
     </div>
   )
@@ -1322,22 +1322,22 @@ function ReplayLab({ onClose, initialUc }) {
   return (
     <div onClick={tryClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 65 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '16px 20px',
-        width: 'min(96vw, 1460px)', height: '90vh', display: 'flex', flexDirection: 'column', position: 'relative',
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: '14px 18px',
+        width: 'min(94vw, 1180px)', height: 'min(86vh, 680px)', display: 'flex', flexDirection: 'column', position: 'relative',
         boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <div><b style={{ fontSize: 16 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 13 }}>· sandbox · your lab</span></div>
-          <button onClick={tryClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+          <div><b style={{ fontSize: 18.4 }}>DEBUGGER</b> <span style={{ color: DIM, fontSize: 14.9 }}>· sandbox · your lab</span></div>
+          <button onClick={tryClose} style={{ border: 'none', background: 'none', fontSize: 27.6, cursor: 'pointer', color: DIM }}>×</button>
         </div>
 
         {/* setup + transport (drives left/center) */}
         <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
           <select value={uc} onChange={(e) => setUc(e.target.value)}
-            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 999, border: '1px solid #d8d6cc' }}>
+            style={{ fontSize: 14.9, padding: '5px 9px', borderRadius: 999, border: '1px solid #d8d6cc' }}>
             {LAB_USE_CASES.map((u) => <option key={u.key} value={u.key}>{u.label}</option>)}
           </select>
           {rows.length > 0 && <select value={Math.min(selConv, rows.length - 1)} onChange={(e) => pickConv(+e.target.value)}
-            style={{ fontSize: 13, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc', maxWidth: 320 }}>
+            style={{ fontSize: 14.9, padding: '5px 9px', borderRadius: 8, border: '1px solid #d8d6cc', maxWidth: 320 }}>
             {rows.map((r, i) => <option key={i} value={i}>#{r.conv_id} · {r.ticket.slice(0, 30)} · {r.held ? 'held' : 'degraded'}</option>)}
           </select>}
           <div style={{ width: 1, height: 22, background: '#e6e4da', margin: '0 4px' }} />
@@ -1346,22 +1346,22 @@ function ReplayLab({ onClose, initialUc }) {
           <button onClick={stepC} style={transBtn(false)}>⏭ step</button>
           <button onClick={restartC} style={transBtn(false)}>⟲ restart</button>
           <select value={bp} onChange={(e) => setBp(e.target.value)} title="breakpoint"
-            style={{ fontSize: 12, padding: '5px 8px', borderRadius: 999, border: '1px solid #d8d6cc', color: bp === 'none' ? DIM : AMBER }}>
+            style={{ fontSize: 13.8, padding: '5px 8px', borderRadius: 999, border: '1px solid #d8d6cc', color: bp === 'none' ? DIM : AMBER }}>
             <option value="none">● no breakpoint</option>
             <option value="model">● break on the model call</option>
             <option value="dup">● break on a duplicate call</option>
           </select>
-          <span style={{ marginLeft: 'auto', fontSize: 11.5, color: DIM }}>sandbox · live untouched · traces tagged 'test'</span>
+          <span style={{ marginLeft: 'auto', fontSize: 13.2, color: DIM }}>sandbox · live untouched · traces tagged 'test'</span>
         </div>
 
         {!data ? (loadErr
-          ? <div style={{ color: DIM, padding: 24, fontSize: 14 }}>
+          ? <div style={{ color: DIM, padding: 24, fontSize: 16.1 }}>
               No pre-run batch for <b>{uc.replace('_', ' ')}</b>. Switch the source to <b>synthetic</b> and Run to generate one live.</div>
           : <div style={{ color: DIM, padding: 24 }}>Loading the pre-run batch…</div>) : (
           <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, marginTop: 12, borderTop: '1px solid #eceae0', paddingTop: 12 }}>
             {/* LEFT — call list (UNCHANGED) */}
             <div style={{ width: 290, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em' }}>
+              <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em' }}>
                 conv #{selRow.conv_id} · call {cursorCall + 1} of {selRow.calls.length}
               </div>
               <div style={{ overflowY: 'auto', flex: 1, marginTop: 8 }}>
@@ -1372,13 +1372,13 @@ function ReplayLab({ onClose, initialUc }) {
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', cursor: 'pointer',
                         borderRadius: 7, marginBottom: 2, background: here ? '#f5f4ed' : 'transparent',
                         border: here ? '1px solid #d8d6cc' : '1px solid transparent' }}>
-                      <span style={{ width: 16, color: DIM, fontSize: 12 }}>{i + 1}</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: here ? 600 : 400, color: INK }}>
+                      <span style={{ width: 16, color: DIM, fontSize: 13.8 }}>{i + 1}</span>
+                      <span style={{ flex: 1, fontSize: 14.9, fontWeight: here ? 600 : 400, color: INK }}>
                         {c.kind === 'user' ? c.label : c.kind === 'tool' ? c.tool : c.kind === 'model' ? 'model · respond' : 'reply sent'}
                       </span>
-                      {c.dup && <span style={{ fontSize: 11, color: AMBER }}>⚠ dup</span>}
-                      {c.cost ? <span style={{ fontSize: 12, color: '#555' }}>${c.cost.toFixed(4)}</span> : null}
-                      {here && <span style={{ fontSize: 11, fontWeight: 700, color: INK }}>◀ HERE</span>}
+                      {c.dup && <span style={{ fontSize: 12.6, color: AMBER }}>⚠ dup</span>}
+                      {c.cost ? <span style={{ fontSize: 13.8, color: '#555' }}>${c.cost.toFixed(4)}</span> : null}
+                      {here && <span style={{ fontSize: 12.6, fontWeight: 700, color: INK }}>◀ HERE</span>}
                     </div>
                   )
                 })}
@@ -1386,7 +1386,7 @@ function ReplayLab({ onClose, initialUc }) {
             </div>
             {/* CENTER — path + span detail (UNCHANGED) */}
             <div style={{ flex: 1, minWidth: 360, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #eceae0', paddingLeft: 14 }}>
-              <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em' }}>conv #{selRow.conv_id} · path · current call lit</div>
+              <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em' }}>conv #{selRow.conv_id} · path · current call lit</div>
               <div style={{ height: 110 }}>
                 <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView
                   proOptions={{ hideAttribution: true }} nodesDraggable={false} nodesConnectable={false}
@@ -1404,7 +1404,7 @@ function ReplayLab({ onClose, initialUc }) {
             {/* RIGHT — NEW: lever rail + run + impact + degraded */}
             <div style={{ width: 380, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: '1px solid #eceae0', paddingLeft: 14 }}>
               <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 4 }}>
-                <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', marginBottom: 8 }}>EXPERIMENT · levers apply instantly</div>
+                <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em', marginBottom: 8 }}>EXPERIMENT · levers apply instantly</div>
                 <Toggle on={config.cache} onClick={() => setConfig((c) => ({ ...c, cache: !c.cache }))}
                   title="cache repeated calls" sub="safe · keeps answers" />
                 <Toggle on={config.economy} onClick={() => setConfig((c) => ({ ...c, economy: !c.economy }))}
@@ -1412,38 +1412,38 @@ function ReplayLab({ onClose, initialUc }) {
 
                 {/* run controls — a real, live re-measure */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button onClick={run} disabled={running} style={{ fontSize: 13, fontWeight: 700,
+                  <button onClick={run} disabled={running} style={{ fontSize: 14.9, fontWeight: 700,
                     cursor: running ? 'default' : 'pointer', color: '#fff', background: running ? '#9bbcae' : GREEN,
                     border: 'none', borderRadius: 8, padding: '7px 14px' }}>
                     {running ? `running ${runRows.length}/${N}…` : '▶ run load test'}</button>
-                  <span style={{ fontSize: 12, color: DIM }}>N</span>
+                  <span style={{ fontSize: 13.8, color: DIM }}>N</span>
                   <select value={N} onChange={(e) => setN(+e.target.value)} disabled={running}
-                    style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
+                    style={{ fontSize: 14.4, padding: '4px 7px', borderRadius: 7, border: '1px solid #d8d6cc' }}>
                     {(source === 'synthetic' ? [6, 12, 24, 48] : [6, 12, 18]).map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                   <select value={source} onChange={(e) => { setSource(e.target.value); setN(6) }} disabled={running}
-                    style={{ fontSize: 12.5, padding: '4px 7px', borderRadius: 7, border: `1px solid ${source === 'synthetic' ? AMBER : '#d8d6cc'}`, color: source === 'synthetic' ? AMBER : INK }}>
+                    style={{ fontSize: 14.4, padding: '4px 7px', borderRadius: 7, border: `1px solid ${source === 'synthetic' ? AMBER : '#d8d6cc'}`, color: source === 'synthetic' ? AMBER : INK }}>
                     <option value="replay">replay real</option>
                     <option value="synthetic">synthetic</option>
                   </select>
                 </div>
-                <div style={{ fontSize: 11, color: source === 'synthetic' ? AMBER : DIM, marginTop: 6 }}>
+                <div style={{ fontSize: 12.6, color: source === 'synthetic' ? AMBER : DIM, marginTop: 6 }}>
                   {source === 'synthetic'
                     ? 'synthetic — fresh generated cases, any volume, beyond your history (exploration, not real-traffic proof)'
                     : 'replay — your real past conversations (evidence on actual traffic)'}
                 </div>
 
-                {!ran && !running && <div style={{ color: DIM, fontSize: 12.5, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
+                {!ran && !running && <div style={{ color: DIM, fontSize: 14.4, padding: '16px 2px' }}>Run the load test to measure this config across N real {source === 'synthetic' ? 'synthetic' : 'replayed'} conversations.</div>}
 
                 {/* running banner — shows IMMEDIATELY on click, before the first row */}
                 {running && <div style={{ margin: '14px 0 6px', border: `1px solid ${GREEN}`, background: '#eef7f1', borderRadius: 10, padding: '11px 12px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: GREEN }}>
+                  <div style={{ fontSize: 14.9, fontWeight: 600, color: GREEN }}>
                     <span style={{ animation: 'pulse 1s infinite' }}>●</span> running live — {runRows.length}/{N} {runSource === 'synthetic' ? 'synthetic' : 'real'} replays
                   </div>
                   <div style={{ height: 6, borderRadius: 4, background: '#dceee6', marginTop: 8, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${Math.round((runRows.length / N) * 100)}%`, background: GREEN, transition: 'width .3s' }} />
                   </div>
-                  <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>
+                  <div style={{ fontSize: 12.6, color: DIM, marginTop: 6 }}>
                     {runRows.length === 0 ? 'executing the first replays — each takes a few seconds, results stream in as they land' : 'impact updates as each replay lands'}
                   </div>
                   <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
@@ -1451,42 +1451,42 @@ function ReplayLab({ onClose, initialUc }) {
 
                 {ran && imp && (runRows.length > 0 || !running) && <>
                   {/* COST IMPACT — measured vs estimated, visually distinct */}
-                  <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
+                  <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em', margin: '14px 0 8px' }}>COST IMPACT</div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: 1, border: `1.5px solid ${GREEN}`, background: '#eef7f1', borderRadius: 10, padding: '11px 12px' }}>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: GREEN, lineHeight: 1 }}>−{Math.round(imp.savedPct * 100)}%</div>
-                      <div style={{ fontSize: 11.5, color: '#1a4f40', marginTop: 4 }}>saved vs baseline</div>
-                      <div style={{ fontSize: 10.5, color: DIM }}>measured · {rows.length} {(ran ? runSource : source) === 'synthetic' ? 'synthetic' : 'real'} replays</div>
+                      <div style={{ fontSize: 29.9, fontWeight: 800, color: GREEN, lineHeight: 1 }}>−{Math.round(imp.savedPct * 100)}%</div>
+                      <div style={{ fontSize: 13.2, color: '#1a4f40', marginTop: 4 }}>saved vs baseline</div>
+                      <div style={{ fontSize: 12.1, color: DIM }}>measured · {rows.length} {(ran ? runSource : source) === 'synthetic' ? 'synthetic' : 'real'} replays</div>
                     </div>
                     <div style={{ flex: 1, border: '1.5px dashed #c8b88f', background: '#fbf8f1', borderRadius: 10, padding: '11px 12px' }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: '#85540b', lineHeight: 1 }}>~${proj != null ? Math.round(proj).toLocaleString() : '—'}<span style={{ fontSize: 12, fontWeight: 600 }}>/mo</span></div>
-                      <div style={{ fontSize: 11.5, color: '#85540b', marginTop: 4 }}>projected in production</div>
-                      <div style={{ fontSize: 10.5, color: DIM }}>estimate, not Phoenix-backed</div>
+                      <div style={{ fontSize: 25.3, fontWeight: 800, color: '#85540b', lineHeight: 1 }}>~${proj != null ? Math.round(proj).toLocaleString() : '—'}<span style={{ fontSize: 13.8, fontWeight: 600 }}>/mo</span></div>
+                      <div style={{ fontSize: 13.2, color: '#85540b', marginTop: 4 }}>projected in production</div>
+                      <div style={{ fontSize: 12.1, color: DIM }}>estimate, not Phoenix-backed</div>
                     </div>
                   </div>
 
                   {/* QUALITY IMPACT */}
-                  <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '16px 0 7px' }}>QUALITY IMPACT</div>
+                  <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em', margin: '16px 0 7px' }}>QUALITY IMPACT</div>
                   <div style={{ display: 'flex', height: 14, borderRadius: 5, overflow: 'hidden', background: '#f0eee6' }}>
                     <div style={{ width: `${Math.round(imp.heldPct * 100)}%`, background: GREEN, opacity: 0.6 }} />
                     <div style={{ width: `${Math.round(imp.degradedPct * 100)}%`, background: AMBER, opacity: 0.55 }} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12.5 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 14.4 }}>
                     <span style={{ color: GREEN }}>held {Math.round(imp.heldPct * 100)}%</span>
                     <span style={{ color: AMBER }}>degraded {Math.round(imp.degradedPct * 100)}%</span>
                   </div>
-                  {!config.economy && <div style={{ fontSize: 11.5, color: DIM, marginTop: 6 }}>cache is output-preserving — quality holds by construction.</div>}
+                  {!config.economy && <div style={{ fontSize: 13.2, color: DIM, marginTop: 6 }}>cache is output-preserving — quality holds by construction.</div>}
 
                   {/* degraded drill-down */}
                   {imp.degraded.length > 0 && <>
-                    <div style={{ fontSize: 11, color: DIM, letterSpacing: '.05em', margin: '14px 0 6px' }}>DEGRADED CASES ({imp.degraded.length})</div>
+                    <div style={{ fontSize: 12.6, color: DIM, letterSpacing: '.05em', margin: '14px 0 6px' }}>DEGRADED CASES ({imp.degraded.length})</div>
                     {imp.degraded.map((r) => (
                       <DegradedRow key={r._i} r={r} onOpen={() => openDegraded(r._i)}
                         traceUrl={r.phoenix_url ? redirectUrl({ span_id: r.span_id }, r, { tools: data?.corpus_tool_spans, trace: data?.corpus_trace_span }, runRows.length > 0) : null} />
                     ))}
                   </>}
 
-                  {trickle && <div style={{ marginTop: 12, fontSize: 11.5, color: DIM }}>
+                  {trickle && <div style={{ marginTop: 12, fontSize: 13.2, color: DIM }}>
                     ● live replay landed: <b style={{ color: trickle.held ? GREEN : AMBER }}>{trickle.held ? 'held' : 'degraded'}</b> (q{trickle.economy_quality}) — real, not canned
                   </div>}
                 </>}
@@ -1494,13 +1494,13 @@ function ReplayLab({ onClose, initialUc }) {
 
               {/* source + Phoenix (facts) */}
               <div style={{ borderTop: '1px solid #eceae0', paddingTop: 8, marginTop: 8 }}>
-                <span style={{ fontSize: 10.5, color: (ran ? runSource : source) === 'synthetic' ? AMBER : DIM, fontWeight: 600 }}>
+                <span style={{ fontSize: 12.1, color: (ran ? runSource : source) === 'synthetic' ? AMBER : DIM, fontWeight: 600 }}>
                   source: {(ran ? runSource : source) === 'synthetic' ? 'synthetic · exploration (not real-traffic proof)' : 'real replays · evidence'}
                 </span>
                 <div style={{ marginTop: 4 }}>
                   <a href={phoenixTestUrl(data.project_gid)} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 11.5, color: GREEN, fontWeight: 600 }}>this run's 'test' traces ↗</a>
-                  <span style={{ fontSize: 10.5, color: DIM, marginLeft: 8 }}>{data.test_tag || 'accountant.run_type = test'}</span>
+                    style={{ fontSize: 13.2, color: GREEN, fontWeight: 600 }}>this run's 'test' traces ↗</a>
+                  <span style={{ fontSize: 12.1, color: DIM, marginLeft: 8 }}>{data.test_tag || 'accountant.run_type = test'}</span>
                 </div>
               </div>
             </div>
@@ -1516,8 +1516,8 @@ function ReplayLab({ onClose, initialUc }) {
           return <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,.9)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}>
             <div style={{ width: 500, background: '#fff', border: `1px solid ${config.economy ? AMBER : GREEN}`, borderRadius: 14, padding: 22, boxShadow: '0 12px 44px rgba(0,0,0,.2)' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.08em', fontWeight: 800, color: config.economy ? AMBER : GREEN }}>THE AGENT</div>
-              <div style={{ fontSize: 15, color: INK, lineHeight: 1.5, marginTop: 8 }}>
+              <div style={{ fontSize: 12.6, letterSpacing: '.08em', fontWeight: 800, color: config.economy ? AMBER : GREEN }}>THE AGENT</div>
+              <div style={{ fontSize: 17.2, color: INK, lineHeight: 1.5, marginTop: 8 }}>
                 I'll apply {both ? 'two changes' : 'one change'} to production for {lab}:
                 {config.cache && <> caching repeated lookups <span style={{ color: GREEN }}>(safe, output-preserving)</span></>}
                 {both && ', and'}
@@ -1526,8 +1526,8 @@ function ReplayLab({ onClose, initialUc }) {
                 {' '}Confirm and I'll enact, log the session, and flag you the moment quality slips.
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                <button onClick={onClose} style={{ fontSize: 13, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>not now — close</button>
-                <button onClick={apply} style={{ fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: GREEN, color: '#fff', borderRadius: 8, padding: '7px 16px' }}>confirm — enact &amp; log</button>
+                <button onClick={onClose} style={{ fontSize: 14.9, cursor: 'pointer', border: '1px solid #d8d6cc', background: '#fff', borderRadius: 8, padding: '7px 14px', color: '#5a5852' }}>not now — close</button>
+                <button onClick={apply} style={{ fontSize: 14.9, fontWeight: 700, cursor: 'pointer', border: 'none', background: GREEN, color: '#fff', borderRadius: 8, padding: '7px 16px' }}>confirm — enact &amp; log</button>
               </div>
             </div>
           </div>
@@ -1539,7 +1539,7 @@ function ReplayLab({ onClose, initialUc }) {
 // the shared inspector — renders whatever the cursor points at; the model call
 // is the payoff (premium vs economy side by side).
 function CallInspector({ call, row, corpus, live }) {
-  if (!call) return <div style={{ color: DIM, fontSize: 13 }}>Step or click a box to inspect a call.</div>
+  if (!call) return <div style={{ color: DIM, fontSize: 14.9 }}>Step or click a box to inspect a call.</div>
   // a live-run conversation links to its exact span; a pre-run row to a durable
   // corpus span of the same tool (its own bulk-exported span was dropped).
   const span = redirectUrl(call, row, corpus, live)
@@ -1547,10 +1547,10 @@ function CallInspector({ call, row, corpus, live }) {
     : call.tool ? `open a real ${call.tool} span in Phoenix ↗` : 'open in Phoenix ↗'
   if (call.kind === 'user')
     return <InsShell title="user message" accent={DIM} span={span} spanLabel={spanLabel}>
-      <div style={{ fontSize: 14.5, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
+      <div style={{ fontSize: 16.7, color: INK, lineHeight: 1.45 }}>{row.ticket}</div></InsShell>
   if (call.kind === 'reply')
     return <InsShell title="reply sent · what the customer got" accent={DIM} span={span} spanLabel={spanLabel}>
-      <div style={{ fontSize: 13.5, color: '#3b3b37', lineHeight: 1.45 }}>{row.economy_answer}</div></InsShell>
+      <div style={{ fontSize: 15.5, color: '#3b3b37', lineHeight: 1.45 }}>{row.economy_answer}</div></InsShell>
   if (call.kind === 'tool')
     return <InsShell title={`${call.tool} · tool call`} accent={AMBER} span={span} spanLabel={spanLabel}>
       <FactGrid facts={[
@@ -1561,19 +1561,19 @@ function CallInspector({ call, row, corpus, live }) {
       ]} />
       <Field label="input — what the agent asked">{call.input}</Field>
       <Field label="output — what came back (trimmed)">{call.output}</Field>
-      {call.dup && <div style={{ marginTop: 8, fontSize: 12.5, color: AMBER }}>
+      {call.dup && <div style={{ marginTop: 8, fontSize: 14.4, color: AMBER }}>
         ⚠ the same lookup already fired earlier in this conversation — exactly the redundant call the cache removes.</div>}
     </InsShell>
   // model call — the payoff: the candidate diff + the real model telemetry
   const bites = row.economy_quality < row.baseline_quality
   return <InsShell title="model · respond — where the candidate bites" accent={bites ? AMBER : GREEN} span={span} spanLabel={spanLabel}>
     <div style={{ border: `1px solid ${GREEN}`, background: '#e1f5ee', borderRadius: 8, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700 }}>premium (baseline) · judge quality {row.baseline_quality}/5</div>
-      <div style={{ fontSize: 13, color: '#1a4f40', marginTop: 4, lineHeight: 1.4 }}>{row.baseline_answer}</div>
+      <div style={{ fontSize: 14.4, fontWeight: 700 }}>premium (baseline) · judge quality {row.baseline_quality}/5</div>
+      <div style={{ fontSize: 14.9, color: '#1a4f40', marginTop: 4, lineHeight: 1.4 }}>{row.baseline_answer}</div>
     </div>
     <div style={{ border: `1px solid ${AMBER}`, background: '#faeeda', borderRadius: 8, padding: '10px 12px', marginTop: 8 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700 }}>economy (candidate) · judge quality {row.economy_quality}/5 {bites ? '⚠' : ''}</div>
-      <div style={{ fontSize: 13, color: '#85540b', marginTop: 4, lineHeight: 1.4 }}>{row.economy_answer}</div>
+      <div style={{ fontSize: 14.4, fontWeight: 700 }}>economy (candidate) · judge quality {row.economy_quality}/5 {bites ? '⚠' : ''}</div>
+      <div style={{ fontSize: 14.9, color: '#85540b', marginTop: 4, lineHeight: 1.4 }}>{row.economy_answer}</div>
     </div>
     <div style={{ marginTop: 10 }}><FactGrid facts={[
       ['model', call.model || '—'],
@@ -1582,7 +1582,7 @@ function CallInspector({ call, row, corpus, live }) {
       ['cost', <>${(call.cost || 0).toFixed(5)} <span style={{ color: GREEN }}>Phoenix-measured</span></>],
     ]} /></div>
     <JudgePanel votes={call.votes || row.judge_votes} held={row.held} />
-    <div style={{ fontSize: 12.5, color: bites ? AMBER : GREEN, marginTop: 8 }}>
+    <div style={{ fontSize: 14.4, color: bites ? AMBER : GREEN, marginTop: 8 }}>
       → this replay {row.held ? 'holds' : 'degrades'} — by <b>majority of the neutral panel</b>
     </div>
   </InsShell>
@@ -1594,24 +1594,24 @@ function DegradedRow({ r, onOpen, traceUrl }) {
   const [open, setOpen] = useState(false)
   return (
     <div style={{ borderBottom: '1px solid #f1efe8', padding: '6px 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 14.4 }}>
         <button onClick={() => setOpen((o) => !o)} style={{ flex: 1, textAlign: 'left', background: 'none',
           border: 'none', cursor: 'pointer', color: '#3b3b37', padding: 0 }}>
           <span style={{ color: DIM }}>{open ? '▾' : '▸'}</span> #{r.conv_id} · {r.ticket.slice(0, 22)}
         </button>
         <span style={{ color: AMBER, fontWeight: 700 }}>q{r.economy_quality}</span>
-        <button onClick={onOpen} style={{ fontSize: 11.5, color: GREEN, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>step</button>
+        <button onClick={onOpen} style={{ fontSize: 13.2, color: GREEN, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>step</button>
         {traceUrl && <SpanLink url={traceUrl} label="trace ↗" />}
       </div>
       {open && (
         <div style={{ marginTop: 6 }}>
           <div style={{ border: `1px solid ${GREEN}33`, background: '#eef7f1', borderRadius: 7, padding: '7px 9px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: GREEN }}>baseline (premium · {r.baseline_quality}/5)</div>
-            <div style={{ fontSize: 12, color: '#1a4f40', marginTop: 2, lineHeight: 1.4 }}>{r.baseline_answer}</div>
+            <div style={{ fontSize: 12.6, fontWeight: 700, color: GREEN }}>baseline (premium · {r.baseline_quality}/5)</div>
+            <div style={{ fontSize: 13.8, color: '#1a4f40', marginTop: 2, lineHeight: 1.4 }}>{r.baseline_answer}</div>
           </div>
           <div style={{ border: `1px solid ${AMBER}33`, background: '#faeeda', borderRadius: 7, padding: '7px 9px', marginTop: 5 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: AMBER }}>economy (candidate · {r.economy_quality}/5)</div>
-            <div style={{ fontSize: 12, color: '#85540b', marginTop: 2, lineHeight: 1.4 }}>{r.economy_answer}</div>
+            <div style={{ fontSize: 12.6, fontWeight: 700, color: AMBER }}>economy (candidate · {r.economy_quality}/5)</div>
+            <div style={{ fontSize: 13.8, color: '#85540b', marginTop: 2, lineHeight: 1.4 }}>{r.economy_answer}</div>
           </div>
           <JudgePanel votes={r.judge_votes} held={r.held} />
         </div>
@@ -1626,14 +1626,14 @@ function JudgePanel({ votes, held }) {
   if (!votes || !votes.length) return null
   return (
     <div style={{ marginTop: 10, border: '1px solid #e6e1d4', borderRadius: 8, padding: '8px 10px', background: '#fcfbf7' }}>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.05em', textTransform: 'uppercase', fontWeight: 700 }}>
+      <div style={{ fontSize: 12.1, color: DIM, letterSpacing: '.05em', textTransform: 'uppercase', fontWeight: 700 }}>
         neutral judge panel · gemini-2.5-pro · {votes.filter((v) => v.held).length}/{votes.length} held → {held ? 'HELD' : 'DEGRADED'}
       </div>
       {votes.map((v, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, marginTop: 5 }}>
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14.4, marginTop: 5 }}>
           <span style={{ flex: 1, color: '#3b3b37' }}>{v.lens.replace('_', ' ')}</span>
-          {v.refused && <span style={{ color: RED, fontSize: 11 }}>refused/errored</span>}
-          {v.clarified && <span style={{ color: AMBER, fontSize: 11 }}>asked customer</span>}
+          {v.refused && <span style={{ color: RED, fontSize: 12.6 }}>refused/errored</span>}
+          {v.clarified && <span style={{ color: AMBER, fontSize: 12.6 }}>asked customer</span>}
           <span style={{ fontWeight: 700, color: v.held ? GREEN : AMBER }}>economy {v.economy_quality}/5 · {v.held ? 'held' : 'degraded'}</span>
         </div>
       ))}
@@ -1643,8 +1643,8 @@ function JudgePanel({ votes, held }) {
 function Field({ label, children }) {
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 10.5, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 12.5, fontFamily: 'monospace', color: '#3b3b37', background: '#f7f6f1',
+      <div style={{ fontSize: 12.1, color: DIM, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 14.4, fontFamily: 'monospace', color: '#3b3b37', background: '#f7f6f1',
         border: '1px solid #eceae0', borderRadius: 7, padding: '7px 9px', marginTop: 3,
         whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.4 }}>{children || '—'}</div>
     </div>
@@ -1654,7 +1654,7 @@ function FactGrid({ facts }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
       {facts.map(([k, v], i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13,
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.9,
           borderBottom: '1px solid #f1efe8', paddingBottom: 3 }}>
           <span style={{ color: DIM }}>{k}</span><span style={{ color: INK, textAlign: 'right' }}>{v}</span>
         </div>
@@ -1682,17 +1682,17 @@ function redirectUrl(call, row, corpus, live) {
 function SpanLink({ url, label }) {
   return (
     <a href={url} target="_blank" rel="noreferrer"
-      style={{ fontSize: 12.5, color: GREEN, fontWeight: 700, whiteSpace: 'nowrap',
+      style={{ fontSize: 14.4, color: GREEN, fontWeight: 700, whiteSpace: 'nowrap',
         textDecoration: 'none', background: '#eef7f1', border: `1px solid ${GREEN}33`,
         borderRadius: 999, padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      {label || 'open in Phoenix'} <span style={{ fontSize: 11 }}>↗</span></a>
+      {label || 'open in Phoenix'} <span style={{ fontSize: 12.6 }}>↗</span></a>
   )
 }
 function InsShell({ title, accent, span, spanLabel, children }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <div style={{ fontSize: 11, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
+        <div style={{ fontSize: 12.6, letterSpacing: '.05em', color: accent, fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
         {span && <SpanLink url={span} label={spanLabel} />}
       </div>
       <div style={{ marginTop: 8 }}>{children}</div>
@@ -1700,11 +1700,11 @@ function InsShell({ title, accent, span, spanLabel, children }) {
   )
 }
 function labChip(amber) {
-  return { fontSize: 12.5, padding: '5px 11px', borderRadius: 999,
+  return { fontSize: 14.4, padding: '5px 11px', borderRadius: 999,
     border: `1px solid ${amber ? AMBER : '#d8d6cc'}`, color: amber ? AMBER : '#5a5852' }
 }
 function transBtn(active) {
-  return { fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '5px 11px', borderRadius: 999,
+  return { fontSize: 13.8, fontWeight: 600, cursor: 'pointer', padding: '5px 11px', borderRadius: 999,
     border: `1px solid ${active ? '#5a4815' : '#d8d6cc'}`, color: active ? '#fff' : '#5a5852',
     background: active ? '#5a4815' : '#fff' }
 }
@@ -1719,15 +1719,15 @@ function ProofPanel({ proof, onClose }) {
         width: 580, maxHeight: '84vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <b>{proof.title} — trace insight</b>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 24, cursor: 'pointer', color: DIM }}>×</button>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 27.6, cursor: 'pointer', color: DIM }}>×</button>
         </div>
         {pair && (
           <>
-            <div style={{ fontSize: 14, margin: '8px 0' }}>
+            <div style={{ fontSize: 16.1, margin: '8px 0' }}>
               Same ticket, two ways: baseline <b>${pair.baseline.total_usd.toFixed(4)}</b> → governed <b>${pair.governed.total_usd.toFixed(4)}</b>,
               {' '}{pair.skipped_calls} paid calls skipped, saved <b>${pair.saved_usd.toFixed(4)}</b>.
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.9, marginBottom: 14 }}>
               <thead><tr style={{ color: DIM, textAlign: 'left' }}><th>call</th><th style={{ textAlign: 'right' }}>baseline</th><th>governed</th></tr></thead>
               <tbody>
                 {pair.rows.map((r, i) => {
@@ -1742,11 +1742,11 @@ function ProofPanel({ proof, onClose }) {
             </table>
           </>
         )}
-        <div style={{ fontSize: 13, color: DIM, margin: '4px 0 6px' }}>
+        <div style={{ fontSize: 14.9, color: DIM, margin: '4px 0 6px' }}>
           Real traces through this node — {proof.classes.join(', ').replace(/_/g, ' ')}
           {proof.stats && proof.stats.n ? ` · ${proof.stats.n} tickets, $${proof.stats.min?.toFixed(5)}–$${proof.stats.max?.toFixed(5)} each` : ''}.
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.9 }}>
           <thead><tr style={{ color: DIM, textAlign: 'left' }}><th>trace</th><th style={{ textAlign: 'right' }}>cost</th><th>Phoenix</th></tr></thead>
           <tbody>
             {proof.traces.map((t, i) => (
@@ -1758,7 +1758,7 @@ function ProofPanel({ proof, onClose }) {
             ))}
           </tbody>
         </table>
-        <div style={{ fontSize: 12, color: DIM, marginTop: 10 }}>System behaviour only — span names, counts, cost. No prompt text or PII.</div>
+        <div style={{ fontSize: 13.8, color: DIM, marginTop: 10 }}>System behaviour only — span names, counts, cost. No prompt text or PII.</div>
       </div>
     </div>
   )
