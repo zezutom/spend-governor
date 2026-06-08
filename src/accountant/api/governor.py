@@ -319,6 +319,12 @@ class Governor:
     # --- value-spine -------------------------------------------------------
     def _sample(self) -> None:
         now = time.monotonic()
+        # Window complete → FREEZE the timeline. Otherwise the clock clamps at the
+        # end (t=1.0) and the steady heartbeat keeps appending samples there, which
+        # evicts the actual arc from the ring buffer and blanks the chart. No new
+        # traffic = nothing new to plot; the completed arc stays put.
+        if self.history and self.history[-1].get("t", 0.0) >= 0.999:
+            return
         rates, rows, totals, by = self._economics()
         saved = self._saved_total(rows, by)
         baseline_dpm = totals["cost_per_ticket"]

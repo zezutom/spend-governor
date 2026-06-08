@@ -700,41 +700,65 @@ function Spine({ state, onPin }) {
   history.forEach((h) => { vol += ` L ${X(h.t)} ${volY(h.volume || 0)}` })
   vol += ` L ${X(history[history.length - 1].t)} ${_H - _PADB} Z`
   const nowX = X(history[history.length - 1].t)
+  // axis units — y: $/message; x: the compressed business-day clock (08:00 → 20:00)
+  const startH = parseInt((history[0].label || '08:00').split(':')[0], 10) || 8
+  const win = state?.clock?.window_hours || 12
+  const fmtH = (h) => `${String(((h % 24) + 24) % 24).padStart(2, '0')}:00`
+  const xticks = [[0, fmtH(startH)], [0.5, fmtH(startH + win / 2)], [1, fmtH(startH + win)]]
 
   return (
-    <div>
-      <div style={{ position: 'relative', height: _H }}>
-        <svg viewBox={`0 0 ${_W} ${_H}`} preserveAspectRatio="none"
-          style={{ width: '100%', height: _H, display: 'block', overflow: 'visible' }}>
-          <path d={vol} fill="rgba(181,121,26,.13)" stroke="none" />
-          <line x1={X(0)} y1={costY(start)} x2={_W} y2={costY(start)} stroke="#d8d6cc"
-            strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
-          <path d={qual} fill="none" stroke={DIM} strokeWidth="2" strokeDasharray="5 4"
-            vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-          <path d={cost} fill="none" stroke={GREEN} strokeWidth="2.75"
-            vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-          <circle cx={nowX} cy={costY(history[history.length - 1].dollars_per_message)} r="3.5" fill={GREEN} />
-        </svg>
-        {pins.map((p, i) => (
-          <div key={i} style={{ position: 'absolute', left: `${_xpct(p.t)}%`, top: 0, bottom: 0, width: 0,
-            borderLeft: `1.5px dashed ${_pinColor(p.kind)}55` }} />
-        ))}
+    <div style={{ display: 'flex' }}>
+      {/* y-axis: $/message */}
+      <div style={{ position: 'relative', width: 52, height: _H, flexShrink: 0 }}>
+        <div style={{ position: 'absolute', right: 5, top: -2, fontSize: 10, color: DIM }}>${ymax.toFixed(4)}</div>
+        <div style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 9.5, fontWeight: 700, color: DIM, letterSpacing: '.02em' }}>$/msg</div>
+        <div style={{ position: 'absolute', right: 5, bottom: -2, fontSize: 10, color: DIM }}>$0</div>
       </div>
-      <div style={{ position: 'relative', height: 26, marginTop: 3 }}>
-        {pins.map((p, i) => {
-          const c = _pinColor(p.kind)
-          return (
-            <button key={i} onClick={() => onPin && onPin(p)}
-              title={`${p.label_time || ''} — ${p.label || ''}${p.trigger ? ' · ' + p.trigger : ''}`}
-              style={{ position: 'absolute', left: `${_xpct(p.t)}%`, transform: 'translateX(-50%)',
-                whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: c, background: _pinBg(p.kind),
-                border: `1px solid ${c}44`, borderRadius: 999, padding: '3px 9px',
-                cursor: p.session ? 'pointer' : 'default', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
-              <span style={{ fontSize: 10 }}>{_pinIcon(p.kind)}</span>{_pinText(p)}
-              {p.session ? <span style={{ opacity: .6 }}>›</span> : null}
-            </button>
-          )
-        })}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ position: 'relative', height: _H }}>
+          <svg viewBox={`0 0 ${_W} ${_H}`} preserveAspectRatio="none"
+            style={{ width: '100%', height: _H, display: 'block', overflow: 'visible' }}>
+            <path d={vol} fill="rgba(181,121,26,.13)" stroke="none" />
+            <line x1={X(0)} y1={costY(start)} x2={_W} y2={costY(start)} stroke="#d8d6cc"
+              strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+            {xticks.map(([x], i) => i === 0 ? null : (
+              <line key={i} x1={X(x)} y1={_PADT} x2={X(x)} y2={_H - _PADB} stroke="#efeee7"
+                strokeWidth="1" vectorEffect="non-scaling-stroke" />))}
+            <path d={qual} fill="none" stroke={DIM} strokeWidth="2" strokeDasharray="5 4"
+              vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+            <path d={cost} fill="none" stroke={GREEN} strokeWidth="2.75"
+              vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={nowX} cy={costY(history[history.length - 1].dollars_per_message)} r="3.5" fill={GREEN} />
+          </svg>
+          {pins.map((p, i) => (
+            <div key={i} style={{ position: 'absolute', left: `${_xpct(p.t)}%`, top: 0, bottom: 0, width: 0,
+              borderLeft: `1.5px dashed ${_pinColor(p.kind)}55` }} />
+          ))}
+        </div>
+        {/* x-axis: compressed clock */}
+        <div style={{ position: 'relative', height: 13, marginTop: 1 }}>
+          {xticks.map(([x, t], i) => (
+            <span key={i} style={{ position: 'absolute', left: `${_xpct(x)}%`,
+              transform: i === 0 ? 'none' : i === xticks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+              fontSize: 10, color: DIM }}>{t}</span>
+          ))}
+        </div>
+        <div style={{ position: 'relative', height: 26, marginTop: 2 }}>
+          {pins.map((p, i) => {
+            const c = _pinColor(p.kind)
+            return (
+              <button key={i} onClick={() => onPin && onPin(p)}
+                title={`${p.label_time || ''} — ${p.label || ''}${p.trigger ? ' · ' + p.trigger : ''}`}
+                style={{ position: 'absolute', left: `${_xpct(p.t)}%`, transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: c, background: _pinBg(p.kind),
+                  border: `1px solid ${c}44`, borderRadius: 999, padding: '3px 9px',
+                  cursor: p.session ? 'pointer' : 'default', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
+                <span style={{ fontSize: 10 }}>{_pinIcon(p.kind)}</span>{_pinText(p)}
+                {p.session ? <span style={{ opacity: .6 }}>›</span> : null}
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
