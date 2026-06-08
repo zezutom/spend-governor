@@ -4,6 +4,7 @@ import 'reactflow/dist/style.css'
 
 const API = 'http://localhost:8800'
 const GREEN = '#0f6e56', AMBER = '#b5791a', RED = '#a3402f', DIM = '#9ca3af', INK = '#141413', PAPER = '#fbfbf9'
+const MCP = '#2f6f8f'  // Phoenix-MCP accent — the agent's live introspection path
 
 // ===========================================================================
 //  The cockpit is a SEQUENCED experience, not a dashboard. The system map is
@@ -150,6 +151,7 @@ export default function App() {
   const [lab, setLab] = useState(null)             // {uc} when the debugger is open (sandbox)
   const [sessionId, setSessionId] = useState(null) // debug-session metadata popup (#DS-…)
   const [agentDetail, setAgentDetail] = useState(null) // agent metrics popup (id)
+  const [ask, setAsk] = useState(null)             // {agent} | {free:true} — live MCP introspection
   const [hideSummary, setHideSummary] = useState(false)  // dismiss the closing takeaway
   // Ending B is reached deliberately via the inspector's force-route on refunds —
   // no floating controls on the main canvas (that protects the supervise default).
@@ -240,14 +242,16 @@ export default function App() {
       {sessionId && <SessionPopup id={sessionId} onClose={() => setSessionId(null)} />}
       {agentDetail && <AgentPopup agentId={agentDetail} state={state}
         onClose={() => setAgentDetail(null)} act={act}
+        onAsk={(id) => { setAgentDetail(null); setAsk({ agent: id }) }}
         onDebug={(id) => { setAgentDetail(null); setLab({ uc: id }) }} />}
+      {ask && <AskPanel open={ask} state={state} onClose={() => setAsk(null)} />}
     </div>
   )
 }
 
 // Agent detail popup — open on a tree click. Useful metrics + a small traffic/cost
 // timeline + the option to open the full debugger. (Not the debugger itself.)
-function AgentPopup({ agentId, state, onClose, onDebug, act }) {
+function AgentPopup({ agentId, state, onClose, onDebug, onAsk, act }) {
   const a = (state?.agents || []).find((x) => x.id === agentId)
   if (!a) return null
   const st = _STATUS[a.status] || _STATUS.watching
@@ -315,11 +319,140 @@ function AgentPopup({ agentId, state, onClose, onDebug, act }) {
           </div>}
           {fix.active && <div style={{ marginTop: 9 }}><Btn onClick={() => act('veto', fix.sig)} label="revert" color={DIM} /></div>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
           <div style={{ fontSize: 14.4, color: DIM }}>Want to be sure before you commit?</div>
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+            <Btn onClick={() => onAsk(a.id)} label="🔍 ask the accountant →" color={MCP} big />
             <Btn onClick={() => onDebug(a.id)} label="🔬 open debugger →" color={GREEN} primary big />
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Live "Ask the Accountant" — runs the real ADK agent, which introspects its own
+// Phoenix operational data AT RUNTIME via the Phoenix MCP server. Every MCP call
+// is rendered as a step, so the agentic loop + the MCP integration are on screen.
+const ASK_SUGGESTIONS = [
+  'Which fleet agent is the most expensive right now, and why?',
+  'Find the biggest cost anomaly and verify it against one real trace.',
+  'Is the repeated web_search on the refund auditor genuine waste?',
+]
+function AskPanel({ open, state, onClose }) {
+  const [q, setQ] = useState('')
+  const [steps, setSteps] = useState([])   // interleaved tool calls + results
+  const [answer, setAnswer] = useState('')
+  const [status, setStatus] = useState('idle')  // idle | running | done | error
+  const [question, setQuestion] = useState(null)
+  const esRef = useRef(null)
+  const bodyRef = useRef(null)
+
+  const start = useCallback((url, shownQ) => {
+    if (esRef.current) esRef.current.close()
+    setSteps([]); setAnswer(''); setStatus('running'); setQuestion(shownQ || null)
+    const es = new EventSource(url); esRef.current = es
+    es.onmessage = (e) => {
+      const s = JSON.parse(e.data)
+      if (s.type === 'question') setQuestion(s.question)
+      else if (s.type === 'tool_call') setSteps((x) => [...x, { kind: 'tool', name: s.name, args: s.args, mcp: s.mcp }])
+      else if (s.type === 'tool_result') setSteps((x) => [...x, { kind: 'result', name: s.name, mcp: s.mcp, summary: s.summary }])
+      else if (s.type === 'text') setAnswer((a) => a + s.text)
+      else if (s.type === 'error') { setSteps((x) => [...x, { kind: 'error', error: s.error }]); setStatus('error'); es.close() }
+      else if (s.type === 'done') { setStatus('done'); es.close() }
+    }
+    es.onerror = () => {}  // ride it out until our explicit 'done'
+  }, [])
+
+  useEffect(() => {
+    if (open?.agent) start(`${API}/api/ask?agent=${encodeURIComponent(open.agent)}`)
+    return () => { if (esRef.current) esRef.current.close() }
+  }, [open?.agent, start])
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight }, [steps, answer])
+
+  const submit = () => { const t = q.trim(); if (t && status !== 'running') start(`${API}/api/ask?q=${encodeURIComponent(t)}`, t) }
+  const mcpCount = steps.filter((s) => s.kind === 'tool' && s.mcp).length
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 70 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PAPER, borderRadius: 16, padding: '18px 22px',
+        width: 'min(94vw, 760px)', height: 'min(88vh, 660px)', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 16px 56px rgba(0,0,0,.34)' }}>
+        {/* header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <span style={{ fontSize: 12.6, fontWeight: 800, color: MCP, background: '#eaf2f6',
+              border: `1px solid ${MCP}33`, borderRadius: 999, padding: '3px 10px' }}>◇ live · Phoenix MCP</span>
+            <div style={{ fontSize: 23, fontWeight: 800, marginTop: 8 }}>Ask the Accountant</div>
+            <div style={{ fontSize: 14.4, color: DIM }}>The agent introspects its own traces in Phoenix at runtime via the MCP server.</div>
+          </div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', border: 'none', background: 'none',
+            fontSize: 28, cursor: 'pointer', color: DIM }}>×</button>
+        </div>
+
+        {/* transcript */}
+        <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 14,
+          borderTop: '1px solid #eceae0', paddingTop: 12 }}>
+          {question && <div style={{ fontSize: 15, color: INK, background: '#f5f4ed', borderRadius: 10,
+            padding: '10px 12px', marginBottom: 12 }}><b style={{ color: DIM, fontSize: 12.6 }}>YOU ASKED</b><br />{question}</div>}
+
+          {steps.length === 0 && status === 'idle' && (
+            <div style={{ color: DIM, fontSize: 14.4 }}>
+              Ask a cost question — the Accountant will call the Phoenix MCP tools to check the real traces before answering.
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {ASK_SUGGESTIONS.map((s) => (
+                  <button key={s} onClick={() => { setQ(s); start(`${API}/api/ask?q=${encodeURIComponent(s)}`, s) }}
+                    style={{ textAlign: 'left', fontSize: 14, color: MCP, background: '#fff', cursor: 'pointer',
+                      border: `1px solid ${MCP}33`, borderRadius: 9, padding: '8px 11px' }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {steps.map((s, i) => s.kind === 'error' ? (
+            <div key={i} style={{ fontSize: 13.8, color: RED, marginBottom: 8 }}>⚠ {s.error}</div>
+          ) : s.kind === 'tool' ? (
+            <div key={i} style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: s.mcp ? MCP : DIM,
+                background: s.mcp ? '#eaf2f6' : '#f1f0ea', border: `1px solid ${s.mcp ? MCP + '44' : '#e0ded5'}`,
+                borderRadius: 6, padding: '2px 7px' }}>{s.mcp ? '◇ MCP' : 'fn'}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>{s.name}</span>
+              <span style={{ fontSize: 12.6, color: DIM, fontFamily: 'ui-monospace, monospace' }}>
+                ({Object.entries(s.args || {}).map(([k, v]) => `${k}: ${String(v).slice(0, 36)}`).join(', ')})
+              </span>
+            </div>
+          ) : (
+            <div key={i} style={{ marginBottom: 12, marginLeft: 14, fontSize: 12.6, color: DIM,
+              fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              borderLeft: `2px solid ${s.mcp ? MCP + '55' : '#e0ded5'}`, paddingLeft: 9 }}>
+              → {s.summary}
+            </div>
+          ))}
+
+          {status === 'running' && !answer && (
+            <div style={{ fontSize: 13.8, color: MCP, marginTop: 4 }}>
+              <span style={{ animation: 'pulse 1s infinite' }}>●</span> the agent is reasoning + calling Phoenix MCP…
+              <style>{'@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}'}</style>
+            </div>
+          )}
+          {answer && (
+            <div style={{ marginTop: 8, padding: '12px 14px', borderRadius: 11, background: '#eef5f1',
+              border: `1px solid ${GREEN}33` }}>
+              <div style={{ fontSize: 12.6, fontWeight: 800, color: GREEN, letterSpacing: '.05em' }}>
+                THE ACCOUNTANT {mcpCount > 0 && <span style={{ color: MCP, fontWeight: 700 }}>· grounded in {mcpCount} live MCP call{mcpCount > 1 ? 's' : ''}</span>}
+              </div>
+              <div style={{ fontSize: 15.5, color: INK, lineHeight: 1.5, marginTop: 6, whiteSpace: 'pre-wrap' }}>{answer}</div>
+            </div>
+          )}
+        </div>
+
+        {/* free-form ask */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()}
+            placeholder="Ask a cost question…" style={{ flex: 1, fontSize: 15, padding: '10px 12px',
+              borderRadius: 9, border: '1px solid #d8d6cc', outline: 'none' }} />
+          <Btn onClick={submit} label={status === 'running' ? 'working…' : 'ask →'} color={MCP} primary big />
         </div>
       </div>
     </div>

@@ -269,6 +269,12 @@ def find_anomalies(
     """
     anomalies = []
 
+    # Real, freshly-fetched trace ids per class so a drill-down (get-trace via
+    # the Phoenix MCP tool) lands on a trace that actually resolves.
+    ids_by_class: dict[str, list] = defaultdict(list)
+    for t in traces:
+        ids_by_class[t["task_class"] or "unknown"].append(t["trace_id"])
+
     baseline = by_class.get(baseline_class)
     if baseline:
         baseline_cost = baseline["avg_cost_usd"] or 1e-9
@@ -285,6 +291,7 @@ def find_anomalies(
                     "avg_cost_usd": summary["avg_cost_usd"],
                     "baseline_cost_usd": baseline["avg_cost_usd"],
                     "n_traces": summary["n"],
+                    "example_trace_ids": ids_by_class[tc][:2],
                 })
 
     by_class_traces: dict[str, list] = defaultdict(list)
@@ -295,11 +302,13 @@ def find_anomalies(
         if tc == "unknown" or not items:
             continue
         tool_repeat_hits: Counter = Counter()
+        tool_repeat_ids: dict[str, list] = defaultdict(list)
         for t in items:
             counts = Counter(t["tools"])
             for tool_name, c in counts.items():
                 if c >= repeat_threshold and tool_name != "task_classifier":
                     tool_repeat_hits[tool_name] += 1
+                    tool_repeat_ids[tool_name].append(t["trace_id"])
         for tool_name, hit_count in tool_repeat_hits.items():
             hit_rate = hit_count / len(items)
             if hit_rate >= 0.10:
@@ -311,6 +320,7 @@ def find_anomalies(
                     "traces_with_repeat": hit_count,
                     "of_total_in_class": len(items),
                     "hit_rate": round(hit_rate, 3),
+                    "example_trace_ids": tool_repeat_ids[tool_name][:2],
                 })
 
     return anomalies

@@ -94,15 +94,32 @@ def build_phoenix_mcp_toolset() -> MCPToolset:
     )
 
 
-def build_agent() -> LlmAgent:
+# A trimmed instruction for the live "Ask the Accountant" panel: answer the
+# operator's question directly, and ALWAYS verify against the raw spans by
+# pulling at least one trace through the Phoenix MCP `get-trace` tool — the MCP
+# server is the load-bearing path for runtime self-introspection.
+ASK_INSTRUCTION = """You are the Accountant, answering an operator's question
+live about the Helpdesk fleet's cost. The Phoenix project is "agent-accountant".
+
+Tools:
+- summarize_project_cost(hours_back) — by-task-class cost summary. Start here.
+- find_cost_anomalies(hours_back) — detected cost anomalies.
+- get-trace(trace_identifier, project_identifier) — the Phoenix MCP tool: fetch
+  one trace's raw spans. ALWAYS pull at least one representative trace this way
+  to ground your answer in real span data before you conclude.
+- list-projects, get-project, get-span-annotations — Phoenix inventory/annotations.
+
+Answer in 3-5 sentences. Quote concrete numbers and the trace id you inspected.
+Do not write any report file. Be direct and decision-useful."""
+
+
+def build_agent(instruction: str | None = None, include_report: bool = True) -> LlmAgent:
+    tools = [build_phoenix_mcp_toolset(), summarize_project_cost, find_cost_anomalies]
+    if include_report:
+        tools.append(write_report)
     return LlmAgent(
         name="accountant",
         model="gemini-2.5-pro",
-        instruction=INSTRUCTION,
-        tools=[
-            build_phoenix_mcp_toolset(),
-            summarize_project_cost,
-            find_cost_anomalies,
-            write_report,
-        ],
+        instruction=instruction or INSTRUCTION,
+        tools=tools,
     )

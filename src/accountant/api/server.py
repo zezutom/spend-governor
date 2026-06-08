@@ -68,6 +68,32 @@ async def stream():
     return EventSourceResponse(gen())
 
 
+@app.get("/api/ask")
+async def ask(q: str | None = None, agent: str | None = None):
+    """Live 'Ask the Accountant': runs the real ADK agent, which introspects its
+    own Phoenix operational data at runtime via the Phoenix MCP server, and
+    streams each tool-call + the answer (SSE). `agent` seeds a per-agent
+    investigation; `q` is a free-form question."""
+    from accountant.api import ask as ask_mod
+
+    question, meta = q, {}
+    if agent:
+        a = next((x for x in governor.snapshot().get("agents", []) if x["id"] == agent), None)
+        label = a["label"] if a else agent
+        question = ask_mod.seed_question(agent, label, (a or {}).get("waste"))
+        meta = {"agent": agent, "label": label}
+    if not question:
+        raise HTTPException(400, "provide ?q=<question> or ?agent=<id>")
+
+    async def gen():
+        yield {"event": "message",
+               "data": json.dumps({"type": "question", "question": question, **meta})}
+        async for step in ask_mod.ask_stream(question):
+            yield {"event": "message", "data": json.dumps(step)}
+
+    return EventSourceResponse(gen())
+
+
 _ACTIONS = {"veto": "veto", "enable": "enable", "accept": "accept", "reject": "reject"}
 
 

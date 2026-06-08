@@ -67,6 +67,8 @@ def find_cost_anomalies(hours_back: int = 2) -> dict:
           trace in at least 10% of a task_class's traces. Fields:
           task_class, tool, repeat_threshold, traces_with_repeat,
           of_total_in_class, hit_rate.
+        Each anomaly also carries example_trace_ids: real trace ids you
+        can pass straight to get-trace to inspect the raw spans.
     """
     traces = fetch_traces(DEFAULT_PROJECT, since=timedelta(hours=hours_back))
     by_class = aggregate_by_task_class(traces)
