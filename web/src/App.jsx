@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import ReactFlow, { Background, Handle, Position } from 'reactflow'
 import 'reactflow/dist/style.css'
 
-const API = 'http://localhost:8800'
+// Same-origin in the single-service deploy (VITE_API_BASE=''); the API host in
+// dev (Vite on :5173 → API on :8800).
+const API = import.meta.env.VITE_API_BASE ?? 'http://localhost:8800'
 const GREEN = '#0f6e56', AMBER = '#b5791a', RED = '#a3402f', DIM = '#9ca3af', INK = '#141413', PAPER = '#fbfbf9'
 const MCP = '#2f6f8f'  // Phoenix-MCP accent — the agent's live introspection path
 

@@ -77,11 +77,18 @@ def build_phoenix_mcp_toolset() -> MCPToolset:
         raise RuntimeError(
             "PHOENIX_API_KEY_OBSERVED_WRITE and PHOENIX_COLLECTOR_ENDPOINT must be set"
         )
+    # Local dev fetches the MCP server via npx; the container pre-installs it
+    # globally and calls the `phoenix-mcp` binary directly, because npx needs a
+    # writable cache and Cloud Run's filesystem is read-only. PHOENIX_MCP_COMMAND
+    # switches between the two.
+    command = os.environ.get("PHOENIX_MCP_COMMAND", "npx")
+    args = (["-y", os.environ.get("PHOENIX_MCP_PACKAGE", "@arizeai/phoenix-mcp@latest")]
+            if command == "npx" else [])
     return MCPToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
-                command="npx",
-                args=["-y", "@arizeai/phoenix-mcp@latest"],
+                command=command,
+                args=args,
                 env={
                     "PHOENIX_API_KEY": api_key,
                     "PHOENIX_HOST": host,

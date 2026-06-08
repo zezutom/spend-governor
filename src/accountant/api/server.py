@@ -392,3 +392,15 @@ def proof_node(node: str) -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"ok": True, "project": os.environ.get("PHOENIX_PROJECT_NAME")}
+
+
+# Serve the built React cockpit so the whole thing is ONE service (Cloud Run).
+# Mounted LAST, so every /api/* route and /health above take precedence; the
+# StaticFiles mount only catches the UI ("/", index.html, /assets/*). In dev
+# there's no build — Vite serves the UI and this mount is simply skipped.
+from pathlib import Path as _Path  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+_DIST = _Path(__file__).resolve().parents[3] / "web" / "dist"
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="ui")

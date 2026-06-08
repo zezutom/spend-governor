@@ -1,0 +1,23 @@
+# gcloud uses THIS instead of .gitignore for `--source` uploads. Critically, it
+# does NOT exclude data/accountant.db — the corpus must ship in the build context
+# (it's gitignored, which is why the first deploy shipped an empty cockpit).
+.git
+.venv
+__pycache__/
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# rebuilt inside the image
+web/node_modules
+web/dist
+
+# secrets + local-only noise
+.env
+*.log
+data/*.log
+data/*.bak-*
+gitignore/
+.claude/
+.DS_Store
