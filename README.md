@@ -210,7 +210,7 @@ service. See [`infra/README.md`](./infra/README.md).
 
 ## Demo video
 
-**▶ [Watch the 3-minute demo on YouTube](https://youtu.be/ewRBxz2E1eI)**
+**▶ [Watch the 3-minute demo on YouTube](https://youtu.be/VljIgux2VZ4)**
 
 ---
 
