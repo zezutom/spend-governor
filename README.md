@@ -125,8 +125,13 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 
 ## Built with
 
-- [Google ADK](https://github.com/google/adk-python) + [Gemini](https://deepmind.google/technologies/gemini/) — the Governor and the observed fleet are ADK agents (Gemini embeddings power the semantic cache)
-- [Arize / Phoenix](https://phoenix.arize.com/) — OTEL traces via OpenInference instrumentation; the learning signal, **introspected at runtime through the Phoenix MCP server**
+- **Google Cloud Agent Builder — [Google ADK](https://github.com/google/adk-python)** (Agent Development Kit): the Governor and the observed fleet are ADK agents. This is the **code-owned agent runtime the Arize track requires**:
+  > "The Arize track requires a code-owned agent runtime — Gemini CLI, Gemini Enterprise Agent Platform SDK, Google ADK, Agent Runtime, or Cloud Run. The visual Agent Builder alone is not supported for tracing integration. You must be able to instrument your code directly."
+
+  We build on ADK and deploy on Cloud Run for exactly that reason.
+- [**Gemini**](https://deepmind.google/technologies/gemini/) — `gemini-2.5-flash` (live MCP chat), `gemini-2.5-pro` (neutral eval judge), Gemini embeddings (semantic cache)
+- [**Arize / Phoenix**](https://phoenix.arize.com/) — OTEL traces via **OpenInference** auto-instrumentation for ADK, **introspected at runtime through the Phoenix MCP server**:
+  > "Instrument your agent with OpenInference. Auto-instrumentors exist for Google ADK, Agent Platform, Google GenAI, LangChain, LlamaIndex and many other frameworks."
 - FastAPI + SQLite — the gateway, control-plane API, and store
 - React (Vite) — the operator cockpit (SSE-driven, live)
 - Deployed on **Google Cloud Run** · [uv](https://docs.astral.sh/uv/) · MIT licensed
