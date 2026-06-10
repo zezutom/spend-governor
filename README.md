@@ -152,7 +152,7 @@ See [`doc/architecture.md`](./doc/architecture.md) for the full design and
 │   └── observed/        The observed agent fleet (the governed targets)
 ├── web/                 React (Vite) operator cockpit (the dashboard)
 ├── infra/               Cloud Run deploy (deploy.sh / teardown.sh); Dockerfile at root
-├── examples/            Sample traces and Governor outputs
+├── examples/            Where the Governor agent writes its report (governor-report.json)
 ├── doc/
 │   ├── architecture.md      Two-plane design overview
 │   ├── realtime-pipeline.md Ingest, wrapper, policies, verification
