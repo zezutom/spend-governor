@@ -178,7 +178,7 @@ cached calls are priced $0 and routed calls carry the cheaper model, the
 "after" cost genuinely drops. The dashboard shows this beside the
 wrapper's own realized-savings log; when they agree, the number is
 trustworthy. Optimized calls are filterable in Phoenix by the
-`governor.*` tags.
+`accountant.*` tags.
 
 ## Accuracy
 
