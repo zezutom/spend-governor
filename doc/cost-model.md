@@ -101,34 +101,36 @@ And returns a dict containing:
 
 ## Worked example
 
-A refund trace with the anti-pattern firing typically looks like:
+A **Refund Auditor** trace with its anti-pattern firing — the same
+`web_search` repeated five times as a "verification loop" — typically
+looks like:
 
 ```
-tools = [task_classifier, kb_lookup, web_search, web_search,
-         web_search, customer_lookup, refund_api, ticket_update]
-LLM calls = 8
+tools = [task_classifier, kb_lookup, web_search, web_search, web_search,
+         web_search, web_search, customer_lookup, refund_api, ticket_update]
+LLM calls ≈ 10
 ```
 
 Tool cost breakdown:
 
 - `task_classifier`: $0.000 × 1
 - `kb_lookup`: $0.0001 × 1
-- `web_search`: $0.005 × 3 = $0.015
+- `web_search`: $0.005 × 5 = $0.025
 - `customer_lookup`: $0.0001 × 1
 - `refund_api`: $0.001 × 1
 - `ticket_update`: $0.0001 × 1
 
-Tool subtotal: ≈ $0.0163
+Tool subtotal: ≈ $0.0263
 
-LLM cost depends on the specific token counts; typical refund
-traces add ~$0.008 in LLM cost (Flash at 8 calls, ~10k total
-tokens).
+LLM cost depends on the specific token counts; a loop like this adds
+~$0.01 in LLM cost (Flash reasoning over the repeated searches across
+~10 calls).
 
-Trace total: ≈ $0.024.
+Trace total: ≈ $0.036.
 
-A clean `password_reset` trace, by comparison, lands around $0.0037
-— roughly a 6× ratio. The dollar gap is the signal the aggregation
-layer surfaces.
+A **Docs Bot** trace, by comparison — a trivial how-to answered straight
+from the KB with no `web_search` — lands an order of magnitude lower
+(~$0.003). The dollar gap is the signal the aggregation layer surfaces.
 
 ## Verifying against a known input
 

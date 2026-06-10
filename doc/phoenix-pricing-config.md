@@ -90,7 +90,7 @@ defines `TOOL_PRICES`:
 | `ticket_update` | $0.0001 | Internal ticketing RPC stand-in |
 | `escalate_human` | $0.0001 | Routing handoff |
 | `refund_api` | $0.001 | Internal billing API; mild floor above the trivial rate to reflect a payments call |
-| `web_search` | $0.005 | The only externally-priced tool — chosen an order of magnitude higher than internal RPCs so the refund anti-pattern (3× `web_search` per ticket) shows up as a clear cost delta |
+| `web_search` | $0.005 | The only externally-priced tool — chosen an order of magnitude higher than internal RPCs so the agents' redundant-search waste (e.g. the Refund Auditor's 5× `web_search` loop, the Support Co-Pilot's 3×) shows up as a clear cost delta |
 
 These are **placeholder defaults for the demo**, not vendor rates —
 they exist so the trace economics tell a coherent story. Adjust to
