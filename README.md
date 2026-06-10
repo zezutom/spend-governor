@@ -6,6 +6,9 @@ your own traces.**
 
 A submission to the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/).
 
+**Required stack — all three imported and called at runtime:**
+**Gemini** · **Google Cloud Agent Builder** — [Google ADK](https://github.com/google/adk-python), the code-owned agent runtime the Arize track mandates (the visual Agent Builder is explicitly not supported for tracing) · the **Arize Phoenix MCP server**. Details in [Built with](#built-with).
+
 ---
 
 ## Live demo
