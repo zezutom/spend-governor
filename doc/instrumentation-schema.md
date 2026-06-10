@@ -1,7 +1,8 @@
-# Instrumentation schema — the `governor.*` span namespace
+# Instrumentation schema — the `accountant.*` span namespace
 
 The wrapper sits in front of the customer's LLM and tool calls. Every
-span it handles is annotated with `governor.*` attributes so that
+span it handles is annotated with `accountant.*` attributes (the internal
+cost-attribution component's schema) so that
 **any savings number the platform reports is independently re-derivable
 by querying the customer's own Phoenix traces** — nothing the dashboard
 shows depends on private state the customer can't see.
@@ -23,7 +24,7 @@ for models). The wrapper writes `accountant.cost.actual_usd` on tool
 spans from our local `TOOL_PRICES` table.
 
 Counterfactual ("baseline") cost — what the call *would* have cost
-without an Governor policy — has no Phoenix equivalent either. The
+without a Governor policy — has no Phoenix equivalent either. The
 wrapper writes it when a policy modified the call, along with the
 counterfactual parameters used to derive it, so the math is auditable
 from the span itself.

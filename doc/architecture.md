@@ -10,11 +10,11 @@ real time. It never edits prompts or touches source.
 
 ### The observed agent
 
-A small customer-support agent — Helpdesk Co-Pilot for the fictional
-Stratus Forms SaaS. Built on Google ADK (`google-adk` Python
-package), calls `gemini-2.5-flash` via Vertex AI, and uses seven
-local tools (none reach the real internet — all return synthetic
-data).
+A **fleet of four small support agents** for the fictional Stratus Forms
+SaaS — each with one job and one signature cost-waste pattern. Built on
+Google ADK (`google-adk` Python package), they call `gemini-2.5-flash`
+and use seven shared local tools (none reach the real internet — all
+return synthetic data).
 
 Lives in `src/observed/`. See [observed-agent.md](./observed-agent.md)
 for the tools and the agent instruction.
@@ -41,7 +41,7 @@ tool logic, or internals.
 - `wrapper.py` — wraps tool calls (semantic-cache interception, tagging
   the span `accountant.cache_hit` and pricing it $0), routes simple
   requests to a cheaper model (tagging `accountant.modification =
-  model_swap`), and writes the per-span/per-trace `governor.*` cost
+  model_swap`), and writes the per-span/per-trace `accountant.*` cost
   schema. Policy-driven; no prompt/source access.
 - `store.py` — operator-activated policies + an append-only intervention
   log (every action, with cost avoided) + policy activation timestamps.
@@ -71,7 +71,8 @@ savings of a runtime policy, and — once a policy is active —
 **verifies the savings from the traces**.
 
 `src/governor/` is one loose module — `agent.py` (the ADK agent that
-reads traces via Phoenix MCP and writes a report) — and six packages:
+reads traces via Phoenix MCP and answers in the *Ask the Governor* panel) —
+and these packages:
 
 **`pricing/`** — the cost model (pure, no I/O):
 - `cost.py` — per-span / per-trace cost computation
@@ -94,10 +95,14 @@ reads traces via Phoenix MCP and writes a report) — and six packages:
 - `verification.py` — trace-measured cost-per-ticket before vs. after a policy's activation time — the audit proof
 - `analysis.py` + `agent_tools.py` — one-shot bulk pull/breakdown + the agent's tool functions
 
-**`ui/`** — `dashboard.py`, the Streamlit UI; one command boots the whole stack.
+**`api/`** — the FastAPI control plane: cockpit state, the SSE stream, the
+`/api/ask` live Phoenix-MCP panel, and policy actions. `service/` holds the
+view-model the API serves. The operator UI is the **React (Vite) cockpit in
+`web/`** — `./scripts/start-cockpit.sh` boots the API + ingest server + cockpit
+from one command.
 
 **`cli/`** — secondary entry points: `main.py` (runs `agent.py`),
-`inspect_traces.py`, `verify_cost.py`.
+`inspect_traces.py`, `verify_cost.py`, `run_experiments.py`.
 
 See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
 [cost-model.md](./cost-model.md) for cost attribution.
@@ -116,7 +121,7 @@ See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
 ┌─────────────────────────────┐   ┌──────────────────────────────────┐
 │  Phoenix Cloud              │   │  POST /ingest  (FastAPI :8765)    │
 │  durable store · MCP · SDK  │   │  → outbox INSERT → 200            │
-│  (filter governor.* tags) │   └───────────────┬──────────────────┘
+│  (filter accountant.* tags) │   └───────────────┬──────────────────┘
 └───────────────┬─────────────┘                   │ worker.py drains;
                 │ backfill (new account)           │ cached calls priced $0
                 ▼                                  ▼
@@ -127,7 +132,7 @@ See [realtime-pipeline.md](./realtime-pipeline.md) for the runtime path and
                        activate policy │   ▲ reads
                                        ▼   │
                           ┌────────────────────────────┐
-                          │  dashboard.py (Streamlit)   │
+                          │  React cockpit (Vite)       │
                           │  hero: avoidable waste / $   │
                           │  saved · policy cards ·      │
                           │  trace-verified before/after │
@@ -150,7 +155,7 @@ claimed.
 - **Trace instrumentation:** OpenTelemetry via `arize-phoenix-otel` + `openinference-instrumentation-google-adk`
 - **Ingest service:** FastAPI + uvicorn
 - **Local store:** SQLite (WAL mode)
-- **Dashboard:** Streamlit
+- **Cockpit:** React (Vite), served by the FastAPI control plane (SSE-driven)
 - **Package manager:** [uv](https://docs.astral.sh/uv/)
 - **License:** MIT
 
