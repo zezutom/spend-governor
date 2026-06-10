@@ -6,15 +6,16 @@ Running and modifying the project locally.
 
 - **Python 3.10+**
 - **[uv](https://docs.astral.sh/uv/)** for dependency management
-- **`gcloud` CLI** authenticated against a Google Cloud project
-  with billing enabled and Vertex AI enabled
+- A **Gemini API key** (`GOOGLE_API_KEY`) — the simplest path — *or* the
+  **`gcloud` CLI** authenticated for Vertex AI (ADC)
 - A **Phoenix Cloud** account with an API key
+- **Node 20+** (the cockpit UI and the Phoenix MCP server both need Node)
 
 ## Setup
 
 ```bash
 git clone <repo>
-cd agent-accountant
+cd spend-governor
 uv sync
 ```
 
@@ -31,9 +32,14 @@ PHOENIX_COLLECTOR_ENDPOINT=https://app.phoenix.arize.com/s/<your-tenant>
 PHOENIX_PROJECT_NAME=agent-accountant
 PHOENIX_API_KEY_OBSERVED_WRITE=<your-phoenix-api-key>
 
-GOOGLE_GENAI_USE_VERTEXAI=True
-GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
-GOOGLE_CLOUD_LOCATION=us-central1
+# Gemini auth — pick ONE:
+# (a) simplest: a Gemini API key
+GOOGLE_API_KEY=<your-gemini-api-key>
+GOOGLE_GENAI_USE_VERTEXAI=False
+# (b) Vertex AI via gcloud ADC (see "Vertex AI authentication" below)
+# GOOGLE_GENAI_USE_VERTEXAI=True
+# GOOGLE_CLOUD_PROJECT=<your-gcp-project-id>
+# GOOGLE_CLOUD_LOCATION=us-central1
 
 # Enables the observed agent's real-time fan-out to the Governor.
 # Without it, spans go only to Phoenix (and the agent logs a notice).
@@ -111,16 +117,19 @@ Prints the tool sequence and the agent's reply. The trace is emitted
 to Phoenix and (with the env var set) to the Governor in the
 background.
 
-### Generate a synthetic dataset
+### Generate the fleet corpus
 
 ```bash
-uv run python -m observed.generate_dataset 20 5
+uv run python -m observed.generate_dataset 50 4
 ```
 
-Runs 20 agent invocations at concurrency 5. The task mix is
-weighted (35% password_reset, 25% account_question, 25%
-refund_handling, 15% plan_change). Concurrency 5–10 keeps Vertex's
-per-minute quota comfortable in `us-central1`.
+Runs `PER_AGENT` traces for **each of the four fleet agents**
+(`support_copilot`, `refund_auditor`, `sales_assistant`, `docs_bot`),
+interleaved. Defaults: `PER_AGENT=50`, `CONCURRENCY=4` → 200 traces. Start
+with `PER_AGENT=4` to validate wiring. Keep concurrency low (≈4) to stay
+under the Gemini/Vertex per-minute quota. Each trace is tagged with its
+agent id as the grouping key and (with `GOVERNOR_INGEST_URL` set) streamed
+to the cockpit live. See [observed-agent.md](./observed-agent.md).
 
 ### Inspect traces
 
@@ -187,8 +196,9 @@ the import order in `observed/main.py` and
 ### Reset to a clean "new account" state
 
 ```bash
-rm -f data/accountant.db data/accountant.db-wal data/accountant.db-shm
+./scripts/reset-db.sh
 ```
 
-Next dashboard load sees an empty cache and re-runs the Phoenix
-backfill from scratch. The cache is gitignored and disposable.
+Removes the local cache (`data/accountant.db`). The next cockpit load sees
+an empty cache and re-runs the Phoenix backfill from scratch. The cache is
+gitignored and disposable.
