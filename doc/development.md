@@ -96,26 +96,14 @@ Phoenix (empty cache = new account). See
 [realtime-pipeline.md](./realtime-pipeline.md) for what happens under
 the hood.
 
-To feed it live traffic, run the observed agent (next command) with
-`GOVERNOR_INGEST_URL` set — the dashboard reflects each new trace
-within ~0.5s.
+To feed it live traffic, generate fleet traffic (next command) with
+`GOVERNOR_INGEST_URL` set — the cockpit reflects each new trace within ~0.5s.
 
 The ingest server can also be started on its own (e.g. for debugging):
 
 ```bash
 uv run uvicorn governor.pipeline.ingest_server:app --port 8765
 ```
-
-### Run the observed agent once
-
-```bash
-GOVERNOR_INGEST_URL=http://localhost:8765 \
-  uv run python -m observed.main "I want a refund for last month's charge."
-```
-
-Prints the tool sequence and the agent's reply. The trace is emitted
-to Phoenix and (with the env var set) to the Governor in the
-background.
 
 ### Generate the fleet corpus
 

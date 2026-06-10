@@ -1,8 +1,7 @@
-"""Extracted view-model — the figures the v5 dashboard computed, lifted out
-from behind Streamlit VERBATIM (control-plane migration, Phase 2). No logic is
-changed: these are byte-for-byte the v5 functions, so the numbers are identical
-(the parity check in _parity.py pins this). The public interface in __init__.py
-is the only thing the new UI imports.
+"""The view-model — per-class cost rows + totals, the volume→projection, the
+tool-cost decomposition, the issue→policy lever mapping, and the live-state /
+recommendations loaders. Pure compute (no UI); the public interface in
+__init__.py is what the control-plane API serves.
 """
 
 import json

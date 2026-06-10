@@ -128,13 +128,5 @@ traces for each of the four agents:
 uv run python -m observed.generate_dataset 50 4   # 50 per agent × 4 agents, concurrency 4
 ```
 
-A single original Helpdesk agent is also kept in `agent.py` /`main.py` for
-quick one-off runs (it classifies into the legacy four ticket types rather
-than the fleet ids):
-
-```bash
-uv run python -m observed.main "I want a refund for last month's charge."
-```
-
 See [development.md](./development.md) for environment setup and the full
 command catalogue.
